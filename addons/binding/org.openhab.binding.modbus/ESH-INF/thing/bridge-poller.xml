@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="modbus" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+	<bridge-type id="poller">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="tcp" />
+			<!--  <bridge-type-ref id="serial" />-->
+		</supported-bridge-type-refs>
+
+		<label>Poll definition</label>
+		<description>Modbus poll definition</description>
+		<config-description>
+			<parameter name="refresh" type="integer" min="1" max="86400">
+				<label>interval</label>
+				<description>Poll interval in milliseconds. Use zero to disable automatic polling.</description>
+				<default>500</default>
+			</parameter>
+			<parameter name="id" type="integer">
+				<label>Id</label>
+				<description>Slave id. Also known as station address or unit identifier.</description>
+				<default>1</default>
+			</parameter>
+			<parameter name="start" type="integer">
+				<label>Start</label>
+				<description>Adress of the first register, coil, or discrete input to poll. Input as zero-based index number.</description>
+				<default>0</default>
+			</parameter>
+			<parameter name="length" type="integer" required="true">
+				<label>Length</label>
+				<description>Number of registers, coils or discrete inputs to read.</description>
+			</parameter>
+			<parameter name="type" type="text" required="true">
+				<label>Type</label>
+				<description>Type of modbus registers</description>
+				<options>
+					<option value="coil">coil, or digital out (DO)</option>
+					<option value="discrete">discrete input, or digital in (DI)</option>
+					<option value="holding">holding register</option>
+					<option value="input">input register</option>
+				</options>
+			</parameter>
+		</config-description>
+	</bridge-type>
+
+</thing:thing-descriptions>
