@@ -20,9 +20,12 @@ public class ModbusBindingConstants {
     public static final String BINDING_ID = "modbus";
 
     // List of all Thing Type UIDs
-    public final static ThingTypeUID THING_TYPE_MODBUS_THING = new ThingTypeUID(BINDING_ID, "modbusThing");
+    public final static ThingTypeUID THING_TYPE_MODBUS_WRITE = new ThingTypeUID(BINDING_ID, "writeDefinition");
+    public final static ThingTypeUID THING_TYPE_MODBUS_READ = new ThingTypeUID(BINDING_ID, "readDefinition");
+    public final static ThingTypeUID THING_TYPE_MODBUS_READ_WRITE = new ThingTypeUID(BINDING_ID, "readWriteDefinition");
 
     // List of all Channel ids
-    public final static String CHANNEL_SWITCH = "switch-type";
+    public final static String CHANNEL_SWITCH = "switch";
+    public final static String CHANNEL_STRING = "string";
 
 }
