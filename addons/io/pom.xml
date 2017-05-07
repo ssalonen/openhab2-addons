@@ -20,7 +20,7 @@
     <module>org.openhab.io.hueemulation</module>
     <module>org.openhab.io.transport.feed</module>
     <module>org.openhab.io.imperihome</module>
-    <module>org.openhab.io.modbus</module>
+    <module>org.openhab.io.transport.modbus</module>
   </modules>
 
   <profiles>
