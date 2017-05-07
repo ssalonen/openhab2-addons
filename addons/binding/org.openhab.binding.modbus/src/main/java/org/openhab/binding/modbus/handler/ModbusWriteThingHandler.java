@@ -9,31 +9,32 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
-import org.openhab.binding.modbus.internal.config.ModbusTcpConfiguration;
+import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
-import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link ModbusTcpThingHandler} is responsible for handling commands, which are
+ * The {@link ModbusWriteThingHandler} is responsible for handling commands, which are
  * sent to one of the channels.
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements ModbusEndpointThingHandler {
+public class ModbusWriteThingHandler extends BaseThingHandler implements BridgeRefreshListener {
 
-    private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
+    private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private ChannelUID stringChannelUid;
-    private ModbusTcpConfiguration config;
+    private ModbusWriteConfiguration config;
     private ModbusSlaveEndpoint endpoint;
 
-    public ModbusTcpThingHandler(Thing thing, ModbusManagerReference managerRef) {
+    public ModbusWriteThingHandler(Thing thing) {
         super(thing);
     }
 
@@ -50,22 +51,42 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
     }
 
     @Override
-    public void doInitialize() {
+    public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);
+        config = getConfigAs(ModbusWriteConfiguration.class);
+        validateConfiguration();
+    }
 
-        this.config = getConfigAs(ModbusTcpConfiguration.class);
-        endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
+    public void validateConfiguration() {
+        Bridge readwrite = getBridgeOfThing(getThing());
+        if (readwrite == null) {
+            return;
+        }
+        Bridge poller = getBridgeOfThing(readwrite);
+        if (poller == null) {
+            return;
+        }
+
+        // TODO: validate out-of-bounds situations here and updateStatus accordingly
+    }
+
+    private Bridge getBridgeOfThing(Thing thing) {
+        ThingUID bridgeUID = thing.getBridgeUID();
+        synchronized (this) {
+            if (bridgeUID != null && thingRegistry != null) {
+                return (Bridge) thingRegistry.get(bridgeUID);
+            } else {
+                return null;
+            }
+        }
     }
 
     @Override
-    public ModbusSlaveEndpoint asSlaveEndpoint() {
-        return endpoint;
+    public void onBridgeRefresh() {
+        logger.debug("modbus write thing: bridge refreshed");
+        validateConfiguration();
     }
 
-    @Override
-    public int getSlaveId() {
-        return config.getId();
-    }
 }

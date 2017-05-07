@@ -9,17 +9,18 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import java.util.function.Consumer;
+
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
-import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
+import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.binding.modbus.internal.config.ModbusPollerConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
-import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -35,21 +36,48 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusPollerThingHandler extends BaseThingHandler {
+public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implements BridgeRefreshListener {
+
+    private class ReadCallbackDelegator implements ReadCallback {
+
+        private void forEachAllChildCallbacks(Consumer<ReadCallback> callback) {
+            ((Bridge) getThing()).getThings().stream()
+                    .filter(thing -> thing.getHandler() != null && thing.getHandler() instanceof ReadCallback)
+                    .map(thing -> (ReadCallback) thing.getHandler()).forEach(callback);
+        }
+
+        @Override
+        public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+            forEachAllChildCallbacks(callback -> callback.internalUpdateItem(request, registers));
+        }
+
+        @Override
+        public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
+            forEachAllChildCallbacks(callback -> callback.internalUpdateItem(request, coils));
+        }
+
+        @Override
+        public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
+            forEachAllChildCallbacks(callback -> callback.internalUpdateReadErrorItem(request, error));
+        }
+
+    }
 
     private Logger logger = LoggerFactory.getLogger(ModbusPollerThingHandler.class);
     private ChannelUID stringChannelUid;
-    private ModbusManager manager;
 
     private volatile Exception lastResponseError;
     private volatile BitArray lastResponseCoils;
     private volatile RegisterArray lastResponseRegisters;
     private ModbusPollerConfiguration config;
     private PollTask pollTask;
+    private ModbusManagerReference managerRef;
 
-    public ModbusPollerThingHandler(Thing thing, ModbusManager manager) {
+    private ReadCallback callbackDelegator = new ReadCallbackDelegator();
+
+    public ModbusPollerThingHandler(Thing thing, ModbusManagerReference managerRef) {
         super(thing);
-        this.manager = manager;
+        this.managerRef = managerRef;
     }
 
     @Override
@@ -94,12 +122,11 @@ public class ModbusPollerThingHandler extends BaseThingHandler {
     }
 
     @Override
-    public void initialize() {
+    public void doInitialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);
         config = getConfigAs(ModbusPollerConfiguration.class);
-        initPolling();
     }
 
     public void initPolling() {
@@ -108,14 +135,20 @@ public class ModbusPollerThingHandler extends BaseThingHandler {
         if (pollTask == null) {
             return;
         }
-        manager.registerRegularPoll(pollTask, config.getRefresh(), 0);
+        managerRef.getManager().registerRegularPoll(pollTask, config.getRefresh(), 0);
+    }
+
+    @Override
+    public void onBridgeRefresh() {
+        super.onBridgeRefresh();
+        initPolling();
     }
 
     public void unregisterPollTask() {
         if (pollTask == null) {
             return;
         }
-        manager.unregisterRegularPoll(pollTask);
+        managerRef.getManager().unregisterRegularPoll(pollTask);
     }
 
     private void preparePollTask() {
@@ -171,31 +204,10 @@ public class ModbusPollerThingHandler extends BaseThingHandler {
 
             @Override
             public ReadCallback getCallback() {
-                return new ReadCallback() {
-
-                    @Override
-                    public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
-                        lastResponseError = error;
-                        lastResponseCoils = null;
-                        lastResponseRegisters = null;
-                    }
-
-                    @Override
-                    public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
-                        lastResponseError = null;
-                        lastResponseCoils = coils;
-                        lastResponseRegisters = null;
-                    }
-
-                    @Override
-                    public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
-                        lastResponseError = null;
-                        lastResponseCoils = null;
-                        lastResponseRegisters = registers;
-                    }
-                };
+                return callbackDelegator;
             }
         };
 
     }
+
 }

@@ -1,15 +1,15 @@
 <thing:thing-descriptions bindingId="modbus" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
-    xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
-    <bridge-type id="readwrite">
-        <supported-bridge-type-refs>
-            <bridge-type-ref id="poller" />
-        </supported-bridge-type-refs>
-        <label>Modbus read-write definition</label>
-        <channels>
-            <channel id="switch" typeId="switch-type" />
-            <channel id="number" typeId="number-type" />
-            <channel id="string" typeId="string-type" />
-        </channels>
-</bridge-type>
+	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+	<bridge-type id="readwrite">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="poller" />
+		</supported-bridge-type-refs>
+		<label>Modbus read-write definition</label>
+		<channels>
+			<channel id="switch" typeId="switch-type" />
+			<channel id="number" typeId="number-type" />
+			<channel id="string" typeId="string-type" />
+		</channels>
+	</bridge-type>
 </thing:thing-descriptions>

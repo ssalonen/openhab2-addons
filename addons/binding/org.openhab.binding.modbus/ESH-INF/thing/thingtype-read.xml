@@ -45,6 +45,12 @@
 					<option value="int16">16bit integer (0/1). Only applicable to registers.</option>
 				</options>
 			</parameter>
+
+			<parameter name="postReadErrorsAsUndefined" type="boolean">
+				<label>Post read errors as undefined</label>
+				<description>Update channel values with Undefined when read fails</description>
+				<default>*</default>
+			</parameter>
 		</config-description>
 	</thing-type>
 </thing:thing-descriptions>

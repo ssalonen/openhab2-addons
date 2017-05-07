@@ -13,11 +13,6 @@
 		</channels>
 		<config-description>
 			<!-- where to write -->
-			<parameter name="id" type="integer">
-				<label>Id</label>
-				<description>Slave id. Also known as station address or unit identifier.</description>
-				<default>1</default>
-			</parameter>
 			<parameter name="start" type="integer">
 				<label>Address</label>
 				<description>Start address of the register and/or coils to write</description>

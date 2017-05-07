@@ -17,7 +17,10 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandler;
+import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
+import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
+import org.openhab.binding.modbus.handler.ModbusWriteThingHandler;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +31,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusHandlerFactory extends BaseThingHandlerFactory {
+public class ModbusHandlerFactory extends BaseThingHandlerFactory implements ModbusManagerReference {
 
     private final Logger logger = LoggerFactory.getLogger(ModbusHandlerFactory.class);
 
@@ -53,12 +56,21 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
 
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
-        if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
-            logger.debug("createHandler Modbus poller");
-            return new ModbusPollerThingHandler(thing, manager);
-        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
+        if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
-            return new ModbusTcpThingHandler(thing, manager);
+            return new ModbusTcpThingHandler(thing, this);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
+            logger.debug("createHandler Modbus poller");
+            return new ModbusPollerThingHandler(thing, this);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_READ_WRITE)) {
+            logger.debug("createHandler read-write");
+            return new ModbusReadWriteThingHandler(thing);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_READ)) {
+            logger.debug("createHandler read");
+            return new ModbusReadThingHandler(thing);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_WRITE)) {
+            logger.debug("createHandler write");
+            return new ModbusWriteThingHandler(thing);
         }
         logger.info("createHandler for unknown thing");
 
@@ -72,5 +84,10 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
 
     public void unsetManager(ModbusManager manager) {
         this.manager = null;
+    }
+
+    @Override
+    public ModbusManager getManager() {
+        return manager;
     }
 }
