@@ -6,13 +6,12 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  */
-package org.openhab.binding.modbus.internal.pooling;
+package org.openhab.io.transport.modbus.endpoint;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import net.wimpi.modbus.net.ModbusSlaveConnection;
 import net.wimpi.modbus.util.SerialParameters;
 
 /**
@@ -42,11 +41,6 @@ public class ModbusSerialSlaveEndpoint implements ModbusSlaveEndpoint {
     @Override
     public <R> R accept(ModbusSlaveEndpointVisitor<R> factory) {
         return factory.visit(this);
-    }
-
-    @Override
-    public ModbusSlaveConnection create(ModbusSlaveConnectionFactory factory) {
-        return accept(factory);
     }
 
     @Override

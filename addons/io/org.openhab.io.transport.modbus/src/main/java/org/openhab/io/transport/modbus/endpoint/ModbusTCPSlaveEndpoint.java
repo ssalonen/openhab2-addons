@@ -6,9 +6,7 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  */
-package org.openhab.binding.modbus.internal.pooling;
-
-import net.wimpi.modbus.net.ModbusSlaveConnection;
+package org.openhab.io.transport.modbus.endpoint;
 
 public class ModbusTCPSlaveEndpoint extends ModbusIPSlaveEndpoint {
 
@@ -19,11 +17,6 @@ public class ModbusTCPSlaveEndpoint extends ModbusIPSlaveEndpoint {
     @Override
     public <R> R accept(ModbusSlaveEndpointVisitor<R> factory) {
         return factory.visit(this);
-    }
-
-    @Override
-    public ModbusSlaveConnection create(ModbusSlaveConnectionFactory factory) {
-        return accept(factory);
     }
 
 }

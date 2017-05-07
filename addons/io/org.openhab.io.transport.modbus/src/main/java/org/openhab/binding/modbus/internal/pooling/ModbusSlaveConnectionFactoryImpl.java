@@ -17,6 +17,13 @@ import java.util.function.Function;
 import org.apache.commons.pool2.BaseKeyedPooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
+import org.openhab.io.transport.modbus.endpoint.ModbusIPSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpointVisitor;
+import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusUDPSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

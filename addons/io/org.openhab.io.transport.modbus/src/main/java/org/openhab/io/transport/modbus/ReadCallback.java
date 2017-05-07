@@ -1,8 +1,8 @@
 package org.openhab.io.transport.modbus;
 
+import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdException;
+
 import net.wimpi.modbus.ModbusException;
-import net.wimpi.modbus.procimg.InputRegister;
-import net.wimpi.modbus.util.BitVector;
 
 public interface ReadCallback {
 
@@ -12,7 +12,7 @@ public interface ReadCallback {
      * @param ModbusReadRequestBlueprint representing the request
      * @param registers data received from slave device in the last pollInterval
      */
-    void internalUpdateItem(ModbusReadRequestBlueprint request, InputRegister[] registers);
+    void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers);
 
     /**
      * Posts update event to OpenHAB bus for "coil" and "discrete input" type slaves
@@ -20,7 +20,7 @@ public interface ReadCallback {
      * @param ModbusReadRequestBlueprint representing the request
      * @param registers data received from slave device in the last pollInterval
      */
-    void internalUpdateItem(ModbusReadRequestBlueprint request, BitVector coils);
+    void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils);
 
     /**
      * Posts update event to OpenHAB bus for all types of slaves when there is a read error

@@ -1,0 +1,50 @@
+<thing:thing-descriptions bindingId="modbus" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+	<thing-type id="read">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="readwrite" />
+		</supported-bridge-type-refs>
+		<label>Modbus read definition</label>
+		<channels>
+			<channel id="switch" typeId="switch-type" />
+			<channel id="number" typeId="number-type" />
+			<channel id="string" typeId="string-type" />
+		</channels>
+		<config-description>
+			<!-- what to read -->
+			<parameter name="start" type="integer">
+				<label>Address</label>
+				<description>Start address of the register and/or to read</description>
+				<default>0</default>
+			</parameter>
+			<parameter name="trigger" type="text">
+				<label>trigger</label>
+				<description>Update channel values only if the polled
+    value matches this after transformation.
+         Use asterisk 
+    (*) to match all</description>
+				<default>*</default>
+			</parameter>
+
+			<!-- how to write: transform and valuetype -->
+			<parameter name="transform" type="text">
+				<label>transform</label>
+				<description>Transformation to apply to received commands and polled state.
+    Use "default" to communicate that no transformation is done and value should be passed as is.
+    Use SERVICENAME(ARG) to use transformation service.
+    Any other value than the above types will be interpreted as static text, in which case the actual content of the polled 
+         value is ignored.</description>
+				<default>default</default>
+			</parameter>
+			<parameter name="valueType" type="text" required="true">
+				<label>Value type</label>
+				<description>How data is read from modbus</description>
+				<options>
+					<option value="int32">32bit integer (0/1). Only applicable to registers.</option>
+					<option value="int16">16bit integer (0/1). Only applicable to registers.</option>
+				</options>
+			</parameter>
+		</config-description>
+	</thing-type>
+</thing:thing-descriptions>

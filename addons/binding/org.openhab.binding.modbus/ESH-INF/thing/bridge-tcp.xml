@@ -6,8 +6,8 @@
 		<label>TCP Connection</label>
 		<description>Modbus/TCP connection</description>
 		<config-description>
-			<parameter name="ip" type="text" required="true">
-				<label>IP Address</label>
+			<parameter name="host" type="text" required="true">
+				<label>IP Address or hostname</label>
 				<description>Network address of the device</description>
 				<default>localhost</default>
 			</parameter>
@@ -16,6 +16,11 @@
 				<description>Port of the slave</description>
 				<default>502</default>
 			</parameter>
+			<parameter name="id" type="integer">
+                <label>Id</label>
+                <description>Slave id. Also known as station address or unit identifier.</description>
+                <default>1</default>
+            </parameter>
 		</config-description>
 	</bridge-type>
 

@@ -1,7 +1,7 @@
 package org.openhab.io.transport.modbus;
 
-import org.openhab.binding.modbus.internal.pooling.EndpointPoolConfiguration;
-import org.openhab.binding.modbus.internal.pooling.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 public interface ModbusManager {
 
