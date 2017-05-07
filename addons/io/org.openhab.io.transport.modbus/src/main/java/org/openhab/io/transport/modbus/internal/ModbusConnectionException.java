@@ -8,7 +8,7 @@
  */
 package org.openhab.io.transport.modbus.internal;
 
-import org.openhab.binding.modbus.internal.pooling.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 @SuppressWarnings("serial")
 public class ModbusConnectionException extends Exception {

@@ -6,9 +6,7 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  */
-package org.openhab.binding.modbus.internal.pooling;
-
-import net.wimpi.modbus.net.ModbusSlaveConnection;
+package org.openhab.io.transport.modbus.endpoint;
 
 /**
  * ModbusSlaveEndpoint contains minimal connection information to establish connection to the slave. End point equals
@@ -22,7 +20,5 @@ import net.wimpi.modbus.net.ModbusSlaveConnection;
  */
 public interface ModbusSlaveEndpoint {
     public <R> R accept(ModbusSlaveEndpointVisitor<R> visitor);
-
-    public ModbusSlaveConnection create(ModbusSlaveConnectionFactory factory);
 
 }

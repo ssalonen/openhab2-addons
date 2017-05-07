@@ -16,14 +16,9 @@
 				<description>Poll interval in milliseconds. Use zero to disable automatic polling.</description>
 				<default>500</default>
 			</parameter>
-			<parameter name="id" type="integer">
-				<label>Id</label>
-				<description>Slave id. Also known as station address or unit identifier.</description>
-				<default>1</default>
-			</parameter>
 			<parameter name="start" type="integer">
 				<label>Start</label>
-				<description>Adress of the first register, coil, or discrete input to poll. Input as zero-based index number.</description>
+				<description>Address of the first register, coil, or discrete input to poll. Input as zero-based index number.</description>
 				<default>0</default>
 			</parameter>
 			<parameter name="length" type="integer" required="true">
@@ -32,7 +27,7 @@
 			</parameter>
 			<parameter name="type" type="text" required="true">
 				<label>Type</label>
-				<description>Type of modbus registers</description>
+				<description>Type of modbus items to poll</description>
 				<options>
 					<option value="coil">coil, or digital out (DO)</option>
 					<option value="discrete">discrete input, or digital in (DI)</option>

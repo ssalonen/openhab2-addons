@@ -8,6 +8,8 @@
  */
 package org.openhab.binding.modbus.internal.pooling;
 
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpointVisitor;
+
 import net.wimpi.modbus.net.ModbusSlaveConnection;
 
 /**
