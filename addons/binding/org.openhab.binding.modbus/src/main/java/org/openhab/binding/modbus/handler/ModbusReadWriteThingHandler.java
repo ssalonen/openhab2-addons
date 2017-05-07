@@ -13,27 +13,27 @@ import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.types.Command;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
-import org.openhab.binding.modbus.internal.config.ModbusTcpConfiguration;
+import org.openhab.io.transport.modbus.BitArray;
+import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ReadCallback;
+import org.openhab.io.transport.modbus.RegisterArray;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
-import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link ModbusTcpThingHandler} is responsible for handling commands, which are
+ * The {@link ModbusReadWriteThingHandler} is responsible for handling commands, which are
  * sent to one of the channels.
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements ModbusEndpointThingHandler {
+public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ReadCallback {
 
-    private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
+    private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
     private ChannelUID stringChannelUid;
-    private ModbusTcpConfiguration config;
     private ModbusSlaveEndpoint endpoint;
 
-    public ModbusTcpThingHandler(Thing thing, ModbusManagerReference managerRef) {
+    public ModbusReadWriteThingHandler(Thing thing) {
         super(thing);
     }
 
@@ -54,18 +54,30 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);
-
-        this.config = getConfigAs(ModbusTcpConfiguration.class);
-        endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
     }
 
     @Override
-    public ModbusSlaveEndpoint asSlaveEndpoint() {
-        return endpoint;
+    public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+        // TODO Auto-generated method stub
+        logger.info("Read write thing handler got registers: {}", registers);
+        // 1. update readers
+        // 2. update channels based on readers
     }
 
     @Override
-    public int getSlaveId() {
-        return config.getId();
+    public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
+        // TODO Auto-generated method stub
+        logger.info("Read write thing handler got coils: {}", coils);
+        // 1. update readers
+        // 2. update channels based on readers
     }
+
+    @Override
+    public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
+        // TODO Auto-generated method stub
+        logger.info("Read write thing handler got error: {}", error);
+        // 1. update readers
+        // 2. update channels based on readers
+    }
+
 }
