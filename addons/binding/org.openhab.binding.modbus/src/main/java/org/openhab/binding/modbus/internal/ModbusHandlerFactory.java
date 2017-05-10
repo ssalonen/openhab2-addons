@@ -12,6 +12,7 @@ import static org.openhab.binding.modbus.ModbusBindingConstants.*;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
@@ -58,13 +59,13 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements Mod
 
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
-            return new ModbusTcpThingHandler(thing, this);
+            return new ModbusTcpThingHandler((Bridge) thing, this);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
             logger.debug("createHandler Modbus poller");
-            return new ModbusPollerThingHandler(thing, this);
+            return new ModbusPollerThingHandler((Bridge) thing, this);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_READ_WRITE)) {
             logger.debug("createHandler read-write");
-            return new ModbusReadWriteThingHandler(thing);
+            return new ModbusReadWriteThingHandler((Bridge) thing);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_READ)) {
             logger.debug("createHandler read");
             return new ModbusReadThingHandler(thing);

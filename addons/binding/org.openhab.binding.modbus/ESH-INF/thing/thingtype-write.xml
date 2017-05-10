@@ -5,7 +5,7 @@
 		<supported-bridge-type-refs>
 			<bridge-type-ref id="readwrite" />
 		</supported-bridge-type-refs>
-		<label>Modbus read definition</label>
+		<label>Modbus write definition</label>
 		<channels>
 			<channel id="switch" typeId="switch-type" />
 			<channel id="number" typeId="number-type" />
