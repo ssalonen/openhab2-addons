@@ -13,6 +13,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
@@ -27,7 +28,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusWriteThingHandler extends BaseThingHandler implements BridgeRefreshListener {
+public class ModbusWriteThingHandler extends BaseThingHandler {
 
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private ChannelUID stringChannelUid;
@@ -84,8 +85,8 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements BridgeR
     }
 
     @Override
-    public void onBridgeRefresh() {
-        logger.debug("modbus write thing: bridge refreshed");
+    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
+        super.bridgeStatusChanged(bridgeStatusInfo);
         validateConfiguration();
     }
 

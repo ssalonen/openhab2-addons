@@ -9,8 +9,8 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.ModbusManagerReference;
@@ -33,8 +33,8 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
     private ModbusTcpConfiguration config;
     private ModbusSlaveEndpoint endpoint;
 
-    public ModbusTcpThingHandler(Thing thing, ModbusManagerReference managerRef) {
-        super(thing);
+    public ModbusTcpThingHandler(Bridge bridge, ModbusManagerReference managerRef) {
+        super(bridge);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
     }
 
     @Override
-    public void doInitialize() {
+    public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);

@@ -13,8 +13,8 @@ import java.util.function.Consumer;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
@@ -36,12 +36,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implements BridgeRefreshListener {
+public class ModbusPollerThingHandler extends AbstractModbusBridgeThing {
 
     private class ReadCallbackDelegator implements ReadCallback {
 
         private void forEachAllChildCallbacks(Consumer<ReadCallback> callback) {
-            ((Bridge) getThing()).getThings().stream()
+            getThing().getThings().stream()
                     .filter(thing -> thing.getHandler() != null && thing.getHandler() instanceof ReadCallback)
                     .map(thing -> (ReadCallback) thing.getHandler()).forEach(callback);
         }
@@ -75,8 +75,8 @@ public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implemen
 
     private ReadCallback callbackDelegator = new ReadCallbackDelegator();
 
-    public ModbusPollerThingHandler(Thing thing, ModbusManagerReference managerRef) {
-        super(thing);
+    public ModbusPollerThingHandler(Bridge bridge, ModbusManagerReference managerRef) {
+        super(bridge);
         this.managerRef = managerRef;
     }
 
@@ -122,7 +122,7 @@ public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implemen
     }
 
     @Override
-    public void doInitialize() {
+    public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);
@@ -139,8 +139,8 @@ public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implemen
     }
 
     @Override
-    public void onBridgeRefresh() {
-        super.onBridgeRefresh();
+    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
+        super.bridgeStatusChanged(bridgeStatusInfo);
         initPolling();
     }
 
@@ -149,6 +149,7 @@ public class ModbusPollerThingHandler extends AbstractModbusBridgeThing implemen
             return;
         }
         managerRef.getManager().unregisterRegularPoll(pollTask);
+        pollTask = null;
     }
 
     private void preparePollTask() {

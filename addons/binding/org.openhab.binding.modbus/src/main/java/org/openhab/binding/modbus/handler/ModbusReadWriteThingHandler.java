@@ -9,8 +9,8 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.io.transport.modbus.BitArray;
@@ -33,8 +33,8 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     private ChannelUID stringChannelUid;
     private ModbusSlaveEndpoint endpoint;
 
-    public ModbusReadWriteThingHandler(Thing thing) {
-        super(thing);
+    public ModbusReadWriteThingHandler(Bridge bridge) {
+        super(bridge);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     }
 
     @Override
-    public void doInitialize() {
+    public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.ONLINE);
@@ -75,7 +75,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     @Override
     public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
         // TODO Auto-generated method stub
-        logger.info("Read write thing handler got error: {}", error);
+        logger.info("Read write thing handler got error: {} {}", error.getClass().getName(), error.getMessage(), error);
         // 1. update readers
         // 2. update channels based on readers
     }
