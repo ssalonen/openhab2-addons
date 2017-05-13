@@ -24,18 +24,18 @@ public class ModbusBindingConstants {
     public static final String BINDING_ID = "modbus";
 
     // List of all Thing Type UIDs
-    public final static ThingTypeUID THING_TYPE_MODBUS_TCP = new ThingTypeUID(BINDING_ID, "tcp");
-    public final static ThingTypeUID THING_TYPE_MODBUS_POLLER = new ThingTypeUID(BINDING_ID, "poller");
-    public final static ThingTypeUID THING_TYPE_MODBUS_WRITE = new ThingTypeUID(BINDING_ID, "write");
-    public final static ThingTypeUID THING_TYPE_MODBUS_READ = new ThingTypeUID(BINDING_ID, "read");
-    public final static ThingTypeUID THING_TYPE_MODBUS_READ_WRITE = new ThingTypeUID(BINDING_ID, "readwrite");
+    public static final ThingTypeUID THING_TYPE_MODBUS_TCP = new ThingTypeUID(BINDING_ID, "tcp");
+    public static final ThingTypeUID THING_TYPE_MODBUS_POLLER = new ThingTypeUID(BINDING_ID, "poller");
+    public static final ThingTypeUID THING_TYPE_MODBUS_WRITE = new ThingTypeUID(BINDING_ID, "write");
+    public static final ThingTypeUID THING_TYPE_MODBUS_READ = new ThingTypeUID(BINDING_ID, "read");
+    public static final ThingTypeUID THING_TYPE_MODBUS_READ_WRITE = new ThingTypeUID(BINDING_ID, "readwrite");
 
     // List of all Channel ids
-    public final static String CHANNEL_SWITCH = "switch";
-    public final static String CHANNEL_NUMBER = "number";
-    public final static String CHANNEL_STRING = "string";
+    public static final String CHANNEL_SWITCH = "switch";
+    public static final String CHANNEL_NUMBER = "number";
+    public static final String CHANNEL_STRING = "string";
 
-    public final static Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
+    public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
     static {
         READ_FUNCTION_CODES.put("coil", ModbusReadFunctionCode.READ_COILS);
         READ_FUNCTION_CODES.put("discrete", ModbusReadFunctionCode.READ_INPUT_DISCRETES);

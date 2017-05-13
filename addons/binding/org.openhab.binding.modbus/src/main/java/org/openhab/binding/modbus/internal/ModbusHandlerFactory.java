@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 by the respective copyright holders.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -38,7 +38,7 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements Mod
 
     private ModbusManager manager;
 
-    private final static Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = new HashSet<>();
+    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = new HashSet<>();
     static {
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_TCP);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_POLLER);
@@ -79,7 +79,7 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements Mod
     }
 
     public void setManager(ModbusManager manager) {
-        logger.info("Setting manager: " + manager.toString());
+        logger.info("Setting manager: {}", manager);
         this.manager = manager;
     }
 
