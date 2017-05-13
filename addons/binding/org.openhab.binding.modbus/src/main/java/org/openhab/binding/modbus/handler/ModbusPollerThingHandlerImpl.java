@@ -225,13 +225,14 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             throw new IllegalStateException("pollTask should be unregistered before registering a new one!");
         }
         if (config.getRefresh() <= 0L) {
-            updateStatus(ThingStatus.OFFLINE);
+            updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
             return;
         }
 
         ModbusEndpointThingHandler slaveEndpoint = getEndpointThingHandler();
         if (slaveEndpoint == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("Bridge '%s' is offline", getBridge().getLabel()));
             logger.debug("No bridge handler -- aborting init for {}", this);
             return;
         }

@@ -7,9 +7,15 @@
 		</supported-bridge-type-refs>
 		<label>Modbus read-write definition</label>
 		<channels>
-			<channel id="switch" typeId="switch-type" />
-			<channel id="number" typeId="number-type" />
-			<channel id="string" typeId="string-type" />
+            <channel id="switch" typeId="switch-type" />
+            <channel id="contact" typeId="contact-type" />
+            <channel id="datetime" typeId="datetime-type" />
+            <channel id="dimmer" typeId="dimmer-type" />
+            <channel id="number" typeId="number-type" />
+            <channel id="string" typeId="string-type" />
+            <channel id="rollershutter" typeId="rollershutter-type" />
+            <channel id="lastSuccess" typeId="last-successful-read-type" />
+            <channel id="lastError" typeId="last-erroring-read-type" />
 		</channels>
 	</bridge-type>
 </thing:thing-descriptions>

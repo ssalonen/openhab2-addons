@@ -6,38 +6,50 @@
 
 	<channel-type id="switch-type">
 		<item-type>Switch</item-type>
-		<label>Switch</label>
+		<label>Value as Switch</label>
 		<description>Switch item channel</description>
 	</channel-type>
     <channel-type id="contact-type">
         <item-type>Contact</item-type>
-        <label>Contact</label>
+        <label>Value as Contact</label>
         <description>Contact item channel</description>
     </channel-type>
     <channel-type id="datetime-type">
         <item-type>DateTime</item-type>
-        <label>DateTime</label>
+        <label>Value as DateTime</label>
         <description>DateTime item channel</description>
     </channel-type>
     <channel-type id="dimmer-type">
         <item-type>Dimmer</item-type>
-        <label>Dimmer</label>
+        <label>Value as Dimmer</label>
         <description>Dimmer item channel</description>
     </channel-type>
     <channel-type id="rollershutter-type">
         <item-type>Rollershutter</item-type>
-        <label>Rollershutter</label>
+        <label>Value as Rollershutter</label>
         <description>Rollershutter item channel</description>
     </channel-type>
     <channel-type id="string-type">
         <item-type>String</item-type>
-        <label>String</label>
+        <label>Value as String</label>
         <description>String item channel</description>
     </channel-type>
     <channel-type id="number-type">
         <item-type>Number</item-type>
-        <label>Register value</label>
+        <label>Value as Number</label>
         <description>Number item channel</description>
+        <config-description></config-description>
+    </channel-type>
+    <channel-type id="last-successful-read-type">
+        <item-type>DateTime</item-type>
+        <label>Last successful read</label>
+        <description>Date of last read</description>
+        <config-description></config-description>
+    </channel-type>
+    <channel-type id="last-erroring-read-type">
+        <item-type>DateTime</item-type>
+        <label>Last erroring read</label>
+        <description>Date of last read error</description>
         <config-description></config-description>
     </channel-type>
 
