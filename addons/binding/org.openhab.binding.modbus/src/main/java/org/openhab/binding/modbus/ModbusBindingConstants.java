@@ -38,6 +38,12 @@ public class ModbusBindingConstants {
     public static final String CHANNEL_NUMBER = "number";
     public static final String CHANNEL_STRING = "string";
     public static final String CHANNEL_ROLLERSHUTTER = "rollershutter";
+    public static final String CHANNEL_LAST_SUCCESS = "lastSuccess";
+    public static final String CHANNEL_LAST_ERROR = "lastError";
+
+    public static final String[] DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE = { CHANNEL_SWITCH, CHANNEL_CONTACT,
+            CHANNEL_DATETIME, CHANNEL_DIMMER, CHANNEL_NUMBER, CHANNEL_STRING, CHANNEL_ROLLERSHUTTER,
+            CHANNEL_LAST_SUCCESS, CHANNEL_LAST_ERROR };
 
     public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
     static {

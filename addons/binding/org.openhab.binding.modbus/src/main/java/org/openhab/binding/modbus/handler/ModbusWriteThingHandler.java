@@ -13,6 +13,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
@@ -55,22 +56,44 @@ public class ModbusWriteThingHandler extends BaseThingHandler {
     public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.ONLINE);
         config = getConfigAs(ModbusWriteConfiguration.class);
         validateConfiguration();
     }
 
     public void validateConfiguration() {
+        updateStatus(ThingStatus.INITIALIZING);
         Bridge readwrite = getBridgeOfThing(getThing());
         if (readwrite == null) {
+            logger.debug("WriteThing '{}' has no ReadThing bridge. Aborting config validation", getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No read-write bridge");
             return;
         }
-        Bridge poller = getBridgeOfThing(readwrite);
-        if (poller == null) {
+        if (readwrite.getStatus() != ThingStatus.ONLINE) {
+            logger.debug("ReadWrite bridge '{}' of WriteThing '{}' is offline. Aborting config validation",
+                    readwrite.getLabel(), getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("Read-write bridge %s is offline", readwrite.getLabel()));
             return;
         }
 
-        // TODO: validate out-of-bounds situations here and updateStatus accordingly
+        Bridge poller = getBridgeOfThing(readwrite);
+        if (poller == null) {
+            logger.debug("ReadWrite bridge '{}' of WriteThing '{}' has no Poller bridge. Aborting config validation",
+                    readwrite.getLabel(), getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("No poller bridge set for the read-write bridge %s", readwrite.getLabel()));
+            return;
+        }
+        if (poller.getStatus() != ThingStatus.ONLINE) {
+            logger.debug(
+                    "Poller bridge '{}' of ReadWriteThing bridge '{}' of WriteThing '{}' is offline. Aborting config validation",
+                    poller.getLabel(), readwrite.getLabel(), getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("Poller bridge %s of the read-write bridge is offline", poller.getLabel()));
+            return;
+        }
+
+        updateStatus(ThingStatus.ONLINE);
     }
 
     private Bridge getBridgeOfThing(Thing thing) {

@@ -10,14 +10,17 @@ package org.openhab.binding.modbus.handler;
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
-import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.State;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ReadCallback;
@@ -65,40 +68,44 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got registers: {}", registers);
-        // 1. update readers
-        getThing().getThings().stream().map(thing -> thing.getHandler())
-                .filter(handler -> handler != null && handler instanceof ReadCallback)
-                .map(handler -> (ReadCallback) handler)
-                .forEach(handler -> handler.internalUpdateItem(request, registers));
-
-        // 2. update channels based on readers
+        propagateToChildren(reader -> reader.internalUpdateItem(request, registers));
     }
 
     @Override
     public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray bits) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got bits: {}", bits);
-        // 1. update readers
-        List<ReadCallback> callbacks = getThing().getThings().stream().map(thing -> thing.getHandler())
-                .filter(handler -> handler != null && handler instanceof ReadCallback)
-                .map(handler -> (ReadCallback) handler).collect(Collectors.toList());
-        callbacks.stream().forEach(callback -> {
-            callback.internalUpdateItem(request, bits);
-            ThingHandler handler = (ThingHandler) callback;
-            handler.getThing().getChannels().stream().forEach(channel -> {
-                // channel.up
-            });
-        });
-
-        // 2. update channels based on readers
+        propagateToChildren(reader -> reader.internalUpdateItem(request, bits));
     }
 
     @Override
     public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got error: {} {}", error.getClass().getName(), error.getMessage(), error);
-        // 1. update readers
-        // 2. update channels based on readers
+        propagateToChildren(reader -> reader.internalUpdateReadErrorItem(request, error));
+    }
+
+    private void propagateToChildren(Consumer<ModbusReadThingHandler> consumer) {
+        List<ModbusReadThingHandler> readers = getReaders();
+        // Call each readers callback, and update this bridge's items (matching by channel id)
+        readers.stream().forEach(reader -> {
+            consumer.accept(reader);
+            Optional<Map<ChannelUID, State>> optionalLastState = reader.getLastState();
+            optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
+                updateState(uid.getId(), state);
+            }));
+        });
+    }
+
+    /**
+     * Get readers by inspecting this bridge's children things
+     *
+     * @return list of {@link ModbusReadThingHandler}
+     */
+    private synchronized List<ModbusReadThingHandler> getReaders() {
+        return getThing().getThings().stream().map(thing -> thing.getHandler())
+                .filter(handler -> handler != null && handler instanceof ModbusReadThingHandler)
+                .map(handler -> (ModbusReadThingHandler) handler).collect(Collectors.toList());
     }
 
     @Override
