@@ -9,9 +9,16 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
-import java.util.stream.Stream;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.library.types.DecimalType;
+import org.eclipse.smarthome.core.library.types.OnOffType;
+import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -22,7 +29,8 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
-import org.openhab.binding.modbus.ModbusBindingConstants;
+import org.eclipse.smarthome.core.types.State;
+import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusReadConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
@@ -31,7 +39,6 @@ import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ReadCallback;
 import org.openhab.io.transport.modbus.RegisterArray;
-import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +51,7 @@ import org.slf4j.LoggerFactory;
 public class ModbusReadThingHandler extends BaseThingHandler implements ReadCallback {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadThingHandler.class);
-    private ChannelUID stringChannelUid;
     private ModbusReadConfiguration config;
-    private ModbusSlaveEndpoint endpoint;
 
     public ModbusReadThingHandler(Thing thing) {
         super(thing);
@@ -172,76 +177,175 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
         validateConfiguration();
     }
 
+    private boolean containsOnOff(List<Class<? extends State>> channelAcceptedDataTypes) {
+        return channelAcceptedDataTypes.stream().anyMatch(clz -> {
+            return clz.equals(OnOffType.class);
+        });
+    }
+
+    private boolean containsOpenClosed(List<Class<? extends State>> acceptedDataTypes) {
+        return acceptedDataTypes.stream().anyMatch(clz -> {
+            return clz.equals(OpenClosedType.class);
+        });
+    }
+
     @Override
     public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
-        DecimalType state;
+        DecimalType numericState;
+        Transformation transformation;
+        List<Channel> linkedChannels;
+        String trigger;
+        Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
         synchronized (this) {
+            trigger = config.getTrigger();
             if (getThing().getStatus() != ThingStatus.ONLINE) {
                 return;
             }
-            state = ModbusBitUtilities.extractStateFromRegisters(registers, config.getStart(), config.getValueType());
-            // config.getTrigger()
-            // config.getTransform()
+            numericState = ModbusBitUtilities.extractStateFromRegisters(registers, config.getStart(),
+                    config.getValueType());
 
-            // CHANNEL_SWITCH
-            // CHANNEL_CONTACT
-            // CHANNEL_DATETIME
-            // CHANNEL_DIMMER
-            // CHANNEL_NUMBER
-            // CHANNEL_STRING
-            // CHANNEL_ROLLERSHUTTER
-            //
-            Stream<Channel> linkedChannels = getThing().getChannels().stream()
-                    .filter(channel -> isLinked(channel.getUID().getId()));
-            linkedChannels.forEach(channel -> {
-
-                switch (channel.getAcceptedItemType()) {
-                    case ModbusBindingConstants.CHANNEL_SWITCH:
-                        break;
-                    case ModbusBindingConstants.CHANNEL_CONTACT:
-                        break;
-                    case ModbusBindingConstants.CHANNEL_DATETIME:
-                        // this.updateState(channelId, new DateTimeType(value));
-                        break;
-                    case ModbusBindingConstants.CHANNEL_DIMMER:
-                        // this.updateState(channelId, new DateTimeType(value));
-                        break;
-                    case ModbusBindingConstants.CHANNEL_NUMBER:
-                        // this.updateState(channelId, new DateTimeType(value));
-                        break;
-                    case ModbusBindingConstants.CHANNEL_STRING:
-                        // this.updateState(channelId, new DateTimeType(value));
-                        break;
-                    case ModbusBindingConstants.CHANNEL_ROLLERSHUTTER:
-                        // this.updateState(channelId, new DateTimeType(value));
-                        break;
-                    default:
-                        logger.trace("Type '{}' for channel '{}' not implemented", channel.getAcceptedItemType(),
-                                channel.getUID().getId());
-                }
-            });
-
-            updateState(CHANNEL_STRING, state);
+            transformation = new Transformation(config.getTransform());
+            linkedChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
+                    .collect(Collectors.toList());
+            channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized(linkedChannels);
         }
 
+        linkedChannels.forEach(channel -> {
+            List<Class<? extends State>> acceptedDataTypes = channelAcceptedDataTypes.get(channel.getUID());
+            if (acceptedDataTypes == null) {
+                throw new IllegalStateException();
+            }
+            boolean boolValue = !numericState.equals(DecimalType.ZERO);
+            State boolLikeState;
+            if (containsOnOff(acceptedDataTypes)) {
+                boolLikeState = boolValue ? OnOffType.ON : OnOffType.OFF;
+            } else if (containsOpenClosed(acceptedDataTypes)) {
+                boolLikeState = boolValue ? OpenClosedType.OPEN : OpenClosedType.CLOSED;
+            } else {
+                boolLikeState = null;
+            }
+
+            if (trigger.equals("*")) {
+                // catch all
+            } else if (trigger.equalsIgnoreCase(numericState.toString())) {
+                // matches numeric state
+            } else if (boolLikeState != null && trigger.equalsIgnoreCase(boolLikeState.toString())) {
+                // Channel is bound to OnOff or OpenClosed type of item, and the trigger matches ON/OFF, OPEN/CLOSED
+            } else {
+                // no match, continue to next channel
+                return;
+            }
+
+            // Note: different from modbus 1.x where numericState was converted to item state before transformation
+            // transformation.
+            State transformedState;
+            if (transformation == null || transformation.isIdentityTransform()) {
+                if (boolLikeState != null) {
+                    transformedState = boolLikeState;
+                } else {
+                    transformedState = numericState;
+                }
+            } else {
+                transformedState = transformation.transformState(bundleContext, acceptedDataTypes, numericState);
+            }
+
+            if (transformedState != null) {
+                setState(channel.getUID(), transformedState);
+            }
+        });
+        // TODO: lastUpdated channel
+        // TODO: lastError channel
     }
 
     @Override
     public synchronized void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
+        boolean boolValue;
+        State numericState;
+        Transformation transformation;
+        List<Channel> linkedChannels;
+        String trigger;
+        Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
         synchronized (this) {
+            trigger = config.getTrigger();
             if (getThing().getStatus() != ThingStatus.ONLINE) {
                 return;
             }
+            boolValue = coils.getBit(config.getStart());
+            numericState = boolValue ? new DecimalType(BigDecimal.ONE) : DecimalType.ZERO;
+
+            transformation = new Transformation(config.getTransform());
+            linkedChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
+                    .collect(Collectors.toList());
+            channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized(linkedChannels);
         }
+
+        linkedChannels.forEach(channel -> {
+            List<Class<? extends State>> acceptedDataTypes = channelAcceptedDataTypes.get(channel.getUID());
+            if (acceptedDataTypes == null) {
+                throw new IllegalStateException();
+            }
+            State boolLikeState;
+            if (containsOnOff(acceptedDataTypes)) {
+                boolLikeState = boolValue ? OnOffType.ON : OnOffType.OFF;
+            } else if (containsOpenClosed(acceptedDataTypes)) {
+                boolLikeState = boolValue ? OpenClosedType.OPEN : OpenClosedType.CLOSED;
+            } else {
+                boolLikeState = null;
+            }
+
+            if (trigger.equals("*")) {
+                // catch all
+            } else if (trigger.equalsIgnoreCase(numericState.toString())) {
+                // matches numeric (0/1) state
+            } else if (boolLikeState != null && trigger.equalsIgnoreCase(boolLikeState.toString())) {
+                // Channel is bound to OnOff or OpenClosed type of item, and the trigger matches ON/OFF, OPEN/CLOSED
+            } else {
+                // no match, continue to next channel
+                return;
+            }
+
+            // Note: different from modbus 1.x where numericState was converted to item state before transformation
+            // transformation.
+            State transformedState;
+            if (transformation == null || transformation.isIdentityTransform()) {
+                if (boolLikeState != null) {
+                    transformedState = boolLikeState;
+                } else {
+                    transformedState = numericState;
+                }
+            } else {
+                transformedState = transformation.transformState(bundleContext, acceptedDataTypes, numericState);
+            }
+
+            if (transformedState != null) {
+                setState(channel.getUID(), transformedState);
+            }
+        });
     }
 
     @Override
     public synchronized void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
-        synchronized (this) {
-            if (getThing().getStatus() != ThingStatus.ONLINE) {
-                return;
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+        // TODO: do we want to post undefined etc?
+    }
+
+    private void setState(ChannelUID uid, State state) {
+        // Update channel
+        updateState(uid, state);
+        // Update bridge?
+    }
+
+    private Map<ChannelUID, List<Class<? extends State>>> getLinkedChannelDataTypesUnsynchronized(
+            List<Channel> linkedChannels) {
+        return linkedChannels.stream().collect(Collectors.toMap(channel -> channel.getUID(), channel -> {
+            Optional<Item> item = linkRegistry.getLinkedItems(channel.getUID()).stream().findFirst();
+            if (!item.isPresent()) {
+                return null;
             }
-        }
+
+            List<Class<? extends State>> acceptedDataTypes = item.get().getAcceptedDataTypes();
+            return acceptedDataTypes;
+        }));
     }
 
 }

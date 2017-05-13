@@ -9,10 +9,14 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
+import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -62,14 +66,30 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got registers: {}", registers);
         // 1. update readers
+        getThing().getThings().stream().map(thing -> thing.getHandler())
+                .filter(handler -> handler != null && handler instanceof ReadCallback)
+                .map(handler -> (ReadCallback) handler)
+                .forEach(handler -> handler.internalUpdateItem(request, registers));
+
         // 2. update channels based on readers
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
+    public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray bits) {
         // TODO Auto-generated method stub
-        logger.info("Read write thing handler got coils: {}", coils);
+        logger.info("Read write thing handler got bits: {}", bits);
         // 1. update readers
+        List<ReadCallback> callbacks = getThing().getThings().stream().map(thing -> thing.getHandler())
+                .filter(handler -> handler != null && handler instanceof ReadCallback)
+                .map(handler -> (ReadCallback) handler).collect(Collectors.toList());
+        callbacks.stream().forEach(callback -> {
+            callback.internalUpdateItem(request, bits);
+            ThingHandler handler = (ThingHandler) callback;
+            handler.getThing().getChannels().stream().forEach(channel -> {
+                // channel.up
+            });
+        });
+
         // 2. update channels based on readers
     }
 
