@@ -7,15 +7,21 @@ Bundle-Version: 2.1.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
 Import-Package: 
+ org.apache.commons.lang;version="2.6.0",
+ org.apache.commons.lang.builder;version="2.6.0",
  org.eclipse.smarthome.config.core,
+ org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.thing,
  org.eclipse.smarthome.core.thing.binding,
  org.eclipse.smarthome.core.thing.binding.builder,
+ org.eclipse.smarthome.core.thing.link,
  org.eclipse.smarthome.core.thing.type,
+ org.eclipse.smarthome.core.transform,
  org.eclipse.smarthome.core.types,
  org.openhab.io.transport.modbus,
  org.openhab.io.transport.modbus.endpoint,
+ org.osgi.framework;version="1.8.0",
  org.slf4j
 Service-Component: OSGI-INF/*.xml
 Export-Package: org.openhab.binding.modbus,
