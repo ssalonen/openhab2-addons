@@ -53,10 +53,9 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
     public void initialize() {
         // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.ONLINE);
-
         this.config = getConfigAs(ModbusTcpConfiguration.class);
         endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
+        updateStatus(ThingStatus.ONLINE);
     }
 
     @Override

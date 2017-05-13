@@ -2,14 +2,13 @@ package org.openhab.io.transport.modbus;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Optional;
 
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.types.Command;
-
-import net.wimpi.modbus.procimg.InputRegister;
 
 public class ModbusBitUtilities {
     static final public String VALUE_TYPE_BIT = "bit";
@@ -23,6 +22,13 @@ public class ModbusBitUtilities {
     static final public String VALUE_TYPE_INT32_SWAP = "int32_swap";
     static final public String VALUE_TYPE_UINT32_SWAP = "uint32_swap";
     static final public String VALUE_TYPE_FLOAT32_SWAP = "float32_swap";
+
+    private static String[] VALUE_TYPE_8BIT = new String[] { VALUE_TYPE_INT8, VALUE_TYPE_UINT8 };
+
+    private static String[] VALUE_TYPE_16BIT = new String[] { VALUE_TYPE_INT16, VALUE_TYPE_UINT16 };
+
+    private static String[] VALUE_TYPE_32BIT = new String[] { VALUE_TYPE_FLOAT32, VALUE_TYPE_INT32, VALUE_TYPE_UINT32,
+            VALUE_TYPE_INT32_SWAP, VALUE_TYPE_UINT32_SWAP, VALUE_TYPE_FLOAT32_SWAP };
 
     /**
      * Read data from registers and convert the result to DecimalType
@@ -47,15 +53,21 @@ public class ModbusBitUtilities {
      * UINT16:
      * - same as INT16 except values are interpreted as unsigned integers
      * INT32:
-     * - registers (2 * index) and ( 2 *index + 1) are interpreted as signed 32bit integer.
+     * - registers (index) and (index + 1) are interpreted as signed 32bit integer.
      * - it assumed that the first register contains the most significant 16 bits
      * - it is assumed that each register is encoded in most significant bit first order
+     * INT32_SWAP:
+     * - Same as INT32 but registers swapped
      * UINT32:
      * - same as UINT32 except values are interpreted as unsigned integers
+     * UINT32_SWAP:
+     * - Same as UINT32 but registers swapped
      * FLOAT32:
-     * - registers (2 * index) and ( 2 *index + 1) are interpreted as signed 32bit floating point number.
+     * - registers (index) and (index + 1) are interpreted as signed 32bit floating point number.
      * - it assumed that the first register contains the most significant 16 bits
      * - it is assumed that each register is encoded in most significant bit first order
+     * FLOAT32_SWAP:
+     * - Same as FLOAT32 but registers swapped
      *
      * @param registers
      *            list of registers, each register represent 16bit of data
@@ -68,53 +80,53 @@ public class ModbusBitUtilities {
      * @throws IndexOutOfBoundsException when <tt>index</tt> is out of bounds of registers
      *
      */
-    public static DecimalType extractStateFromRegisters(InputRegister[] registers, int index, String type) {
+    public static DecimalType extractStateFromRegisters(RegisterArray registers, int index, String type) {
         if (type.equals(VALUE_TYPE_BIT)) {
-            return new DecimalType((registers[index / 16].toUnsignedShort() >> (index % 16)) & 1);
+            return new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1);
         } else if (type.equals(VALUE_TYPE_INT8)) {
-            return new DecimalType(registers[index / 2].toBytes()[1 - (index % 2)]);
+            return new DecimalType(registers.getRegister(index / 2).getBytes()[1 - (index % 2)]);
         } else if (type.equals(VALUE_TYPE_UINT8)) {
-            return new DecimalType((registers[index / 2].toUnsignedShort() >> (8 * (index % 2))) & 0xff);
+            return new DecimalType((registers.getRegister(index / 2).toUnsignedShort() >> (8 * (index % 2))) & 0xff);
         } else if (type.equals(VALUE_TYPE_INT16)) {
             ByteBuffer buff = ByteBuffer.allocate(2);
-            buff.put(registers[index].toBytes());
+            buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getShort(0));
         } else if (type.equals(VALUE_TYPE_UINT16)) {
-            return new DecimalType(registers[index].toUnsignedShort());
+            return new DecimalType(registers.getRegister(index).toUnsignedShort());
         } else if (type.equals(VALUE_TYPE_INT32)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers[index * 2 + 0].toBytes());
-            buff.put(registers[index * 2 + 1].toBytes());
+            buff.put(registers.getRegister(index).getBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
         } else if (type.equals(VALUE_TYPE_UINT32)) {
             ByteBuffer buff = ByteBuffer.allocate(8);
             buff.position(4);
-            buff.put(registers[index * 2 + 0].toBytes());
-            buff.put(registers[index * 2 + 1].toBytes());
+            buff.put(registers.getRegister(index).getBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
         } else if (type.equals(VALUE_TYPE_FLOAT32)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers[index * 2 + 0].toBytes());
-            buff.put(registers[index * 2 + 1].toBytes());
+            buff.put(registers.getRegister(index).getBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
         } else if (type.equals(VALUE_TYPE_INT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers[index * 2 + 1].toBytes());
-            buff.put(registers[index * 2 + 0].toBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
+            buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
         } else if (type.equals(VALUE_TYPE_UINT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(8);
             buff.position(4);
-            buff.put(registers[index * 2 + 1].toBytes());
-            buff.put(registers[index * 2 + 0].toBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
+            buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
         } else if (type.equals(VALUE_TYPE_FLOAT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers[index * 2 + 1].toBytes());
-            buff.put(registers[index * 2 + 0].toBytes());
+            buff.put(registers.getRegister(index + 1).getBytes());
+            buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
         } else {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(type);
         }
     }
 
@@ -142,6 +154,20 @@ public class ModbusBitUtilities {
             return Optional.of(!command.equals(DecimalType.ZERO));
         }
         return Optional.empty();
+    }
+
+    public static int getBitCount(String valueType) {
+        if (Arrays.asList(VALUE_TYPE_32BIT).contains(valueType)) {
+            return 32;
+        } else if (Arrays.asList(VALUE_TYPE_16BIT).contains(valueType)) {
+            return 16;
+        } else if (Arrays.asList(VALUE_TYPE_8BIT).contains(valueType)) {
+            return 8;
+        } else if ("bit".equals(VALUE_TYPE_BIT)) {
+            return 1;
+        } else {
+            throw new IllegalArgumentException(valueType);
+        }
     }
 
 }

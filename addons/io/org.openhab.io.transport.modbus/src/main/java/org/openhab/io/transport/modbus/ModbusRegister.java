@@ -11,4 +11,12 @@ public interface ModbusRegister {
      * @return the value as <tt>int</tt>.
      */
     public int getValue();
+
+    /**
+     * Returns the content of this <tt>Register</tt> as
+     * unsigned 16-bit value (unsigned short).
+     *
+     * @return the content as unsigned short (<tt>int</tt>).
+     */
+    public int toUnsignedShort();
 }
