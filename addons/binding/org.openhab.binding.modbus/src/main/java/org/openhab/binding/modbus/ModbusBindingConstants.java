@@ -32,8 +32,12 @@ public class ModbusBindingConstants {
 
     // List of all Channel ids
     public static final String CHANNEL_SWITCH = "switch";
+    public static final String CHANNEL_CONTACT = "contact";
+    public static final String CHANNEL_DATETIME = "datetime";
+    public static final String CHANNEL_DIMMER = "dimmer";
     public static final String CHANNEL_NUMBER = "number";
     public static final String CHANNEL_STRING = "string";
+    public static final String CHANNEL_ROLLERSHUTTER = "rollershutter";
 
     public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
     static {

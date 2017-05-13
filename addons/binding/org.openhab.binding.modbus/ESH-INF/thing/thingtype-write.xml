@@ -45,14 +45,27 @@
          value is ignored.</description>
 				<default>default</default>
 			</parameter>
-			<parameter name="valueType" type="text" required="true">
-				<label>Value type</label>
-				<description>How data is serialized to modbus</description>
-				<options>
-					<option value="int32">32bit integer (0/1). Only applicable to registers.</option>
-					<option value="int16">16bit integer (0/1). Only applicable to registers.</option>
-				</options>
-			</parameter>
+            <parameter name="valueType" type="text" required="true">
+                <label>Value type</label>
+                <description>How data is read from modbus. Only applicable to registers</description>
+                <options>
+                    <option value="float32">32bit floating point</option>
+                    <option value="float32_swap">32bit floating point, 16bit words swapped</option>
+                    
+                    <option value="int32">32bit signed integer</option>
+                    <option value="uint32">32bit unsigned integer</option>
+                    <option value="int32_swap">32bit signed integer, 16bit words swapped</option>
+                    <option value="uint32_swap">32bit unsigned integer, 16bit words swapped</option>
+                    
+                    <option value="int16">16bit signed integer</option>
+                    <option value="uint16">16bit unsigned integer</option>
+                    
+                    <option value="int8">8bit signed integer</option>
+                    <option value="uint8">8bit unsigned integer</option>
+                    
+                    <option value="bit">individual bit</option>
+                </options>
+            </parameter>
 		</config-description>
 	</thing-type>
 

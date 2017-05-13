@@ -12,20 +12,25 @@ public class RegisterArrayImpl implements RegisterArray {
 
     private class RegisterReference implements ModbusRegister {
 
-        private int index;
+        private InputRegister wrappedRegister;
 
         public RegisterReference(int index) {
-            this.index = index;
+            this.wrappedRegister = wrapped[index];
         }
 
         @Override
         public byte[] getBytes() {
-            return wrapped[index].toBytes();
+            return wrappedRegister.toBytes();
         }
 
         @Override
         public int getValue() {
-            return wrapped[index].getValue();
+            return wrappedRegister.getValue();
+        }
+
+        @Override
+        public int toUnsignedShort() {
+            return wrappedRegister.toUnsignedShort();
         }
 
     }

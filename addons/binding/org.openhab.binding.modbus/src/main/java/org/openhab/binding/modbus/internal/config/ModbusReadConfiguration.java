@@ -5,7 +5,7 @@ public class ModbusReadConfiguration {
     private String trigger;
     private String transform;
     private String valueType;
-    private String postReadErrorsAsUndefined;
+    private boolean postReadErrorsAsUndefined;
 
     public int getStart() {
         return start;
@@ -39,11 +39,11 @@ public class ModbusReadConfiguration {
         this.valueType = valueType;
     }
 
-    public String getPostReadErrorsAsUndefined() {
+    public boolean getPostReadErrorsAsUndefined() {
         return postReadErrorsAsUndefined;
     }
 
-    public void setPostReadErrorsAsUndefined(String postReadErrorsAsUndefined) {
+    public void setPostReadErrorsAsUndefined(boolean postReadErrorsAsUndefined) {
         this.postReadErrorsAsUndefined = postReadErrorsAsUndefined;
     }
 
