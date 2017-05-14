@@ -8,6 +8,7 @@
 package org.openhab.binding.modbus.handler;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,6 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
     private volatile Transformation transformation;
     private volatile String trigger;
     private volatile List<Channel> linkedChannels;
-    private volatile Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
 
     public ModbusReadThingHandler(Thing thing) {
         super(thing);
@@ -84,7 +84,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
 
         linkedChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
                 .collect(Collectors.toList());
-        channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized(linkedChannels);
+
         validateConfiguration();
     }
 
@@ -193,9 +193,11 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
     }
 
     @Override
-    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
+    public synchronized void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
         super.bridgeStatusChanged(bridgeStatusInfo);
-        validateConfiguration();
+        if (thingIsInitialized()) {
+            validateConfiguration();
+        }
     }
 
     private boolean containsOnOff(List<Class<? extends State>> channelAcceptedDataTypes) {
@@ -212,16 +214,18 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
 
     @Override
     public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+        boolean boolValue;
         DecimalType numericState;
+        Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
         synchronized (this) {
             if (getThing().getStatus() != ThingStatus.ONLINE) {
                 return;
             }
             numericState = ModbusBitUtilities.extractStateFromRegisters(registers, config.getStart(),
                     config.getValueType());
+            boolValue = !numericState.equals(DecimalType.ZERO);
+            channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized();
         }
-
-        boolean boolValue = !numericState.equals(DecimalType.ZERO);
         Map<ChannelUID, State> state = processUpdatedValue(numericState, transformation, linkedChannels, trigger,
                 channelAcceptedDataTypes, boolValue);
         synchronized (lastStateLock) {
@@ -235,12 +239,14 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
     public synchronized void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
         boolean boolValue;
         DecimalType numericState;
+        Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
         synchronized (this) {
             if (getThing().getStatus() != ThingStatus.ONLINE) {
                 return;
             }
             boolValue = coils.getBit(config.getStart());
             numericState = boolValue ? new DecimalType(BigDecimal.ONE) : DecimalType.ZERO;
+            channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized();
         }
 
         Map<ChannelUID, State> state = processUpdatedValue(numericState, transformation, linkedChannels, trigger,
@@ -270,9 +276,11 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
             Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes, boolean boolValue) {
         Map<ChannelUID, State> states = new HashMap<>();
         linkedChannels.forEach(channel -> {
-            List<Class<? extends State>> acceptedDataTypes = channelAcceptedDataTypes.get(channel.getUID());
-            if (acceptedDataTypes == null) {
-                throw new IllegalStateException();
+            ChannelUID channelUID = channel.getUID();
+            List<Class<? extends State>> acceptedDataTypes = channelAcceptedDataTypes.get(channelUID);
+            if (acceptedDataTypes.isEmpty()) {
+                // Channel is not linked -- skip
+                return;
             }
 
             State boolLikeState;
@@ -318,12 +326,11 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
         return states;
     }
 
-    private Map<ChannelUID, List<Class<? extends State>>> getLinkedChannelDataTypesUnsynchronized(
-            List<Channel> linkedChannels) {
+    private Map<ChannelUID, List<Class<? extends State>>> getLinkedChannelDataTypesUnsynchronized() {
         return linkedChannels.stream().collect(Collectors.toMap(channel -> channel.getUID(), channel -> {
             Optional<Item> item = linkRegistry.getLinkedItems(channel.getUID()).stream().findFirst();
             if (!item.isPresent()) {
-                return null;
+                return Collections.emptyList();
             }
 
             List<Class<? extends State>> acceptedDataTypes = item.get().getAcceptedDataTypes();
