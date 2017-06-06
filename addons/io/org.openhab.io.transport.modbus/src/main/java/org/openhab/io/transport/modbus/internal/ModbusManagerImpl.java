@@ -18,7 +18,6 @@ import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.SwallowedExceptionListener;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
-import org.openhab.binding.modbus.internal.pooling.ModbusSlaveConnectionFactoryImpl;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
@@ -37,6 +36,7 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpointVisitor;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusUDPSlaveEndpoint;
+import org.openhab.io.transport.modbus.internal.pooling.ModbusSlaveConnectionFactoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
