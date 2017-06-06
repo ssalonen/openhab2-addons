@@ -9,7 +9,7 @@ public interface ModbusManager {
         // metadata, e.g. last polled?
         ModbusSlaveEndpoint getEndpoint();
 
-        ModbusReadRequestBlueprint getMessage();
+        ModbusReadRequestBlueprint getRequest();
 
         ModbusReadCallback getCallback();
     }
@@ -29,7 +29,8 @@ public interface ModbusManager {
 
     public boolean unregisterRegularPoll(PollTask task);
 
-    public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint message, ModbusWriteCallback callback);
+    public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request,
+            ModbusWriteCallback callback);
 
     /**
      * Configure general connection settings with a given endpoint

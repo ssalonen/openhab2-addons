@@ -77,13 +77,13 @@ public class ModbusManagerImpl implements ModbusManager {
         }
 
         private ModbusSlaveEndpoint endpoint;
-        private ModbusReadRequestBlueprint message;
+        private ModbusReadRequestBlueprint request;
         private ModbusReadCallback callback;
 
-        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint message,
+        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint request,
                 ModbusReadCallback callback) {
             this.endpoint = endpoint;
-            this.message = message;
+            this.request = request;
             this.callback = callback;
         }
 
@@ -99,18 +99,18 @@ public class ModbusManagerImpl implements ModbusManager {
                 return false;
             }
             PollTaskImpl rhs = (PollTaskImpl) obj;
-            return new EqualsBuilder().append(endpoint, rhs.endpoint).append(message, rhs.message)
+            return new EqualsBuilder().append(endpoint, rhs.endpoint).append(request, rhs.request)
                     .append(callback, rhs.callback).isEquals();
         }
 
         @Override
         public int hashCode() {
-            return new HashCodeBuilder(1541, 81).append(endpoint).append(message).append(callback).toHashCode();
+            return new HashCodeBuilder(1541, 81).append(endpoint).append(request).append(callback).toHashCode();
         }
 
         @Override
         public String toString() {
-            return new ToStringBuilder(this, toStringStyle).append("endpoint", endpoint).append("message", message)
+            return new ToStringBuilder(this, toStringStyle).append("endpoint", endpoint).append("message", request)
                     .append("callback", callback).toString();
         }
 
@@ -120,8 +120,8 @@ public class ModbusManagerImpl implements ModbusManager {
         }
 
         @Override
-        public ModbusReadRequestBlueprint getMessage() {
-            return message;
+        public ModbusReadRequestBlueprint getRequest() {
+            return request;
         }
 
         @Override
@@ -255,8 +255,7 @@ public class ModbusManagerImpl implements ModbusManager {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
                 callback.onBits(message, new BitArrayImpl(((ReadCoilsResponse) response).getCoils()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
-                callback.onBits(message,
-                        new BitArrayImpl(((ReadInputDiscretesResponse) response).getDiscretes()));
+                callback.onBits(message, new BitArrayImpl(((ReadInputDiscretesResponse) response).getDiscretes()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
                 callback.onRegisters(message,
                         new RegisterArrayImpl(((ReadMultipleRegistersResponse) response).getRegisters()));
@@ -449,23 +448,23 @@ public class ModbusManagerImpl implements ModbusManager {
 
     public void executeOneTimePoll(PollTask task, boolean manual) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
-        ModbusReadRequestBlueprint message = task.getMessage();
+        ModbusReadRequestBlueprint request = task.getRequest();
         ModbusReadCallback callback = task.getCallback();
 
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint); // might take a while
 
         try {
             if (!connection.isPresent()) {
-                logger.warn("Not connected to endpoint {} -- aborting request {}", endpoint, message);
+                logger.warn("Not connected to endpoint {} -- aborting request {}", endpoint, request);
                 if (!manual) {
                     verifyTaskIsRegistered(task);
                 }
-                callback.onError(message, new ModbusConnectionException(endpoint));
+                callback.onError(request, new ModbusConnectionException(endpoint));
             }
 
             ModbusTransaction transaction = createTransactionForEndpoint(endpoint, connection);
-            ModbusRequest request = createRequest(message);
-            transaction.setRequest(request);
+            ModbusRequest libRequest = createRequest(request);
+            transaction.setRequest(libRequest);
             if (!manual) {
                 verifyTaskIsRegistered(task);
             }
@@ -483,7 +482,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 if (!manual) {
                     verifyTaskIsRegistered(task);
                 }
-                callback.onError(message, e);
+                callback.onError(request, e);
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for read (FC={}, transaction ID={}) {}", response.getFunctionCode(),
@@ -497,9 +496,9 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.onError(message, new ModbusUnexpectedTransactionIdException());
+                callback.onError(request, new ModbusUnexpectedTransactionIdException());
             } else {
-                invokeCallbackWithResponse(message, callback, response);
+                invokeCallbackWithResponse(request, callback, response);
             }
         } catch (PollTaskUnregistered e) {
             logger.warn("Poll task was unregistered -- not executing/proceeding with the poll", e);
