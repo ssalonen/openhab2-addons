@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
@@ -158,8 +159,17 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
         // public static final String CHANNEL_LAST_SUCCESS = "lastSuccess";
         // public static final String CHANNEL_LAST_ERROR = "lastError";
         //
+        forEachChildWriter(handler -> {
+            Channel childChannel = handler.getThing().getChannel(channelUID.getId());
+            if (childChannel == null) {
+                logger.warn("no channel {}", channelUID);
+            } else {
+                handler.handleCommand(childChannel.getUID(), command);
+            }
+        });
 
         // FIXME: commands should be forwarded to writers, and not handled in readerwrite thing
+        // move the below code to writers
 
         Bridge pollerBridge = getBridge();
         if (pollerBridge == null) {
@@ -215,14 +225,14 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         logger.debug("Read write thing handler got registers: {}", registers);
         updateStatus(ThingStatus.ONLINE);
-        propagateToChildReaders(reader -> reader.onRegisters(request, registers));
+        forEachChildReader(reader -> reader.onRegisters(request, registers));
     }
 
     @Override
     public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
         logger.debug("Read write thing handler got bits: {}", bits);
         updateStatus(ThingStatus.ONLINE);
-        propagateToChildReaders(reader -> reader.onBits(request, bits));
+        forEachChildReader(reader -> reader.onBits(request, bits));
     }
 
     @Override
@@ -231,7 +241,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
                 error.getMessage());
         logger.debug(msg, error);
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-        propagateToChildReaders(reader -> reader.onError(request, error));
+        forEachChildReader(reader -> reader.onError(request, error));
     }
 
     @Override
@@ -248,7 +258,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
         updateStatus(ThingStatus.ONLINE);
     }
 
-    private void propagateToChildReaders(Consumer<ModbusReadThingHandler> consumer) {
+    private void forEachChildReader(Consumer<ModbusReadThingHandler> consumer) {
         List<ModbusReadThingHandler> readers = getReaders();
         // Call each readers callback, and update this bridge's items (matching by channel id)
         readers.stream().forEach(reader -> {
@@ -257,6 +267,14 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
             optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
                 updateState(uid.getId(), state);
             }));
+        });
+    }
+
+    private void forEachChildWriter(Consumer<ModbusWriteThingHandler> consumer) {
+        List<ModbusWriteThingHandler> readers = getWriters();
+        // Call each readers callback, and update this bridge's items (matching by channel id)
+        readers.stream().forEach(reader -> {
+            consumer.accept(reader);
         });
     }
 
