@@ -132,16 +132,29 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
             return;
         }
 
-        int dataLength = pollTask.getMessage().getDataLength();
+        if (validateIndex(pollTask)) {
+            updateStatus(ThingStatus.ONLINE);
+        } else {
 
-        int bitCount;
+        }
+    }
+
+    private boolean validateIndex(PollTask pollTask) {
+        // bits represented by the value type, e.g. int32 -> 32
+        int valueTypeBitCount;
+        // bits represented by the function code. For registers this is 16, for coils and discrete inputs it is 1.
+        int functionObjectBitSize;
+        // textual name for the data element, e.g. register
+        // (for logging)
         String dataElement;
         if (pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
                 || pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-            bitCount = ModbusBitUtilities.getBitCount(config.getValueType());
+            valueTypeBitCount = ModbusBitUtilities.getBitCount(config.getValueType());
+            functionObjectBitSize = 16;
             dataElement = "register";
         } else {
-            bitCount = 1;
+            valueTypeBitCount = 1;
+            functionObjectBitSize = 1;
             if (pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
                 dataElement = "coil";
             } else {
@@ -149,30 +162,25 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
             }
         }
 
-        int firstIndex;
-        if (bitCount < 16) {
-            firstIndex = config.getStart() / 16;
+        int firstObjectIndex;
+        if (valueTypeBitCount < 16) {
+            firstObjectIndex = config.getStart() / functionObjectBitSize;
         } else {
-            firstIndex = config.getStart();
+            firstObjectIndex = config.getStart();
         }
-        int registerCount = Math.max(1, bitCount / 16);
-        int lastIndex = firstIndex + registerCount - 1;
-        int pollLength = pollTask.getMessage().getDataLength();
+        int objectCount = Math.max(1, valueTypeBitCount / functionObjectBitSize);
+        int lastObjectIndex = firstObjectIndex + objectCount - 1;
+        int pollObjectCount = pollTask.getMessage().getDataLength();
 
-        if (firstIndex >= dataLength || lastIndex >= dataLength) {
-            logger.error(
-                    "ReadThing {} with start={} and valueType={} would try to read from {}'th {} to {}'th {} which "
-                            + "is out of bounds with poller {} that reads only {} registers",
-                    getThing(), config.getStart(), config.getValueType(), firstIndex, dataElement, lastIndex,
-                    dataElement, poller, pollLength);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    String.format(
-                            "Out-of-bounds: would read %s elements with index (zero-indexed) %d to %d. Poller reads only %d %s elements which means that maximum index (zero-indexed) is %d",
-                            dataElement, firstIndex, lastIndex, pollLength, dataElement, pollLength));
-            return;
+        if (firstObjectIndex >= pollObjectCount || lastObjectIndex >= pollObjectCount) {
+            String errmsg = String.format(
+                    "Out-of-bounds: tried to read %s elements with index %d to %d (zero based index). Poller reads only %d %s elements which means that maximum index (zero-indexed) is %d",
+                    dataElement, firstObjectIndex, lastObjectIndex, pollObjectCount, dataElement, pollObjectCount);
+            logger.error("ReadThing {} is out of bounds: {}", getThing(), errmsg);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, errmsg);
+            return false;
         }
-
-        updateStatus(ThingStatus.ONLINE);
+        return true;
     }
 
     /**
