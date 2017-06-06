@@ -1,7 +1,8 @@
 package org.openhab.io.transport.modbus;
 
+import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdException;
+
 import net.wimpi.modbus.ModbusException;
-import net.wimpi.modbus.msg.ModbusResponse;
 
 public interface ModbusWriteCallback {
 
