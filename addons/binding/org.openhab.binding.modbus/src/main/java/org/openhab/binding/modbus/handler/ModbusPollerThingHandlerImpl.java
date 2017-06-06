@@ -23,9 +23,9 @@ import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.binding.modbus.internal.config.ModbusPollerConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
@@ -126,7 +126,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         }
 
         @Override
-        public ModbusReadRequestBlueprint getMessage() {
+        public ModbusReadRequestBlueprint getRequest() {
             return request;
         }
 

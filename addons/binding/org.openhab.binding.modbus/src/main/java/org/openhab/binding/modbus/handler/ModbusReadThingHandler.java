@@ -37,9 +37,9 @@ import org.openhab.binding.modbus.internal.config.ModbusReadConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,15 +147,15 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         // textual name for the data element, e.g. register
         // (for logging)
         String dataElement;
-        if (pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
-                || pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
+        if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
+                || pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
             valueTypeBitCount = ModbusBitUtilities.getBitCount(config.getValueType());
             functionObjectBitSize = 16;
             dataElement = "register";
         } else {
             valueTypeBitCount = 1;
             functionObjectBitSize = 1;
-            if (pollTask.getMessage().getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
+            if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
                 dataElement = "coil";
             } else {
                 dataElement = "discrete input";
@@ -170,7 +170,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         }
         int objectCount = Math.max(1, valueTypeBitCount / functionObjectBitSize);
         int lastObjectIndex = firstObjectIndex + objectCount - 1;
-        int pollObjectCount = pollTask.getMessage().getDataLength();
+        int pollObjectCount = pollTask.getRequest().getDataLength();
 
         if (firstObjectIndex >= pollObjectCount || lastObjectIndex >= pollObjectCount) {
             String errmsg = String.format(
