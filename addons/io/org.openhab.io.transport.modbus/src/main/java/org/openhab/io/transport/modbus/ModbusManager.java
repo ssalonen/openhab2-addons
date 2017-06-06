@@ -7,6 +7,15 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 public interface ModbusManager {
 
+    /**
+     * Poll task represents modbus read request
+     *
+     * Must be hashable. HashCode and equals should be defined such that no two poll tasks are registered that are
+     * equal.
+     *
+     * @author Sami Salonen
+     *
+     */
     public interface PollTask {
         /**
          * Gets endpoint associated with this poll task
@@ -30,6 +39,14 @@ public interface ModbusManager {
         ModbusReadCallback getCallback();
     }
 
+    /**
+     * Poll task represents modbus write request
+     *
+     * Unlike {@link PollTask}, this does not have to be hashable.
+     *
+     * @author Sami Salonen
+     *
+     */
     public interface WriteTask {
         /**
          * Gets endpoint associated with this write task

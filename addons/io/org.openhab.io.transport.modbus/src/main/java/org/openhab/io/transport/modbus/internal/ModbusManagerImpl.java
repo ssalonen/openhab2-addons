@@ -10,10 +10,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.SwallowedExceptionListener;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
@@ -67,68 +63,6 @@ import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
 public class ModbusManagerImpl implements ModbusManager {
-
-    public static class PollTaskImpl implements PollTask {
-
-        private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
-
-        static {
-            toStringStyle.setUseShortClassName(true);
-        }
-
-        private ModbusSlaveEndpoint endpoint;
-        private ModbusReadRequestBlueprint request;
-        private ModbusReadCallback callback;
-
-        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint request,
-                ModbusReadCallback callback) {
-            this.endpoint = endpoint;
-            this.request = request;
-            this.callback = callback;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (obj == this) {
-                return true;
-            }
-            if (obj.getClass() != getClass()) {
-                return false;
-            }
-            PollTaskImpl rhs = (PollTaskImpl) obj;
-            return new EqualsBuilder().append(endpoint, rhs.endpoint).append(request, rhs.request)
-                    .append(callback, rhs.callback).isEquals();
-        }
-
-        @Override
-        public int hashCode() {
-            return new HashCodeBuilder(1541, 81).append(endpoint).append(request).append(callback).toHashCode();
-        }
-
-        @Override
-        public String toString() {
-            return new ToStringBuilder(this, toStringStyle).append("endpoint", endpoint).append("message", request)
-                    .append("callback", callback).toString();
-        }
-
-        @Override
-        public ModbusSlaveEndpoint getEndpoint() {
-            return endpoint;
-        }
-
-        @Override
-        public ModbusReadRequestBlueprint getRequest() {
-            return request;
-        }
-
-        @Override
-        public ModbusReadCallback getCallback() {
-            return callback;
-        }
-    }
 
     private static class PollTaskUnregistered extends Exception {
         public PollTaskUnregistered(String msg) {
@@ -610,7 +544,7 @@ public class ModbusManagerImpl implements ModbusManager {
                         request, endpoint, connection);
                 callback.onError(request, new ModbusUnexpectedTransactionIdException());
             } else {
-                callback.onResponse(request, new ModbusResponseImpl(response));
+                callback.onWriteResponse(request, new ModbusResponseImpl(response));
             }
         } finally {
             returnConnection(endpoint, connection);

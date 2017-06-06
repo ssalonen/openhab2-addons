@@ -7,7 +7,7 @@
  */
 package org.openhab.binding.modbus.handler;
 
-import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
+import static org.openhab.binding.modbus.ModbusBindingConstants.*;
 
 import java.util.List;
 import java.util.Map;
@@ -15,16 +15,27 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
+import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
-import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
+import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusResponse;
+import org.openhab.io.transport.modbus.ModbusWriteCallback;
+import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
+import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +46,100 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ModbusReadCallback {
+public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
+        implements ModbusReadCallback, ModbusWriteCallback {
+
+    private static class SingleBitArray implements BitArray {
+
+        private boolean bit;
+
+        public SingleBitArray(boolean bit) {
+            this.bit = bit;
+        }
+
+        @Override
+        public boolean getBit(int index) {
+            if (index != 0) {
+                throw new IndexOutOfBoundsException();
+            }
+            return bit;
+        }
+
+        @Override
+        public int size() {
+            return 1;
+        }
+
+    }
+
+    private static class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilRequestBlueprint {
+        private int slaveId;
+        private int reference;
+        private BitArray bits;
+
+        public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data) {
+            super();
+            this.slaveId = slaveId;
+            this.reference = reference;
+            this.bits = new SingleBitArray(data);
+            ;
+        }
+
+        @Override
+        public int getUnitID() {
+            return slaveId;
+        }
+
+        @Override
+        public int getReference() {
+            return reference;
+        }
+
+        @Override
+        public ModbusWriteFunctionCode getFunctionCode() {
+            return ModbusWriteFunctionCode.WRITE_COIL;
+        }
+
+        @Override
+        public BitArray getCoils() {
+            return bits;
+        }
+    }
+
+    private static class WriteTaskImpl implements WriteTask {
+
+        private ModbusSlaveEndpoint endpoint;
+        private ModbusWriteRequestBlueprint request;
+        private ModbusWriteCallback callback;
+
+        public WriteTaskImpl(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request,
+                ModbusWriteCallback callback) {
+            super();
+            this.endpoint = endpoint;
+            this.request = request;
+            this.callback = callback;
+        }
+
+        @Override
+        public ModbusSlaveEndpoint getEndpoint() {
+            return endpoint;
+        }
+
+        @Override
+        public ModbusWriteRequestBlueprint getRequest() {
+            return request;
+        }
+
+        @Override
+        public ModbusWriteCallback getCallback() {
+            return callback;
+        }
+
+    }
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
-    private ChannelUID stringChannelUid;
     private ModbusSlaveEndpoint endpoint;
+    private volatile ModbusWriteConfiguration config;
 
     public ModbusReadWriteThingHandler(Bridge bridge) {
         super(bridge);
@@ -47,45 +147,108 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        if (channelUID.getId().equals(CHANNEL_STRING)) {
-            // TODO: handle command
+        //
+        // public static final String CHANNEL_SWITCH = "switch";
+        // public static final String CHANNEL_CONTACT = "contact";
+        // public static final String CHANNEL_DATETIME = "datetime";
+        // public static final String CHANNEL_DIMMER = "dimmer";
+        // public static final String CHANNEL_NUMBER = "number";
+        // public static final String CHANNEL_STRING = "string";
+        // public static final String CHANNEL_ROLLERSHUTTER = "rollershutter";
+        // public static final String CHANNEL_LAST_SUCCESS = "lastSuccess";
+        // public static final String CHANNEL_LAST_ERROR = "lastError";
+        //
 
-            // Note: if communication with thing fails for some reason,
-            // indicate that by setting the status with detail information
-            // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-            // "Could not control device at IP address x.x.x.x");
+        // FIXME: commands should be forwarded to writers, and not handled in readerwrite thing
+
+        Bridge pollerBridge = getBridge();
+        if (pollerBridge == null) {
+            logger.debug("ReadWriteThing '{}' has no poller bridge. Aborting writing of command '{}' to channel '{}'",
+                    getThing().getLabel(), command, channelUID);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
+            return;
+        }
+        ModbusPollerThingHandler pollerHandler = (ModbusPollerThingHandler) pollerBridge.getHandler();
+        ModbusEndpointThingHandler modbusEndpointThingHandler = pollerHandler.getEndpointThingHandler();
+        if (modbusEndpointThingHandler == null) {
+            logger.debug(
+                    "Poller ('{}') (of ReadWriteThing '{}') has no EndpointBridge. Aborting writing of command '{}' to channel '{}'",
+                    pollerBridge.getLabel(), getThing().getLabel(), command, channelUID);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Poller has no endpoint bridge");
+            return;
+        }
+        PollTask pollTask = pollerHandler.getPollTask();
+        ModbusSlaveEndpoint slaveEndpoint = modbusEndpointThingHandler.asSlaveEndpoint();
+
+        int slaveId = modbusEndpointThingHandler.getSlaveId();
+        ModbusManager manager = pollerHandler.getManagerRef().getManager();
+
+        if (config.getType().equals(WRITE_TYPE_COIL)) {
+            int reference = pollTask.getRequest().getReference() + config.getStart();
+            boolean data = true;
+            ModbusWriteCoilRequestBlueprintImpl request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference,
+                    data);
+            // manager.submitOneTimeWrite(task)
+        } else if (config.getType().equals(WRITE_TYPE_HOLDING)) {
+
+        } else {
+            // should not happen
+            throw new NotImplementedException();
+        }
+
+        // new ModbusW
+        if (channelUID.getId().equals(CHANNEL_SWITCH)) {
+            // manager.submitOneTimeWrite(task)
         }
     }
 
     @Override
-    public void initialize() {
-        // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
+    public synchronized void initialize() {
+        // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
+        updateStatus(ThingStatus.INITIALIZING);
+        config = getConfigAs(ModbusWriteConfiguration.class);
         updateStatus(ThingStatus.ONLINE);
     }
 
     @Override
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
-        // TODO Auto-generated method stub
-        logger.info("Read write thing handler got registers: {}", registers);
-        propagateToChildren(reader -> reader.onRegisters(request, registers));
+        logger.debug("Read write thing handler got registers: {}", registers);
+        updateStatus(ThingStatus.ONLINE);
+        propagateToChildReaders(reader -> reader.onRegisters(request, registers));
     }
 
     @Override
     public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
-        // TODO Auto-generated method stub
-        logger.info("Read write thing handler got bits: {}", bits);
-        propagateToChildren(reader -> reader.onBits(request, bits));
+        logger.debug("Read write thing handler got bits: {}", bits);
+        updateStatus(ThingStatus.ONLINE);
+        propagateToChildReaders(reader -> reader.onBits(request, bits));
     }
 
     @Override
     public void onError(ModbusReadRequestBlueprint request, Exception error) {
-        // TODO Auto-generated method stub
-        logger.info("Read write thing handler got error: {} {}", error.getClass().getName(), error.getMessage(), error);
-        propagateToChildren(reader -> reader.onError(request, error));
+        String msg = String.format("Read write thing handler got read error: {} {}", error.getClass().getName(),
+                error.getMessage());
+        logger.debug(msg, error);
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+        propagateToChildReaders(reader -> reader.onError(request, error));
     }
 
-    private void propagateToChildren(Consumer<ModbusReadThingHandler> consumer) {
+    @Override
+    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+        String msg = String.format("Read write thing handler got write error: %s %s", error.getClass().getName(),
+                error.getMessage(), error);
+        logger.debug(msg, error);
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+    }
+
+    @Override
+    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
+        logger.debug("Read write thing handler got write response: {}", response);
+        updateStatus(ThingStatus.ONLINE);
+    }
+
+    private void propagateToChildReaders(Consumer<ModbusReadThingHandler> consumer) {
         List<ModbusReadThingHandler> readers = getReaders();
         // Call each readers callback, and update this bridge's items (matching by channel id)
         readers.stream().forEach(reader -> {
@@ -106,6 +269,17 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         return getThing().getThings().stream().map(thing -> thing.getHandler())
                 .filter(handler -> handler != null && handler instanceof ModbusReadThingHandler)
                 .map(handler -> (ModbusReadThingHandler) handler).collect(Collectors.toList());
+    }
+
+    /**
+     * Get writers by inspecting this bridge's children things
+     *
+     * @return list of {@link ModbusWriteThingHandler}
+     */
+    private synchronized List<ModbusWriteThingHandler> getWriters() {
+        return getThing().getThings().stream().map(thing -> thing.getHandler())
+                .filter(handler -> handler != null && handler instanceof ModbusWriteThingHandler)
+                .map(handler -> (ModbusWriteThingHandler) handler).collect(Collectors.toList());
     }
 
     @Override

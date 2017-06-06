@@ -19,6 +19,9 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
+import org.openhab.io.transport.modbus.ModbusResponse;
+import org.openhab.io.transport.modbus.ModbusWriteCallback;
+import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusWriteThingHandler extends BaseThingHandler {
+public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusWriteCallback {
 
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private ChannelUID stringChannelUid;
@@ -111,6 +114,17 @@ public class ModbusWriteThingHandler extends BaseThingHandler {
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
         super.bridgeStatusChanged(bridgeStatusInfo);
         validateConfiguration();
+    }
+
+    @Override
+    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+        logger.error("Unsuccessful write: {} {}", error.getClass().getName(), error.getMessage());
+    }
+
+    @Override
+    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
+        // The binding does not respond in any way to sucessful writes except logging
+        logger.debug("Successful write, matching request {}", request);
     }
 
 }
