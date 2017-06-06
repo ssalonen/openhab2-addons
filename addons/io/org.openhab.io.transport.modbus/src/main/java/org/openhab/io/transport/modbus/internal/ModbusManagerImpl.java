@@ -20,16 +20,16 @@ import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprintVisitor;
-import org.openhab.io.transport.modbus.ModbusReadCallback;
-import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
@@ -80,7 +80,8 @@ public class ModbusManagerImpl implements ModbusManager {
         private ModbusReadRequestBlueprint message;
         private ModbusReadCallback callback;
 
-        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint message, ModbusReadCallback callback) {
+        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint message,
+                ModbusReadCallback callback) {
             this.endpoint = endpoint;
             this.message = message;
             this.callback = callback;
@@ -579,9 +580,9 @@ public class ModbusManagerImpl implements ModbusManager {
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
                 callback.internalUpdateWriteError(message, new ModbusUnexpectedTransactionIdException());
+            } else {
+                callback.internalUpdateResponse(message, new ModbusResponseImpl(response));
             }
-
-            callback.internalUpdateResponse(message, response);
         } finally {
             returnConnection(endpoint, connection);
         }
