@@ -1,6 +1,6 @@
 package org.openhab.io.transport.modbus;
 
-public interface RegisterArray {
+public interface ModbusRegisterArray {
     /**
      * Return register at the given index
      *

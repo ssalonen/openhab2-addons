@@ -25,8 +25,8 @@ import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
-import org.openhab.io.transport.modbus.ReadCallback;
-import org.openhab.io.transport.modbus.RegisterArray;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,16 +39,16 @@ import org.slf4j.LoggerFactory;
  */
 public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing implements ModbusPollerThingHandler {
 
-    private class ReadCallbackDelegator implements ReadCallback {
+    private class ReadCallbackDelegator implements ModbusReadCallback {
 
-        private void forEachAllChildCallbacks(Consumer<ReadCallback> callback) {
+        private void forEachAllChildCallbacks(Consumer<ModbusReadCallback> callback) {
             getThing().getThings().stream()
-                    .filter(thing -> thing.getHandler() != null && thing.getHandler() instanceof ReadCallback)
-                    .map(thing -> (ReadCallback) thing.getHandler()).forEach(callback);
+                    .filter(thing -> thing.getHandler() != null && thing.getHandler() instanceof ModbusReadCallback)
+                    .map(thing -> (ModbusReadCallback) thing.getHandler()).forEach(callback);
         }
 
         @Override
-        public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+        public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
             forEachAllChildCallbacks(callback -> callback.internalUpdateItem(request, registers));
         }
 
@@ -136,7 +136,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         }
 
         @Override
-        public ReadCallback getCallback() {
+        public ModbusReadCallback getCallback() {
             return callbackDelegator;
         }
     }
@@ -146,12 +146,12 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
     private volatile Exception lastResponseError;
     private volatile BitArray lastResponseCoils;
-    private volatile RegisterArray lastResponseRegisters;
+    private volatile ModbusRegisterArray lastResponseRegisters;
     private ModbusPollerConfiguration config;
     private PollTask pollTask;
     private ModbusManagerReference managerRef;
 
-    private ReadCallback callbackDelegator = new ReadCallbackDelegator();
+    private ModbusReadCallback callbackDelegator = new ReadCallbackDelegator();
 
     public ModbusPollerThingHandlerImpl(Bridge bridge, ModbusManagerReference managerRef) {
         super(bridge);

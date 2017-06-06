@@ -3,7 +3,7 @@ package org.openhab.io.transport.modbus;
 import net.wimpi.modbus.ModbusException;
 import net.wimpi.modbus.msg.ModbusResponse;
 
-public interface WriteCallback {
+public interface ModbusWriteCallback {
 
     /**
      * Posts update event to OpenHAB bus for all types of slaves when an error occurred

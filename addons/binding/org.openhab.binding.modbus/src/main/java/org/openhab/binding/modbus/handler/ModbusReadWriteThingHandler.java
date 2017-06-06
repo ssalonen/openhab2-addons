@@ -23,8 +23,8 @@ import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
-import org.openhab.io.transport.modbus.ReadCallback;
-import org.openhab.io.transport.modbus.RegisterArray;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ReadCallback {
+public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ModbusReadCallback {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
     private ChannelUID stringChannelUid;
@@ -65,7 +65,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+    public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got registers: {}", registers);
         propagateToChildren(reader -> reader.internalUpdateItem(request, registers));

@@ -11,7 +11,7 @@ public interface ModbusManager {
 
         ModbusReadRequestBlueprint getMessage();
 
-        ReadCallback getCallback();
+        ModbusReadCallback getCallback();
     }
 
     public void executeOneTimePoll(PollTask task);
@@ -29,7 +29,7 @@ public interface ModbusManager {
 
     public boolean unregisterRegularPoll(PollTask task);
 
-    public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint message, WriteCallback callback);
+    public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint message, ModbusWriteCallback callback);
 
     /**
      * Configure general connection settings with a given endpoint

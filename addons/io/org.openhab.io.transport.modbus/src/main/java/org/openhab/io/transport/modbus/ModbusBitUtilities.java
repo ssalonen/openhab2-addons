@@ -80,7 +80,7 @@ public class ModbusBitUtilities {
      * @throws IndexOutOfBoundsException when <tt>index</tt> is out of bounds of registers
      *
      */
-    public static DecimalType extractStateFromRegisters(RegisterArray registers, int index, String type) {
+    public static DecimalType extractStateFromRegisters(ModbusRegisterArray registers, int index, String type) {
         if (type.equals(VALUE_TYPE_BIT)) {
             return new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1);
         } else if (type.equals(VALUE_TYPE_INT8)) {
