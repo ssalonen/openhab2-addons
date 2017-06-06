@@ -436,27 +436,40 @@ public class ModbusManagerImpl implements ModbusManager {
     private void verifyTaskIsRegistered(PollTask task) throws PollTaskUnregistered {
         if (!this.scheduledPollTasks.containsKey(task)) {
             String msg = String.format("Poll task %s is unregistered", task);
-            logger.warn(msg);
+            logger.debug(msg);
             throw new PollTaskUnregistered(msg);
         }
     }
 
     @Override
-    public void executeOneTimePoll(PollTask task) {
-        executeOneTimePoll(task, true);
+    public ScheduledFuture<?> submitOneTimePoll(PollTask task) {
+        long scheduleTime = System.currentTimeMillis();
+        logger.debug("Scheduling one-off poll task {}", task);
+        ScheduledFuture<?> future = scheduledThreadPoolExecutor.schedule(() -> {
+            long millisInThreadPoolWaiting = System.currentTimeMillis() - scheduleTime;
+            logger.debug("Will now execute one-off poll task {}, waited in thread pool for {}", task,
+                    millisInThreadPoolWaiting);
+            executeOneTimePoll(task, true);
+        }, 0L, TimeUnit.MILLISECONDS);
+        return future;
     }
 
-    public void executeOneTimePoll(PollTask task, boolean manual) {
+    private void executeOneTimePoll(PollTask task, boolean oneOffTask) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusReadRequestBlueprint request = task.getRequest();
         ModbusReadCallback callback = task.getCallback();
 
+        logger.trace("Executing task {} (oneOff={})! Waiting for connection", task, oneOffTask);
+        long connectionBorrowStart = System.currentTimeMillis();
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint); // might take a while
+        logger.trace("Executing task {} (oneOff={})! Connection received in {} ms", task, oneOffTask,
+                System.currentTimeMillis() - connectionBorrowStart);
 
         try {
             if (!connection.isPresent()) {
                 logger.warn("Not connected to endpoint {} -- aborting request {}", endpoint, request);
-                if (!manual) {
+                if (!oneOffTask) {
+                    // Check poll task is still registered (this is all asynchronous)
                     verifyTaskIsRegistered(task);
                 }
                 callback.onError(request, new ModbusConnectionException(endpoint));
@@ -465,7 +478,8 @@ public class ModbusManagerImpl implements ModbusManager {
             ModbusTransaction transaction = createTransactionForEndpoint(endpoint, connection);
             ModbusRequest libRequest = createRequest(request);
             transaction.setRequest(libRequest);
-            if (!manual) {
+            if (!oneOffTask) {
+                // Check poll task is still registered (this is all asynchronous)
                 verifyTaskIsRegistered(task);
             }
 
@@ -479,7 +493,8 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                if (!manual) {
+                if (!oneOffTask) {
+                    // Check poll task is still registered (this is all asynchronous)
                     verifyTaskIsRegistered(task);
                 }
                 callback.onError(request, e);
@@ -488,7 +503,8 @@ public class ModbusManagerImpl implements ModbusManager {
             logger.trace("Response for read (FC={}, transaction ID={}) {}", response.getFunctionCode(),
                     response.getTransactionID(), response.getHexMessage());
 
-            if (!manual) {
+            if (!oneOffTask) {
+                // Check poll task is still registered (this is all asynchronous)
                 verifyTaskIsRegistered(task);
             }
 
@@ -519,7 +535,7 @@ public class ModbusManagerImpl implements ModbusManager {
     /**
      *
      * @return whether poll task was unregistered. Poll task is not unregistered in case of unexpected errors or
-     *         nonexisting poll task
+     *         non-existing poll task
      */
     @Override
     public boolean unregisterRegularPoll(PollTask task) {
@@ -552,14 +568,28 @@ public class ModbusManagerImpl implements ModbusManager {
     }
 
     @Override
-    public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint message,
-            ModbusWriteCallback callback) {
+    public ScheduledFuture<?> submitOneTimeWrite(WriteTask task) {
+        long scheduleTime = System.currentTimeMillis();
+        logger.debug("Scheduling one-off write task {}", task);
+        ScheduledFuture<?> future = scheduledThreadPoolExecutor.schedule(() -> {
+            long millisInThreadPoolWaiting = System.currentTimeMillis() - scheduleTime;
+            logger.debug("Will now execute one-off write task {}, waited in thread pool for {}", task,
+                    millisInThreadPoolWaiting);
+            executeOneTimeWrite(task);
+        }, 0L, TimeUnit.MILLISECONDS);
+        return future;
+    }
+
+    private void executeOneTimeWrite(WriteTask task) {
+        ModbusSlaveEndpoint endpoint = task.getEndpoint();
+        ModbusWriteRequestBlueprint request = task.getRequest();
+        ModbusWriteCallback callback = task.getCallback();
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint);
 
         try {
             ModbusTransaction transaction = createTransactionForEndpoint(endpoint, connection);
-            ModbusRequest request = createRequest(message);
-            transaction.setRequest(request);
+            ModbusRequest libRequest = createRequest(request);
+            transaction.setRequest(libRequest);
             try {
                 transaction.execute();
             } catch (ModbusException e) {
@@ -570,7 +600,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                callback.onError(message, e);
+                callback.onError(request, e);
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
@@ -578,9 +608,9 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.onError(message, new ModbusUnexpectedTransactionIdException());
+                callback.onError(request, new ModbusUnexpectedTransactionIdException());
             } else {
-                callback.onResponse(message, new ModbusResponseImpl(response));
+                callback.onResponse(request, new ModbusResponseImpl(response));
             }
         } finally {
             returnConnection(endpoint, connection);
