@@ -11,11 +11,16 @@ import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
 import java.util.function.Consumer;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang.builder.StandardToStringStyle;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
+import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
@@ -38,7 +43,21 @@ import org.slf4j.LoggerFactory;
  * @author Sami Salonen - Initial contribution
  */
 public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing implements ModbusPollerThingHandler {
+    private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
+    static {
+        toStringStyle.setUseShortClassName(true);
+    }
 
+    /**
+     * {@link ModbusReadCallback} that delegates all tasks forward.
+     *
+     * All instances of {@linkplain ReadCallbackDelegator} are considered equal, if they are connected to the same
+     * bridge. This makes sense, as the callback delegates
+     * to all child things of this bridge.
+     *
+     * @author Sami Salonen
+     *
+     */
     private class ReadCallbackDelegator implements ModbusReadCallback {
 
         private void forEachAllChildCallbacks(Consumer<ModbusReadCallback> callback) {
@@ -62,6 +81,29 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             forEachAllChildCallbacks(callback -> callback.onError(request, error));
         }
 
+        private ThingUID getThingUID() {
+            return getThing().getUID();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (obj == this) {
+                return true;
+            }
+            if (obj.getClass() != getClass()) {
+                return false;
+            }
+            ReadCallbackDelegator rhs = (ReadCallbackDelegator) obj;
+            return getThingUID().equals(rhs.getThingUID());
+        }
+
+        @Override
+        public int hashCode() {
+            return getThingUID().hashCode();
+        }
     }
 
     /**
@@ -114,8 +156,46 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         public ModbusEndpointThingHandler getEndpointThingHandler() {
             return endpointThingHandler;
         }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(89, 3).append(slaveId).append(functionCode).append(start).append(length)
+                    .append(endpointThingHandler).toHashCode();
+        }
+
+        @Override
+        public String toString() {
+            return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId)
+                    .append("functionCode", functionCode).append("start", start).append("length", length)
+                    .append("endpointThingHandler", endpointThingHandler).toString();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (obj == this) {
+                return true;
+            }
+            if (obj.getClass() != getClass()) {
+                return false;
+            }
+            ModbusReadRequestBlueprintImpl rhs = (ModbusReadRequestBlueprintImpl) obj;
+            return new EqualsBuilder().append(slaveId, rhs.slaveId).append(functionCode, rhs.functionCode)
+                    .append(start, rhs.start).append(length, rhs.length)
+                    .append(endpointThingHandler, rhs.endpointThingHandler).isEquals();
+        }
+
     }
 
+    /**
+     * HashCode and equals should be defined such that two poll tasks considered the same only if their request,
+     * endpoint and callback are the same. This allows two differentiate poll tasks with different callbacks.
+     *
+     * @author Sami Salonen
+     *
+     */
     private class PollTaskImpl implements PollTask {
 
         private ModbusReadRequestBlueprintImpl request;
@@ -139,6 +219,34 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         public ModbusReadCallback getCallback() {
             return callbackDelegator;
         }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(71, 5).append(request).append(getEndpoint()).append(getCallback()).toHashCode();
+        }
+
+        @Override
+        public String toString() {
+            return new ToStringBuilder(this, toStringStyle).append("request", request)
+                    .append("getEndpoint()", getEndpoint()).append("getCallback()", getCallback()).toString();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (obj == this) {
+                return true;
+            }
+            if (obj.getClass() != getClass()) {
+                return false;
+            }
+            PollTaskImpl rhs = (PollTaskImpl) obj;
+            return new EqualsBuilder().append(request, rhs.request).append(getEndpoint(), rhs.getEndpoint())
+                    .append(getCallback(), rhs.getCallback()).isEquals();
+        }
+
     }
 
     private Logger logger = LoggerFactory.getLogger(ModbusPollerThingHandlerImpl.class);
@@ -170,7 +278,8 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         }
     }
 
-    private ModbusEndpointThingHandler getEndpointThingHandler() {
+    @Override
+    public ModbusEndpointThingHandler getEndpointThingHandler() {
         Bridge bridge = getBridge();
         if (bridge == null) {
             logger.debug("Bridge is null");
@@ -241,6 +350,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         pollTask = new PollTaskImpl(request);
         managerRef.getManager().registerRegularPoll(pollTask, config.getRefresh(), 0);
         updateStatus(ThingStatus.ONLINE);
+    }
+
+    @Override
+    public ModbusManagerReference getManagerRef() {
+        return managerRef;
     }
 
     @Override

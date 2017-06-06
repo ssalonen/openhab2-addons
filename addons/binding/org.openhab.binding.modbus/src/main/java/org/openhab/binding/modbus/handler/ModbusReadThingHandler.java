@@ -72,7 +72,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void initialize() {
-        // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
+        // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.INITIALIZING);
         synchronized (lastStateLock) {
@@ -134,8 +134,6 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
         if (validateIndex(pollTask)) {
             updateStatus(ThingStatus.ONLINE);
-        } else {
-
         }
     }
 
