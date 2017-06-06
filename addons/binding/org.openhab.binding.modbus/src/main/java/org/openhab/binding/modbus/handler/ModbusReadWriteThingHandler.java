@@ -65,24 +65,24 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+    public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got registers: {}", registers);
-        propagateToChildren(reader -> reader.internalUpdateItem(request, registers));
+        propagateToChildren(reader -> reader.onRegisters(request, registers));
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray bits) {
+    public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got bits: {}", bits);
-        propagateToChildren(reader -> reader.internalUpdateItem(request, bits));
+        propagateToChildren(reader -> reader.onBits(request, bits));
     }
 
     @Override
-    public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
+    public void onError(ModbusReadRequestBlueprint request, Exception error) {
         // TODO Auto-generated method stub
         logger.info("Read write thing handler got error: {} {}", error.getClass().getName(), error.getMessage(), error);
-        propagateToChildren(reader -> reader.internalUpdateReadErrorItem(request, error));
+        propagateToChildren(reader -> reader.onError(request, error));
     }
 
     private void propagateToChildren(Consumer<ModbusReadThingHandler> consumer) {
