@@ -221,7 +221,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+    public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         boolean boolValue;
         DecimalType numericState;
         Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
@@ -244,7 +244,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     @Override
-    public synchronized void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
+    public synchronized void onBits(ModbusReadRequestBlueprint request, BitArray coils) {
         boolean boolValue;
         DecimalType numericState;
         Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
@@ -267,7 +267,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     @Override
-    public synchronized void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
+    public synchronized void onError(ModbusReadRequestBlueprint request, Exception error) {
         logger.error("Thing {} received read error: {} {}", getThing(), error.getClass().getName(), error.getMessage(),
                 error);
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,

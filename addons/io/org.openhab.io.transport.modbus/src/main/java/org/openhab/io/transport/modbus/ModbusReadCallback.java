@@ -7,28 +7,28 @@ import net.wimpi.modbus.ModbusException;
 public interface ModbusReadCallback {
 
     /**
-     * Posts update event to OpenHAB bus for "holding" and "input register" type slaves
+     * Callback for "input register" and "holding register" data in the case of no errors
      *
      * @param ModbusReadRequestBlueprint representing the request
      * @param registers data received from slave device in the last pollInterval
      */
-    void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers);
+    void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers);
 
     /**
-     * Posts update event to OpenHAB bus for "coil" and "discrete input" type slaves
+     * Callback for "coil" and "discrete input" bit data in the case of no errors
      *
      * @param ModbusReadRequestBlueprint representing the request
-     * @param registers data received from slave device in the last pollInterval
+     * @param bits data received from slave device
      */
-    void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils);
+    void onBits(ModbusReadRequestBlueprint request, BitArray bits);
 
     /**
-     * Posts update event to OpenHAB bus for all types of slaves when there is a read error
+     * Callback for errors with read
      *
      * @request ModbusRequestBlueprint representing the request
      * @param Exception representing the issue with the request. Instance of
      *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusException}.
      */
-    void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error);
+    void onError(ModbusReadRequestBlueprint request, Exception error);
 
 }

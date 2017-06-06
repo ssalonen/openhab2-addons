@@ -253,15 +253,15 @@ public class ModbusManagerImpl implements ModbusManager {
             ModbusResponse response) {
         try {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
-                callback.internalUpdateItem(message, new BitArrayImpl(((ReadCoilsResponse) response).getCoils()));
+                callback.onBits(message, new BitArrayImpl(((ReadCoilsResponse) response).getCoils()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
-                callback.internalUpdateItem(message,
+                callback.onBits(message,
                         new BitArrayImpl(((ReadInputDiscretesResponse) response).getDiscretes()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-                callback.internalUpdateItem(message,
+                callback.onRegisters(message,
                         new RegisterArrayImpl(((ReadMultipleRegistersResponse) response).getRegisters()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS) {
-                callback.internalUpdateItem(message,
+                callback.onRegisters(message,
                         new RegisterArrayImpl(((ReadInputRegistersResponse) response).getRegisters()));
             } else {
                 throw new IllegalArgumentException(
@@ -460,7 +460,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 if (!manual) {
                     verifyTaskIsRegistered(task);
                 }
-                callback.internalUpdateReadErrorItem(message, new ModbusConnectionException(endpoint));
+                callback.onError(message, new ModbusConnectionException(endpoint));
             }
 
             ModbusTransaction transaction = createTransactionForEndpoint(endpoint, connection);
@@ -483,7 +483,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 if (!manual) {
                     verifyTaskIsRegistered(task);
                 }
-                callback.internalUpdateReadErrorItem(message, e);
+                callback.onError(message, e);
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for read (FC={}, transaction ID={}) {}", response.getFunctionCode(),
@@ -497,7 +497,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.internalUpdateReadErrorItem(message, new ModbusUnexpectedTransactionIdException());
+                callback.onError(message, new ModbusUnexpectedTransactionIdException());
             } else {
                 invokeCallbackWithResponse(message, callback, response);
             }
@@ -571,7 +571,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                callback.internalUpdateWriteError(message, e);
+                callback.onError(message, e);
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
@@ -579,9 +579,9 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.internalUpdateWriteError(message, new ModbusUnexpectedTransactionIdException());
+                callback.onError(message, new ModbusUnexpectedTransactionIdException());
             } else {
-                callback.internalUpdateResponse(message, new ModbusResponseImpl(response));
+                callback.onResponse(message, new ModbusResponseImpl(response));
             }
         } finally {
             returnConnection(endpoint, connection);

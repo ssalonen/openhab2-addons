@@ -48,18 +48,18 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         }
 
         @Override
-        public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
-            forEachAllChildCallbacks(callback -> callback.internalUpdateItem(request, registers));
+        public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+            forEachAllChildCallbacks(callback -> callback.onRegisters(request, registers));
         }
 
         @Override
-        public void internalUpdateItem(ModbusReadRequestBlueprint request, BitArray coils) {
-            forEachAllChildCallbacks(callback -> callback.internalUpdateItem(request, coils));
+        public void onBits(ModbusReadRequestBlueprint request, BitArray coils) {
+            forEachAllChildCallbacks(callback -> callback.onBits(request, coils));
         }
 
         @Override
-        public void internalUpdateReadErrorItem(ModbusReadRequestBlueprint request, Exception error) {
-            forEachAllChildCallbacks(callback -> callback.internalUpdateReadErrorItem(request, error));
+        public void onError(ModbusReadRequestBlueprint request, Exception error) {
+            forEachAllChildCallbacks(callback -> callback.onError(request, error));
         }
 
     }

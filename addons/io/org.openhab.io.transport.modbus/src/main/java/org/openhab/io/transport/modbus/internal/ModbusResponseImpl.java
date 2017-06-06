@@ -14,7 +14,7 @@ public class ModbusResponseImpl implements ModbusResponse {
     }
 
     @Override
-    public int getResponseFunctionCode() {
+    public int getFunctionCode() {
         return responseFunctionCode;
     }
 
