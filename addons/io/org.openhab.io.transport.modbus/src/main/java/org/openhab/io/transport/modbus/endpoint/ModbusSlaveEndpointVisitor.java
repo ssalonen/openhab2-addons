@@ -15,9 +15,9 @@ package org.openhab.io.transport.modbus.endpoint;
  */
 public interface ModbusSlaveEndpointVisitor<R> {
 
-    R visit(ModbusTCPSlaveEndpoint modbusIPSlavePoolingKey);
+    R visit(ModbusTCPSlaveEndpoint endpoint);
 
-    R visit(ModbusSerialSlaveEndpoint modbusSerialSlavePoolingKey);
+    R visit(ModbusSerialSlaveEndpoint endpoint);
 
-    R visit(ModbusUDPSlaveEndpoint modbusUDPSlavePoolingKey);
+    R visit(ModbusUDPSlaveEndpoint endpoint);
 }

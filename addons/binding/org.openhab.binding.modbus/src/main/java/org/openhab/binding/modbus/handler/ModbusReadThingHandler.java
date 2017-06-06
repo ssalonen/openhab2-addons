@@ -39,8 +39,8 @@ import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
-import org.openhab.io.transport.modbus.ReadCallback;
-import org.openhab.io.transport.modbus.RegisterArray;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadThingHandler extends BaseThingHandler implements ReadCallback {
+public class ModbusReadThingHandler extends BaseThingHandler implements ModbusReadCallback {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadThingHandler.class);
     private volatile ModbusReadConfiguration config;
@@ -221,7 +221,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ReadCall
     }
 
     @Override
-    public void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers) {
+    public void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         boolean boolValue;
         DecimalType numericState;
         Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;

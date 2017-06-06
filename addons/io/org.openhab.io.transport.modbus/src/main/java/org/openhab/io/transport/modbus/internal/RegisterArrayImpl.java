@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.openhab.io.transport.modbus.ModbusRegister;
-import org.openhab.io.transport.modbus.RegisterArray;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 
 import net.wimpi.modbus.procimg.InputRegister;
 
-public class RegisterArrayImpl implements RegisterArray {
+public class RegisterArrayImpl implements ModbusRegisterArray {
 
     private class RegisterReference implements ModbusRegister {
 

@@ -4,7 +4,7 @@ import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdExc
 
 import net.wimpi.modbus.ModbusException;
 
-public interface ReadCallback {
+public interface ModbusReadCallback {
 
     /**
      * Posts update event to OpenHAB bus for "holding" and "input register" type slaves
@@ -12,7 +12,7 @@ public interface ReadCallback {
      * @param ModbusReadRequestBlueprint representing the request
      * @param registers data received from slave device in the last pollInterval
      */
-    void internalUpdateItem(ModbusReadRequestBlueprint request, RegisterArray registers);
+    void internalUpdateItem(ModbusReadRequestBlueprint request, ModbusRegisterArray registers);
 
     /**
      * Posts update event to OpenHAB bus for "coil" and "discrete input" type slaves

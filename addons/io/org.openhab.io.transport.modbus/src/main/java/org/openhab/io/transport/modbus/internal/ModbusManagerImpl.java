@@ -27,9 +27,9 @@ import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprintVisitor;
-import org.openhab.io.transport.modbus.ReadCallback;
-import org.openhab.io.transport.modbus.RegisterArray;
-import org.openhab.io.transport.modbus.WriteCallback;
+import org.openhab.io.transport.modbus.ModbusReadCallback;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
@@ -78,9 +78,9 @@ public class ModbusManagerImpl implements ModbusManager {
 
         private ModbusSlaveEndpoint endpoint;
         private ModbusReadRequestBlueprint message;
-        private ReadCallback callback;
+        private ModbusReadCallback callback;
 
-        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint message, ReadCallback callback) {
+        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprint message, ModbusReadCallback callback) {
             this.endpoint = endpoint;
             this.message = message;
             this.callback = callback;
@@ -124,7 +124,7 @@ public class ModbusManagerImpl implements ModbusManager {
         }
 
         @Override
-        public ReadCallback getCallback() {
+        public ModbusReadCallback getCallback() {
             return callback;
         }
     }
@@ -248,7 +248,7 @@ public class ModbusManagerImpl implements ModbusManager {
         connectionPool = genericKeyedObjectPool;
     }
 
-    private void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ReadCallback callback,
+    private void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
@@ -291,7 +291,7 @@ public class ModbusManagerImpl implements ModbusManager {
         return request;
     }
 
-    private static Register[] convertRegisters(RegisterArray arr) {
+    private static Register[] convertRegisters(ModbusRegisterArray arr) {
         return IntStream.range(0, arr.size()).mapToObj(i -> new SimpleInputRegister(arr.getRegister(i).getValue()))
                 .collect(Collectors.toList()).toArray(new Register[0]);
     }
@@ -449,7 +449,7 @@ public class ModbusManagerImpl implements ModbusManager {
     public void executeOneTimePoll(PollTask task, boolean manual) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusReadRequestBlueprint message = task.getMessage();
-        ReadCallback callback = task.getCallback();
+        ModbusReadCallback callback = task.getCallback();
 
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint); // might take a while
 
@@ -553,7 +553,7 @@ public class ModbusManagerImpl implements ModbusManager {
 
     @Override
     public void writeCommand(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint message,
-            WriteCallback callback) {
+            ModbusWriteCallback callback) {
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint);
 
         try {
