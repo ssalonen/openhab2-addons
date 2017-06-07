@@ -32,7 +32,6 @@ import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.ModbusResponse;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
@@ -47,8 +46,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
-        implements ModbusReadCallback, ModbusWriteCallback {
+public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ModbusReadCallback {
 
     private static class SingleBitArray implements BitArray {
 
@@ -248,20 +246,6 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
         logger.debug(msg, error);
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
         forEachChildReader(reader -> reader.onError(request, error));
-    }
-
-    @Override
-    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
-        String msg = String.format("Read write thing handler got write error: %s %s", error.getClass().getName(),
-                error.getMessage(), error);
-        logger.debug(msg, error);
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-    }
-
-    @Override
-    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
-        logger.debug("Read write thing handler got write response: {}", response);
-        updateStatus(ThingStatus.ONLINE);
     }
 
     private void forEachChildReader(Consumer<ModbusReadThingHandler> consumer) {
