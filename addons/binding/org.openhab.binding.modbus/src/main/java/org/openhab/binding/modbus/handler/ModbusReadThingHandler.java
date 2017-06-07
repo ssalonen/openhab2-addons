@@ -309,8 +309,6 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
                 return;
             }
 
-            // Note: different from modbus 1.x where numericState was converted to item state before transformation
-            // transformation.
             State transformedState;
             if (transformation == null || transformation.isIdentityTransform()) {
                 if (boolLikeState != null) {
