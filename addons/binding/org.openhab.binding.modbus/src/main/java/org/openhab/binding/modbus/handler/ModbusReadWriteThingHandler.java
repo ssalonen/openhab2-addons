@@ -225,14 +225,20 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         logger.debug("Read write thing handler got registers: {}", registers);
         updateStatus(ThingStatus.ONLINE);
-        forEachChildReader(reader -> reader.onRegisters(request, registers));
+        forEachChildReader(reader -> {
+            reader.onRegisters(request, registers);
+            maybeUpdateStateFromReadHandler(reader);
+        });
     }
 
     @Override
     public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
         logger.debug("Read write thing handler got bits: {}", bits);
         updateStatus(ThingStatus.ONLINE);
-        forEachChildReader(reader -> reader.onBits(request, bits));
+        forEachChildReader(reader -> {
+            reader.onBits(request, bits);
+            maybeUpdateStateFromReadHandler(reader);
+        });
     }
 
     @Override
@@ -263,11 +269,16 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
         // Call each readers callback, and update this bridge's items (matching by channel id)
         readers.stream().forEach(reader -> {
             consumer.accept(reader);
-            Optional<Map<ChannelUID, State>> optionalLastState = reader.getLastState();
-            optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
-                updateState(uid.getId(), state);
-            }));
         });
+    }
+
+    private void maybeUpdateStateFromReadHandler(ModbusReadThingHandler readHandler) {
+        Optional<Map<ChannelUID, State>> optionalLastState = readHandler.getLastState();
+        optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
+            if (getThing().getChannel(uid.getId()) != null) {
+                updateState(uid.getId(), state);
+            }
+        }));
     }
 
     private void forEachChildWriter(Consumer<ModbusWriteThingHandler> consumer) {
