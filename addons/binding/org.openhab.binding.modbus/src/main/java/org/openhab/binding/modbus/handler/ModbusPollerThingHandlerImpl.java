@@ -109,6 +109,9 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     /**
      * Immutable {@link ModbusReadRequestBlueprint} to read from endpoint represented by this Poller's bridge
      *
+     * Equals and hashCode implemented for PollTask. Two instances of this class are considered the same if they have
+     * the equal parameters (same slave id, start, length and function).
+     *
      * @author Sami Salonen
      *
      */
@@ -118,12 +121,10 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         private ModbusReadFunctionCode functionCode;
         private int start;
         private int length;
-        private ModbusEndpointThingHandler endpointThingHandler;
 
-        public ModbusReadRequestBlueprintImpl(ModbusEndpointThingHandler slaveEndpoint) {
+        public ModbusReadRequestBlueprintImpl(ModbusEndpointThingHandler slaveEndpointThingHandler) {
             super();
-            this.endpointThingHandler = slaveEndpoint;
-            this.slaveId = slaveEndpoint.getSlaveId();
+            this.slaveId = slaveEndpointThingHandler.getSlaveId();
             this.functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(config.getType());
             if (this.functionCode == null) {
                 logger.error("Illegal function code: {}", config.getType());
@@ -153,21 +154,16 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             return length;
         }
 
-        public ModbusEndpointThingHandler getEndpointThingHandler() {
-            return endpointThingHandler;
-        }
-
         @Override
         public int hashCode() {
             return new HashCodeBuilder(89, 3).append(slaveId).append(functionCode).append(start).append(length)
-                    .append(endpointThingHandler).toHashCode();
+                    .toHashCode();
         }
 
         @Override
         public String toString() {
             return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId)
-                    .append("functionCode", functionCode).append("start", start).append("length", length)
-                    .append("endpointThingHandler", endpointThingHandler).toString();
+                    .append("functionCode", functionCode).append("start", start).append("length", length).toString();
         }
 
         @Override
@@ -183,8 +179,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             }
             ModbusReadRequestBlueprintImpl rhs = (ModbusReadRequestBlueprintImpl) obj;
             return new EqualsBuilder().append(slaveId, rhs.slaveId).append(functionCode, rhs.functionCode)
-                    .append(start, rhs.start).append(length, rhs.length)
-                    .append(endpointThingHandler, rhs.endpointThingHandler).isEquals();
+                    .append(start, rhs.start).append(length, rhs.length).isEquals();
         }
 
     }
@@ -199,9 +194,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     private class PollTaskImpl implements PollTask {
 
         private ModbusReadRequestBlueprintImpl request;
+        private ModbusSlaveEndpoint endpoint;
 
-        public PollTaskImpl(ModbusReadRequestBlueprintImpl request) {
+        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprintImpl request) {
             super();
+            this.endpoint = endpoint;
             this.request = request;
         }
 
@@ -212,7 +209,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
         @Override
         public ModbusSlaveEndpoint getEndpoint() {
-            return request.getEndpointThingHandler().asSlaveEndpoint();
+            return endpoint;
         }
 
         @Override
@@ -227,8 +224,8 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
         @Override
         public String toString() {
-            return new ToStringBuilder(this, toStringStyle).append("request", request)
-                    .append("getEndpoint()", getEndpoint()).append("getCallback()", getCallback()).toString();
+            return new ToStringBuilder(this, toStringStyle).append("request", request).append("endpoint", endpoint)
+                    .append("callback", getCallback()).toString();
         }
 
         @Override
@@ -243,7 +240,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
                 return false;
             }
             PollTaskImpl rhs = (PollTaskImpl) obj;
-            return new EqualsBuilder().append(request, rhs.request).append(getEndpoint(), rhs.getEndpoint())
+            return new EqualsBuilder().append(request, rhs.request).append(endpoint, rhs.endpoint)
                     .append(getCallback(), rhs.getCallback()).isEquals();
         }
 
@@ -338,16 +335,16 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             return;
         }
 
-        ModbusEndpointThingHandler slaveEndpoint = getEndpointThingHandler();
-        if (slaveEndpoint == null) {
+        ModbusEndpointThingHandler slaveEndpointThingHandler = getEndpointThingHandler();
+        if (slaveEndpointThingHandler == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
                     String.format("Bridge '%s' is offline", getBridge().getLabel()));
             logger.debug("No bridge handler -- aborting init for {}", this);
             return;
         }
 
-        ModbusReadRequestBlueprintImpl request = new ModbusReadRequestBlueprintImpl(slaveEndpoint);
-        pollTask = new PollTaskImpl(request);
+        ModbusReadRequestBlueprintImpl request = new ModbusReadRequestBlueprintImpl(slaveEndpointThingHandler);
+        pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request);
         managerRef.getManager().registerRegularPoll(pollTask, config.getRefresh(), 0);
         updateStatus(ThingStatus.ONLINE);
     }
