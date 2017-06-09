@@ -12,6 +12,7 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -183,35 +184,32 @@ public class Transformation {
      *
      *
      * @param context
-     * @param types types types to used to parse the transformation result. First one to match is used. Some types are
-     *            always tried first even if they are not list in the types (see DEFAULT_TYPES constant)
      * @param command
      * @param context
-     * @return Transformed command, or null if no transformation was possible
+     * @return Transformed command, or empty if no transformation was possible
      */
-    public Command transformCommand(BundleContext context, List<Class<? extends Command>> types, Command command) {
+    public Optional<Command> transformCommand(BundleContext context, Command command) {
         if (isIdentityTransform()) {
             // optimization, do not convert command->string->command if the transformation is identity transform
-            return command;
+            return Optional.ofNullable(command);
         }
         final String commandAsString = command.toString();
         final String transformed = transform(context, commandAsString);
 
-        Command transformedCommand = null;
-        transformedCommand = TypeParser.parseCommand(DEFAULT_TYPES, transformed);
-        if (transformedCommand == null) {
-            transformedCommand = TypeParser.parseCommand(types, transformed);
-        }
-        if (transformedCommand == null) {
-            logger.warn(
-                    "Could not transform item  command '{}' to a Command. Command as string '{}', "
-                            + "transformed string '{}', transformation '{}'",
-                    command, commandAsString, transformed, transformation);
-        } else {
+        Optional<Command> transformedCommand = Optional.ofNullable(TypeParser.parseCommand(DEFAULT_TYPES, transformed));
+        // if (!transformedCommand.isPresent()) {
+        // transformedCommand = Optional.ofNullable(TypeParser.parseCommand(types, transformed));
+        // }
+        if (transformedCommand.isPresent()) {
             logger.debug(
                     "Transformed item command '{}' to a command {}. Command as string '{}', "
                             + "transformed string '{}', transformation '{}'",
                     command, transformedCommand, commandAsString, transformed, transformation);
+        } else {
+            logger.warn(
+                    "Could not transform item  command '{}' to a Command. Command as string '{}', "
+                            + "transformed string '{}', transformation '{}'",
+                    command, commandAsString, transformed, transformation);
         }
         return transformedCommand;
     }
