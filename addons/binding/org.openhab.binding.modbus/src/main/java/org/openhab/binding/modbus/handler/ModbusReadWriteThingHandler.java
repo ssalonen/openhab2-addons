@@ -102,10 +102,9 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     @Override
     public void onError(ModbusReadRequestBlueprint request, Exception error) {
-        String msg = String.format("Read write thing handler got read error: {} {}", error.getClass().getName(),
-                error.getMessage());
-        logger.debug(msg, error);
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+        logger.warn("Read write thing handler got read error: {} {}", error.getClass().getName(), error.getMessage());
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
+                "Read write thing handler got read error: {} {}", error.getClass().getName(), error.getMessage()));
         forEachChildReader(reader -> reader.onError(request, error));
     }
 
