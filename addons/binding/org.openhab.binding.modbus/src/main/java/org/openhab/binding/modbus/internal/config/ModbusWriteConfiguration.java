@@ -6,6 +6,7 @@ public class ModbusWriteConfiguration {
     private String trigger;
     private String transform;
     private String valueType;
+    private boolean writeMultipleEvenWithSingleRegister;
 
     public int getStart() {
         return start;
@@ -45,6 +46,14 @@ public class ModbusWriteConfiguration {
 
     public void setValueType(String valueType) {
         this.valueType = valueType;
+    }
+
+    public boolean isWriteMultipleEvenWithSingleRegister() {
+        return writeMultipleEvenWithSingleRegister;
+    }
+
+    public void setWriteMultipleEvenWithSingleRegister(boolean writeMultipleEvenWithSingleRegister) {
+        this.writeMultipleEvenWithSingleRegister = writeMultipleEvenWithSingleRegister;
     }
 
 }

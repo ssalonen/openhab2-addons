@@ -4,11 +4,11 @@ import org.openhab.io.transport.modbus.BitArray;
 
 import net.wimpi.modbus.util.BitVector;
 
-public class BitArrayImpl implements BitArray {
+public class BitArrayWrappingBitVector implements BitArray {
 
     private BitVector wrapped;
 
-    public BitArrayImpl(BitVector wrapped) {
+    public BitArrayWrappingBitVector(BitVector wrapped) {
         this.wrapped = wrapped;
     }
 

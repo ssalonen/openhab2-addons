@@ -59,12 +59,18 @@
                     
                     <option value="int16">16bit signed integer</option>
                     <option value="uint16">16bit unsigned integer</option>
-                    
+<!--                    
                     <option value="int8">8bit signed integer</option>
                     <option value="uint8">8bit unsigned integer</option>
                     
-                    <option value="bit">individual bit</option>
+                    <option value="bit">individual bit</option>-->
                 </options>
+            </parameter>
+            
+            <parameter name="writeMultipleEvenWithSingleRegister" type="boolean">
+                <label>Use FC16</label>
+                <default>false</default>
+                <description>Whether even single register of data is written using "Write Multiple Holding Registers" or Function Code (FC) 16</description>
             </parameter>
 		</config-description>
 	</thing-type>

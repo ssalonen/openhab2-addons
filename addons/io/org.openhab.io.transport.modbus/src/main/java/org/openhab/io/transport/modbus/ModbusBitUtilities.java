@@ -1,10 +1,12 @@
 package org.openhab.io.transport.modbus;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Optional;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
@@ -127,6 +129,82 @@ public class ModbusBitUtilities {
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
         } else {
             throw new IllegalArgumentException(type);
+        }
+    }
+
+    public static ModbusRegisterArray commandToRegisters(Command command, String type) {
+
+        DecimalType numericCommand;
+        if (command instanceof OnOffType || command instanceof OpenClosedType) {
+            if (command.equals(OnOffType.ON) || command.equals(OpenClosedType.OPEN)) {
+                numericCommand = DecimalType.ZERO;
+            } else if (command.equals(OnOffType.OFF) || command.equals(OpenClosedType.CLOSED)) {
+                numericCommand = new DecimalType(BigDecimal.ONE);
+            } else {
+                throw new IllegalArgumentException(
+                        String.format("Did not expect to get '%s' with OnOffType and OpenClosedType command", command));
+            }
+        } else if (command instanceof DecimalType) {
+            numericCommand = (DecimalType) command;
+        } else {
+            throw new NotImplementedException(String.format(
+                    "Command '%s' of class '%s' cannot be converted to registers. Please use OnOffType, OpenClosedType, or DecimalType commands.",
+                    command, command.getClass().getName()));
+        }
+
+        if (type.equals(VALUE_TYPE_INT16) || type.equals(VALUE_TYPE_UINT16)) {
+            short shortValue = numericCommand.shortValue();
+            // big endian byte ordering
+            byte b1 = (byte) (shortValue >> 8);
+            byte b2 = (byte) shortValue;
+
+            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register });
+        } else if (type.equals(VALUE_TYPE_INT32) || type.equals(VALUE_TYPE_UINT32)) {
+            int intValue = numericCommand.intValue();
+            // big endian byte ordering
+            byte b1 = (byte) (intValue >> 24);
+            byte b2 = (byte) (intValue >> 16);
+            byte b3 = (byte) (intValue >> 8);
+            byte b4 = (byte) intValue;
+            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+            ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
+            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+        } else if (type.equals(VALUE_TYPE_INT32_SWAP) || type.equals(VALUE_TYPE_UINT32_SWAP)) {
+            int intValue = numericCommand.intValue();
+            // big endian byte ordering
+            byte b1 = (byte) (intValue >> 24);
+            byte b2 = (byte) (intValue >> 16);
+            byte b3 = (byte) (intValue >> 8);
+            byte b4 = (byte) intValue;
+            ModbusRegister register = new ModbusRegisterImpl(b3, b4);
+            ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
+            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+        } else if (type.equals(VALUE_TYPE_FLOAT32)) {
+            float floatValue = numericCommand.floatValue();
+            int intBits = Float.floatToIntBits(floatValue);
+            // big endian byte ordering
+            byte b1 = (byte) (intBits >> 24);
+            byte b2 = (byte) (intBits >> 16);
+            byte b3 = (byte) (intBits >> 8);
+            byte b4 = (byte) intBits;
+            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+            ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
+            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+        } else if (type.equals(VALUE_TYPE_FLOAT32_SWAP)) {
+            float floatValue = numericCommand.floatValue();
+            int intBits = Float.floatToIntBits(floatValue);
+            // big endian byte ordering
+            byte b1 = (byte) (intBits >> 24);
+            byte b2 = (byte) (intBits >> 16);
+            byte b3 = (byte) (intBits >> 8);
+            byte b4 = (byte) intBits;
+            ModbusRegister register = new ModbusRegisterImpl(b3, b4);
+            ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
+            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+        } else {
+            throw new IllegalArgumentException(
+                    String.format("Illegal type=%s. Only 16bit and 32bit types are supported", type));
         }
     }
 

@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -32,13 +31,16 @@ import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
+import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusResponse;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
+import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
@@ -85,7 +87,6 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             this.slaveId = slaveId;
             this.reference = reference;
             this.bits = new SingleBitArray(data);
-            ;
         }
 
         @Override
@@ -106,6 +107,48 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         @Override
         public BitArray getCoils() {
             return bits;
+        }
+    }
+
+    private static class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegisterRequestBlueprint {
+        private int slaveId;
+        private int reference;
+        private ModbusRegisterArray registers;
+        private boolean writeMultiple;
+
+        public ModbusWriteRegisterRequestBlueprintImpl(int slaveId, int reference, ModbusRegisterArray registers,
+                boolean writeMultiple) {
+            super();
+            this.slaveId = slaveId;
+            this.reference = reference;
+            this.registers = registers;
+            this.writeMultiple = writeMultiple;
+
+            if (!writeMultiple && registers.size() > 1) {
+                throw new IllegalArgumentException("With multiple registers, writeMultiple must be true");
+            }
+        }
+
+        @Override
+        public int getReference() {
+            return reference;
+        }
+
+        @Override
+        public int getUnitID() {
+            return slaveId;
+        }
+
+        @Override
+        public ModbusWriteFunctionCode getFunctionCode() {
+            return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS
+                    : ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER;
+
+        }
+
+        @Override
+        public ModbusRegisterArray getRegisters() {
+            return registers;
         }
     }
 
@@ -151,17 +194,8 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        boolean boolValue;
-        DecimalType numericCommand;
-        List<Class<? extends Command>> channelAcceptedCommandTypes;
-        synchronized (this) {
-            if (getThing().getStatus() != ThingStatus.ONLINE) {
-                return;
-            }
-            // numericState = ModbusBitUtilities.extractStateFromRegisters(registers, config.getStart(),
-            // config.getValueType());
-            // boolValue = !numericState.equals(DecimalType.ZERO);
-            channelAcceptedCommandTypes = getCommandTypesUnsynchronized(channelUID);
+        if (getThing().getStatus() != ThingStatus.ONLINE) {
+            return;
         }
 
         Bridge readwriteBridge = getBridge();
@@ -195,56 +229,37 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             return;
         }
 
-        // Command boolLikeCommand;
-        // if (containsOnOff(channelAcceptedCommandTypes)) {
-        // boolLikeCommand = boolValue ? OnOffType.ON : OnOffType.OFF;
-        // } else if (containsOpenClosed(channelAcceptedCommandTypes)) {
-        // boolLikeCommand = boolValue ? OpenClosedType.OPEN : OpenClosedType.CLOSED;
-        // } else {
-        // boolLikeCommand = null;
-        // }
+        Optional<Command> transformedCommand;
+        if (transformation == null || transformation.isIdentityTransform()) {
+            transformedCommand = Optional.of(command);
+        } else {
+            transformedCommand = transformation.transformCommand(bundleContext, command);
+        }
 
-        // Command transformedCommand;
-        // if (transformation == null || transformation.isIdentityTransform()) {
-        // if (boolLikeCommand != null) {
-        // transformedCommand = boolLikeCommand;
-        // } else {
-        // transformedCommand = numericCommand;
-        // }
-        // } else {
-        // transformedCommand = transformation.transformCommand(bundleContext, channelAcceptedCommandTypes,
-        // numericCommand);
-        // }
-
-        //
-        //
-        // Think this through
-        //
-        //
-
-        if (transformedCommand == null) {
+        if (!transformedCommand.isPresent()) {
             // transformation failed, return
             return;
         }
 
+        int reference = pollTask.getRequest().getReference() + config.getStart();
+        ModbusWriteRequestBlueprint request;
         if (config.getType().equals(WRITE_TYPE_COIL)) {
-            int reference = pollTask.getRequest().getReference() + config.getStart();
-            boolean data = true;
-            ModbusWriteCoilRequestBlueprintImpl request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference,
-                    data);
-            WriteTaskImpl writeTask = new WriteTaskImpl(slaveEndpoint, request, this);
-            manager.submitOneTimeWrite(writeTask);
+            Optional<Boolean> commandAsBoolean = ModbusBitUtilities.translateCommand2Boolean(transformedCommand.get());
+            boolean data = commandAsBoolean.get();
+            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference, data);
         } else if (config.getType().equals(WRITE_TYPE_HOLDING)) {
-
+            ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(),
+                    config.getValueType());
+            boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegister() || data.size() > 1;
+            request = new ModbusWriteRegisterRequestBlueprintImpl(slaveId, reference, data, writeMultiple);
         } else {
             // should not happen
             throw new NotImplementedException();
         }
 
-        // new ModbusW
-        if (channelUID.getId().equals(CHANNEL_SWITCH)) {
-            // manager.submitOneTimeWrite(task)
-        }
+        WriteTaskImpl writeTask = new WriteTaskImpl(slaveEndpoint, request, this);
+        manager.submitOneTimeWrite(writeTask);
+
     }
 
     @Override

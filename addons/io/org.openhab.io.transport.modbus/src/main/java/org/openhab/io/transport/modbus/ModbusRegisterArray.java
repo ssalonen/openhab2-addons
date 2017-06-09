@@ -14,7 +14,7 @@ public interface ModbusRegisterArray {
     ModbusRegister getRegister(int index);
 
     /**
-     * Get number of bits stored in this instance
+     * Get number of registers stored in this instance
      *
      * @return
      */

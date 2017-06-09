@@ -187,15 +187,15 @@ public class ModbusManagerImpl implements ModbusManager {
             ModbusResponse response) {
         try {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
-                callback.onBits(message, new BitArrayImpl(((ReadCoilsResponse) response).getCoils()));
+                callback.onBits(message, new BitArrayWrappingBitVector(((ReadCoilsResponse) response).getCoils()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
-                callback.onBits(message, new BitArrayImpl(((ReadInputDiscretesResponse) response).getDiscretes()));
+                callback.onBits(message, new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
                 callback.onRegisters(message,
-                        new RegisterArrayImpl(((ReadMultipleRegistersResponse) response).getRegisters()));
+                        new RegisterArrayWrappingInputRegister(((ReadMultipleRegistersResponse) response).getRegisters()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS) {
                 callback.onRegisters(message,
-                        new RegisterArrayImpl(((ReadInputRegistersResponse) response).getRegisters()));
+                        new RegisterArrayWrappingInputRegister(((ReadInputRegistersResponse) response).getRegisters()));
             } else {
                 throw new IllegalArgumentException(
                         String.format("Unexpected function code %s", message.getFunctionCode()));

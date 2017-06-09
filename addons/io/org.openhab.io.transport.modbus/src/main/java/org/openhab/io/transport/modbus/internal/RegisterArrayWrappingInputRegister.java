@@ -8,7 +8,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 
 import net.wimpi.modbus.procimg.InputRegister;
 
-public class RegisterArrayImpl implements ModbusRegisterArray {
+public class RegisterArrayWrappingInputRegister implements ModbusRegisterArray {
 
     private class RegisterReference implements ModbusRegister {
 
@@ -38,7 +38,7 @@ public class RegisterArrayImpl implements ModbusRegisterArray {
     private InputRegister[] wrapped;
     private Map<Integer, ModbusRegister> cache = new HashMap<>();
 
-    public RegisterArrayImpl(InputRegister[] wrapped) {
+    public RegisterArrayWrappingInputRegister(InputRegister[] wrapped) {
         this.wrapped = wrapped;
     }
 
