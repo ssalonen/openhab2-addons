@@ -17,31 +17,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray
 
 
 @RunWith(Parameterized.class)
-class BitUtilitiesTest {
-    //
-    //    private static class RegisterWrapper implements ModbusRegisterArray {
-    //        private ByteBuffer buf
-    //
-    //
-    //        public RegisterWrapper(int[] data) {
-    //            this.data = data;
-    //            buf = ByteBuffer.allocate(data.length * 4);
-    //            for(int bits32 : data) {
-    //                buf.putInt(bits32)
-    //            }
-    //        }
-    //
-    //        @Override
-    //        public ModbusRegister getRegister(int registerIndex) {
-    //            int byteIndex = registerIndex*2;
-    //            return new SimpleRegister(buf.get(byteIndex), buf.get(byteIndex+1));
-    //        }
-    //
-    //        @Override
-    //        public int size() {
-    //            return buf.capacity() / 4;
-    //        }
-    //    }
+class BitUtilitiesCommandToRegistersTest {
 
     final Command command
     final String type
@@ -51,7 +27,7 @@ class BitUtilitiesTest {
     public final ExpectedException shouldThrow = ExpectedException.none();
 
 
-    public BitUtilitiesTest(Command command, String type, Object expectedResult) {
+    public BitUtilitiesCommandToRegistersTest(Command command, String type, Object expectedResult) {
         this.command = command
         this.type = type
         this.expectedResult = expectedResult  // Exception or array of 16bit integers

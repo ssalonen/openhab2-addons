@@ -1,5 +1,7 @@
 package org.openhab.io.transport.modbus;
 
+import java.util.Arrays;
+
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
 public class ModbusRegisterImpl implements ModbusRegister {
@@ -31,4 +33,9 @@ public class ModbusRegisterImpl implements ModbusRegister {
         return wrapped.toUnsignedShort();
     }
 
+    @Override
+    public String toString() {
+        return new StringBuffer("ModbusRegisterImpl(bytes=").append(Arrays.toString(wrapped.toBytes()))
+                .append(",ushort=").append(toUnsignedShort()).append(')').toString();
+    }
 }
