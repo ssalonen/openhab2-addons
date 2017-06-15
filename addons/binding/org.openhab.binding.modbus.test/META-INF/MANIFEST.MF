@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Fragment-Host: org.openhab.binding.modbus
+Bundle-Name: Modbus Binding Tests
+Bundle-SymbolicName: org.openhab.binding.modbus.test;singleton:=true
+Bundle-Vendor: openHAB
+Bundle-Version: 2.1.0.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-ClassPath: .,  lib/mockito-all-1.10.19.jar
+Import-Package: org.apache.commons.collections.iterators,
+ org.eclipse.smarthome.core.items,
+ org.eclipse.smarthome.core.thing,
+ org.eclipse.smarthome.test.java,
+ org.hamcrest;core=split,
+ org.junit;version="4.11"
