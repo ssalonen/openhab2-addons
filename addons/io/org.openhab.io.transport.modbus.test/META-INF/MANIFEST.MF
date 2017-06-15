@@ -26,8 +26,6 @@ Import-Package: groovy.json,
  org.junit.rules;version="4.11.0",
  org.junit.runner;version="4.11.0",
  org.junit.runners;version="4.11.0",
- org.openhab.io.transport.modbus,
  org.osgi.framework,
  org.osgi.service.component,
  org.slf4j
-Export-Package: org.openhab.io.transport.modbus.test
