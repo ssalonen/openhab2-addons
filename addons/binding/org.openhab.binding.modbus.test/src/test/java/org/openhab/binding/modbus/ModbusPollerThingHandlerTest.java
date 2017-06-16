@@ -214,6 +214,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
     }
 
     // TODO: have child items and verify callback go through nicely
+    // TODO: test bridge status change -> disconnect/connect
 
     @Override
     public ModbusManager getManager() {
