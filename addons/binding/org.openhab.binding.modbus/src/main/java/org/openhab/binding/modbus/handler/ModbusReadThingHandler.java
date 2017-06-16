@@ -201,9 +201,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     @Override
     public synchronized void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
         super.bridgeStatusChanged(bridgeStatusInfo);
-        if (thingIsInitialized()) {
-            validateConfiguration();
-        }
+        validateConfiguration();
     }
 
     private boolean containsOnOff(List<Class<? extends State>> channelAcceptedDataTypes) {
