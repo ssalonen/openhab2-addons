@@ -9,6 +9,7 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
@@ -128,7 +129,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             this.functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(config.getType());
             if (this.functionCode == null) {
                 logger.error("Illegal function code: {}", config.getType());
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("No function code found for " + config.getType());
             }
             start = config.getStart();
             length = config.getLength();
@@ -253,7 +254,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     private volatile BitArray lastResponseCoils;
     private volatile ModbusRegisterArray lastResponseRegisters;
     private ModbusPollerConfiguration config;
-    private PollTask pollTask;
+    private volatile PollTask pollTask;
     private ModbusManagerReference managerRef;
 
     private ModbusReadCallback callbackDelegator = new ReadCallbackDelegator();
@@ -316,7 +317,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         initPolling();
     }
 
-    public void unregisterPollTask() {
+    public synchronized void unregisterPollTask() {
         if (pollTask == null) {
             return;
         }
@@ -325,7 +326,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         updateStatus(ThingStatus.OFFLINE);
     }
 
-    private void registerPollTask() {
+    private synchronized void registerPollTask() {
         if (pollTask != null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR);
             throw new IllegalStateException("pollTask should be unregistered before registering a new one!");
@@ -338,7 +339,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         ModbusEndpointThingHandler slaveEndpointThingHandler = getEndpointThingHandler();
         if (slaveEndpointThingHandler == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                    String.format("Bridge '%s' is offline", getBridge().getLabel()));
+                    String.format("Bridge '%s' is offline", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
             logger.debug("No bridge handler -- aborting init for {}", this);
             return;
         }
