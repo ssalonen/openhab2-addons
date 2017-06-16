@@ -11,5 +11,7 @@ Import-Package: org.apache.commons.collections.iterators,
  org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.thing,
  org.eclipse.smarthome.test.java,
+ org.eclipse.smarthome.test.storage,
  org.hamcrest;core=split,
- org.junit;version="4.11"
+ org.junit;version="4.11",
+ org.junit.runner;version="4.11.0"
