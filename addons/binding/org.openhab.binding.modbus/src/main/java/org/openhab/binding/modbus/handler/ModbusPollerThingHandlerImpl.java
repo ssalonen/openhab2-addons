@@ -306,6 +306,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         initPolling();
     }
 
+    @Override
+    public void dispose() {
+        unregisterPollTask();
+    }
+
     public void initPolling() {
         unregisterPollTask();
         registerPollTask();
