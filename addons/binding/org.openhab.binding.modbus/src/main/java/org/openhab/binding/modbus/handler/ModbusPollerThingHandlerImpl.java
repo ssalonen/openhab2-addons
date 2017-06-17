@@ -284,6 +284,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             logger.debug("Bridge is null");
             return null;
         }
+        if (bridge.getStatus() == ThingStatus.OFFLINE) {
+            logger.debug("Bridge is offline");
+            return null;
+        }
+
         ThingHandler handler = bridge.getHandler();
         if (handler == null) {
             logger.debug("Bridge handler is null");
