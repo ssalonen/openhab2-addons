@@ -9,12 +9,14 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
+import java.util.function.Supplier;
+
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.types.Command;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.binding.modbus.internal.config.ModbusTcpConfiguration;
+import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.slf4j.Logger;
@@ -29,11 +31,10 @@ import org.slf4j.LoggerFactory;
 public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements ModbusEndpointThingHandler {
 
     private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
-    private ChannelUID stringChannelUid;
     private ModbusTcpConfiguration config;
     private ModbusSlaveEndpoint endpoint;
 
-    public ModbusTcpThingHandler(Bridge bridge, ModbusManagerReference managerRef) {
+    public ModbusTcpThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
         super(bridge);
     }
 

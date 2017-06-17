@@ -219,7 +219,7 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
 
         int slaveId = pollTask.getRequest().getUnitID();
         ModbusSlaveEndpoint slaveEndpoint = pollTask.getEndpoint();
-        ModbusManager manager = pollerHandler.getManagerRef().getManager();
+        ModbusManager manager = pollerHandler.getManagerRef().get();
 
         String trigger = config.getTrigger();
         if (trigger.equals("*")) {

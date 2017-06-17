@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusHandlerFactory extends BaseThingHandlerFactory implements ModbusManagerReference {
+public class ModbusHandlerFactory extends BaseThingHandlerFactory {
 
     private final Logger logger = LoggerFactory.getLogger(ModbusHandlerFactory.class);
 
@@ -59,10 +59,10 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements Mod
 
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
-            return new ModbusTcpThingHandler((Bridge) thing, this);
+            return new ModbusTcpThingHandler((Bridge) thing, () -> manager);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
             logger.debug("createHandler Modbus poller");
-            return new ModbusPollerThingHandlerImpl((Bridge) thing, this);
+            return new ModbusPollerThingHandlerImpl((Bridge) thing, () -> manager);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_READ_WRITE)) {
             logger.debug("createHandler read-write");
             return new ModbusReadWriteThingHandler((Bridge) thing);
@@ -87,8 +87,4 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements Mod
         this.manager = null;
     }
 
-    @Override
-    public ModbusManager getManager() {
-        return manager;
-    }
 }
