@@ -7,16 +7,17 @@
  */
 package org.openhab.binding.modbus.handler;
 
-import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
-
 import java.util.function.Supplier;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.config.ModbusTcpConfiguration;
 import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.ModbusManagerListener;
+import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.slf4j.Logger;
@@ -28,26 +29,22 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements ModbusEndpointThingHandler {
+public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
+        implements ModbusEndpointThingHandler, ModbusManagerListener {
 
     private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
     private ModbusTcpConfiguration config;
     private ModbusSlaveEndpoint endpoint;
+    private Supplier<ModbusManager> managerRef;
+    private volatile EndpointPoolConfiguration configuration;
 
     public ModbusTcpThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
         super(bridge);
+        this.managerRef = managerRef;
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        if (channelUID.getId().equals(CHANNEL_STRING)) {
-            // TODO: handle command
-
-            // Note: if communication with thing fails for some reason,
-            // indicate that by setting the status with detail information
-            // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-            // "Could not control device at IP address x.x.x.x");
-        }
     }
 
     @Override
@@ -56,7 +53,25 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
         // Long running initialization should be done asynchronously in background.
         this.config = getConfigAs(ModbusTcpConfiguration.class);
         endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
+
+        EndpointPoolConfiguration configNew = new EndpointPoolConfiguration();
+        configNew.setConnectMaxTries(config.getConnectMaxTries());
+        configNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
+        configNew.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
+        configNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        configNew.setReconnectAfterMillis(config.getReconnectAfterMillis());
+        managerRef.get().addListener(this);
+        synchronized (configuration) {
+            configuration = configNew;
+            managerRef.get().setEndpointPoolConfiguration(endpoint, configuration);
+        }
+
         updateStatus(ThingStatus.ONLINE);
+    }
+
+    @Override
+    public void dispose() {
+        managerRef.get().removeListener(this);
     }
 
     @Override
@@ -67,5 +82,17 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing implements 
     @Override
     public int getSlaveId() {
         return config.getId();
+    }
+
+    @Override
+    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration configuration) {
+        synchronized (configuration) {
+            if (endpoint.equals(this.endpoint) && !this.configuration.equals(configuration)) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                        String.format(
+                                "Endpoint '%s' has conflicting parameters: parameters of this thing {} are different from {}",
+                                endpoint, this.configuration, configuration));
+            }
+        }
     }
 }

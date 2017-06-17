@@ -1,8 +1,10 @@
 package org.openhab.io.transport.modbus.internal;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -16,6 +18,7 @@ import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -136,6 +139,7 @@ public class ModbusManagerImpl implements ModbusManager {
 
     private volatile Map<PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(10);
+    private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<ModbusManagerListener>();
 
     static {
         connectionFactory = new ModbusSlaveConnectionFactoryImpl();
@@ -189,10 +193,11 @@ public class ModbusManagerImpl implements ModbusManager {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
                 callback.onBits(message, new BitArrayWrappingBitVector(((ReadCoilsResponse) response).getCoils()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
-                callback.onBits(message, new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes()));
+                callback.onBits(message,
+                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-                callback.onRegisters(message,
-                        new RegisterArrayWrappingInputRegister(((ReadMultipleRegistersResponse) response).getRegisters()));
+                callback.onRegisters(message, new RegisterArrayWrappingInputRegister(
+                        ((ReadMultipleRegistersResponse) response).getRegisters()));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS) {
                 callback.onRegisters(message,
                         new RegisterArrayWrappingInputRegister(((ReadInputRegistersResponse) response).getRegisters()));
@@ -559,6 +564,9 @@ public class ModbusManagerImpl implements ModbusManager {
     @Override
     public void setEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration configuration) {
         connectionFactory.setEndpointPoolConfiguration(endpoint, configuration);
+        for (ModbusManagerListener listener : listeners) {
+            listener.onEndpointPoolConfigurationSet(endpoint, configuration);
+        }
     }
 
     @Override
@@ -572,6 +580,16 @@ public class ModbusManagerImpl implements ModbusManager {
 
     protected void deactivate() {
         logger.info("Modbus manager deactivated");
+    }
+
+    @Override
+    public void addListener(ModbusManagerListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(ModbusManagerListener listener) {
+        listeners.remove(listener);
     }
 
 }

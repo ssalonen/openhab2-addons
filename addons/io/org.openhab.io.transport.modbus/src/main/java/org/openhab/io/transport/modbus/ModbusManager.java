@@ -88,4 +88,8 @@ public interface ModbusManager {
 
     public EndpointPoolConfiguration getEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint);
 
+    public void addListener(ModbusManagerListener listener);
+
+    public void removeListener(ModbusManagerListener listener);
+
 }
