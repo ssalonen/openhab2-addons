@@ -38,7 +38,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager;
@@ -49,7 +48,7 @@ import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
+public class ModbusPollerThingHandlerTest {
 
     @Mock
     private ModbusManager modbusManager;
@@ -116,7 +115,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
         thingCallback = Mockito.mock(ThingHandlerCallback.class);
         hookStatusUpdates(endpoint);
 
-        tcpThingHandler = new ModbusTcpThingHandler(endpoint, this);
+        tcpThingHandler = new ModbusTcpThingHandler(endpoint, () -> modbusManager);
         tcpThingHandler.setCallback(thingCallback);
         endpoint.setHandler(tcpThingHandler);
         registerThingToMockRegistry(endpoint);
@@ -152,7 +151,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
         registerThingToMockRegistry(poller);
         hookStatusUpdates(poller);
 
-        ModbusPollerThingHandlerImpl pollerThingHandler = new ModbusPollerThingHandlerImpl(poller, this);
+        ModbusPollerThingHandlerImpl pollerThingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
         pollerThingHandler.setCallback(thingCallback);
         poller.setHandler(pollerThingHandler);
         pollerThingHandler.initialize();
@@ -175,7 +174,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
 
         hookStatusUpdates(poller);
 
-        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, this);
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
         thingHandler.setCallback(thingCallback);
         poller.setHandler(thingHandler);
         hookItemRegistry(thingHandler);
@@ -265,7 +264,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
         registerThingToMockRegistry(poller);
         hookStatusUpdates(poller);
 
-        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, this);
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
         thingHandler.setCallback(thingCallback);
         poller.setHandler(thingHandler);
         hookItemRegistry(thingHandler);
@@ -342,7 +341,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
         registerThingToMockRegistry(poller);
         hookStatusUpdates(poller);
 
-        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, this);
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
         thingHandler.setCallback(thingCallback);
         poller.setHandler(thingHandler);
         hookItemRegistry(thingHandler);
@@ -418,7 +417,7 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
         registerThingToMockRegistry(poller);
         hookStatusUpdates(poller);
 
-        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, this);
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
         thingHandler.setCallback(thingCallback);
         poller.setHandler(thingHandler);
         hookItemRegistry(thingHandler);
@@ -464,11 +463,6 @@ public class ModbusPollerThingHandlerTest implements ModbusManagerReference {
 
         verifyNoMoreInteractions(modbusManager);
 
-    }
-
-    @Override
-    public ModbusManager getManager() {
-        return modbusManager;
     }
 
 }

@@ -18,13 +18,12 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ModbusTcpThingHandlerTest implements ModbusManagerReference {
+public class ModbusTcpThingHandlerTest {
 
     @Mock
     private ModbusManager modbusManager;
@@ -49,7 +48,7 @@ public class ModbusTcpThingHandlerTest implements ModbusManagerReference {
             return null;
         }).when(thingCallback).statusUpdated(Matchers.same(thing), Matchers.any());
 
-        ModbusTcpThingHandler thingHandler = new ModbusTcpThingHandler(thing, this);
+        ModbusTcpThingHandler thingHandler = new ModbusTcpThingHandler(thing, () -> modbusManager);
         thingHandler.setCallback(thingCallback);
         thingHandler.initialize();
 
@@ -60,11 +59,6 @@ public class ModbusTcpThingHandlerTest implements ModbusManagerReference {
         assertThat(thingHandler.getSlaveId(), is(9));
 
         verifyZeroInteractions(modbusManager);
-    }
-
-    @Override
-    public ModbusManager getManager() {
-        return modbusManager;
     }
 
 }

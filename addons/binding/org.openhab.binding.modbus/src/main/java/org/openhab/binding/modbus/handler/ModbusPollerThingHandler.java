@@ -1,13 +1,15 @@
 package org.openhab.binding.modbus.handler;
 
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
+import java.util.function.Supplier;
+
+import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 
 public interface ModbusPollerThingHandler {
 
     public PollTask getPollTask();
 
-    public ModbusManagerReference getManagerRef();
+    public Supplier<ModbusManager> getManagerRef();
 
     public ModbusEndpointThingHandler getEndpointThingHandler();
 }

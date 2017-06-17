@@ -11,6 +11,7 @@ import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
 
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -25,9 +26,9 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
-import org.openhab.binding.modbus.internal.ModbusManagerReference;
 import org.openhab.binding.modbus.internal.config.ModbusPollerConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
+import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
@@ -255,11 +256,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     private volatile ModbusRegisterArray lastResponseRegisters;
     private ModbusPollerConfiguration config;
     private volatile PollTask pollTask;
-    private ModbusManagerReference managerRef;
+    private Supplier<ModbusManager> managerRef;
 
     private ModbusReadCallback callbackDelegator = new ReadCallbackDelegator();
 
-    public ModbusPollerThingHandlerImpl(Bridge bridge, ModbusManagerReference managerRef) {
+    public ModbusPollerThingHandlerImpl(Bridge bridge, Supplier<ModbusManager> managerRef) {
         super(bridge);
         this.managerRef = managerRef;
     }
@@ -326,7 +327,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         if (pollTask == null) {
             return;
         }
-        managerRef.getManager().unregisterRegularPoll(pollTask);
+        managerRef.get().unregisterRegularPoll(pollTask);
         pollTask = null;
         updateStatus(ThingStatus.OFFLINE);
     }
@@ -351,12 +352,12 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
         ModbusReadRequestBlueprintImpl request = new ModbusReadRequestBlueprintImpl(slaveEndpointThingHandler);
         pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request);
-        managerRef.getManager().registerRegularPoll(pollTask, config.getRefresh(), 0);
+        managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
         updateStatus(ThingStatus.ONLINE);
     }
 
     @Override
-    public ModbusManagerReference getManagerRef() {
+    public Supplier<ModbusManager> getManagerRef() {
         return managerRef;
     }
 
