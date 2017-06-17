@@ -17,6 +17,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
@@ -460,6 +461,59 @@ public class ModbusPollerThingHandlerTest {
 
             }
         }));
+
+        verifyNoMoreInteractions(modbusManager);
+
+    }
+
+    @Test
+    public void testInitializeWithNoBridge()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        Configuration pollerConfig = new Configuration();
+        pollerConfig.put("refresh", 150L);
+        pollerConfig.put("start", 5);
+        pollerConfig.put("length", 13);
+        pollerConfig.put("type", "coil");
+        poller = createPollerThingBuilder("poller").withConfiguration(pollerConfig).build();
+        registerThingToMockRegistry(poller);
+        hookStatusUpdates(poller);
+
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        poller.setHandler(thingHandler);
+        hookItemRegistry(thingHandler);
+
+        thingHandler.initialize();
+        assertThat(poller.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+        assertThat(poller.getStatusInfo().getStatusDetail(), is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
+
+        verifyNoMoreInteractions(modbusManager);
+
+    }
+
+    @Test
+    public void testInitializeWithOfflineBridge()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        Configuration pollerConfig = new Configuration();
+        pollerConfig.put("refresh", 150L);
+        pollerConfig.put("start", 5);
+        pollerConfig.put("length", 13);
+        pollerConfig.put("type", "coil");
+
+        poller = createPollerThingBuilder("poller").withConfiguration(pollerConfig).withBridge(endpoint.getUID())
+                .build();
+        registerThingToMockRegistry(poller);
+        hookStatusUpdates(poller);
+
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        poller.setHandler(thingHandler);
+        hookItemRegistry(thingHandler);
+
+        endpoint.setStatusInfo(new ThingStatusInfo(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, ""));
+        thingHandler.initialize();
+        assertThat(poller.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+        assertThat(poller.getStatusInfo().getStatusDetail(), is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
 
         verifyNoMoreInteractions(modbusManager);
 
