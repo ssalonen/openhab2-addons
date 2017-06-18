@@ -10,8 +10,10 @@ package org.openhab.binding.modbus.handler;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
@@ -21,6 +23,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
+import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
@@ -39,6 +42,8 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;
+    private volatile Set<Channel> channelsToCopyFromRead;
+    private volatile Set<Channel> channelsToDelegateWriteCommands;
 
     public ModbusReadWriteThingHandler(Bridge bridge) {
         super(bridge);
@@ -46,17 +51,10 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        //
-        // public static final String CHANNEL_SWITCH = "switch";
-        // public static final String CHANNEL_CONTACT = "contact";
-        // public static final String CHANNEL_DATETIME = "datetime";
-        // public static final String CHANNEL_DIMMER = "dimmer";
-        // public static final String CHANNEL_NUMBER = "number";
-        // public static final String CHANNEL_STRING = "string";
-        // public static final String CHANNEL_ROLLERSHUTTER = "rollershutter";
-        // public static final String CHANNEL_LAST_SUCCESS = "lastSuccess";
-        // public static final String CHANNEL_LAST_ERROR = "lastError";
-        //
+        if (!channelsToDelegateWriteCommands.contains(channelUID)) {
+            return;
+        }
+
         forEachChildWriter(handler -> {
             Channel childChannel = handler.getThing().getChannel(channelUID.getId());
             if (childChannel == null) {
@@ -66,9 +64,6 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
             }
         });
 
-        // FIXME: commands should be forwarded to writers, and not handled in readerwrite thing
-        // move the below code to writers
-
     }
 
     @Override
@@ -77,6 +72,11 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.INITIALIZING);
         config = getConfigAs(ModbusWriteConfiguration.class);
+        channelsToCopyFromRead = Stream.of(ModbusBindingConstants.DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE)
+                .map(channel -> getThing().getChannel(channel)).collect(Collectors.toSet());
+        channelsToDelegateWriteCommands = Stream
+                .of(ModbusBindingConstants.DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE)
+                .map(channel -> getThing().getChannel(channel)).collect(Collectors.toSet());
         updateStatus(ThingStatus.ONLINE);
     }
 
@@ -119,6 +119,10 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     private void maybeUpdateStateFromReadHandler(ModbusReadThingHandler readHandler) {
         Optional<Map<ChannelUID, State>> optionalLastState = readHandler.getLastState();
         optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
+            if (!channelsToCopyFromRead.contains(uid)) {
+                return;
+            }
+
             if (getThing().getChannel(uid.getId()) != null) {
                 updateState(uid.getId(), state);
             }
