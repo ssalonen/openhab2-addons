@@ -2,7 +2,6 @@ package org.openhab.binding.modbus;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.verifyZeroInteractions;
 
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -13,12 +12,14 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 
@@ -40,6 +41,18 @@ public class ModbusTcpThingHandlerTest {
         thingConfig.put("host", "thisishost");
         thingConfig.put("port", 44);
         thingConfig.put("id", 9);
+        thingConfig.put("timeBetweenTransactionsMillis", 1);
+        thingConfig.put("timeBetweenReconnectMillis", 2);
+        thingConfig.put("connectMaxTries", 3);
+        thingConfig.put("reconnectAfterMillis", 4);
+        thingConfig.put("connectTimeoutMillis", 5);
+
+        EndpointPoolConfiguration expectedPoolConfiguration = new EndpointPoolConfiguration();
+        expectedPoolConfiguration.setConnectMaxTries(3);
+        expectedPoolConfiguration.setConnectTimeoutMillis(5);
+        expectedPoolConfiguration.setInterConnectDelayMillis(2);
+        expectedPoolConfiguration.setPassivateBorrowMinMillis(1);
+        expectedPoolConfiguration.setReconnectAfterMillis(4);
 
         thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
         ThingHandlerCallback thingCallback = Mockito.mock(ThingHandlerCallback.class);
@@ -58,7 +71,11 @@ public class ModbusTcpThingHandlerTest {
         assertThat(slaveEndpoint, is(equalTo(new ModbusTCPSlaveEndpoint("thisishost", 44))));
         assertThat(thingHandler.getSlaveId(), is(9));
 
-        verifyZeroInteractions(modbusManager);
+        InOrder orderedVerify = Mockito.inOrder(modbusManager);
+        orderedVerify.verify(modbusManager).addListener(thingHandler);
+        orderedVerify.verify(modbusManager).setEndpointPoolConfiguration(thingHandler.asSlaveEndpoint(),
+                expectedPoolConfiguration);
+
     }
 
 }
