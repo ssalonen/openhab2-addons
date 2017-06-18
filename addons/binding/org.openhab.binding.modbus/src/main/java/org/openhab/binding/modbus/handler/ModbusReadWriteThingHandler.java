@@ -77,7 +77,13 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         channelsToDelegateWriteCommands = Stream
                 .of(ModbusBindingConstants.DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE)
                 .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
-        updateStatus(ThingStatus.ONLINE);
+        if (getBridge() == null) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Bridge is not set");
+        } else if (getBridge().getStatus() == ThingStatus.OFFLINE) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Bridge is offline");
+        } else {
+            updateStatus(ThingStatus.ONLINE);
+        }
     }
 
     @Override
