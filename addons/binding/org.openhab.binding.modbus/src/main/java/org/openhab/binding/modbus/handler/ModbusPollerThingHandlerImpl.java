@@ -7,8 +7,6 @@
  */
 package org.openhab.binding.modbus.handler;
 
-import static org.openhab.binding.modbus.ModbusBindingConstants.CHANNEL_STRING;
-
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -267,14 +265,6 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        if (channelUID.getId().equals(CHANNEL_STRING)) {
-            // TODO: handle command
-
-            // Note: if communication with thing fails for some reason,
-            // indicate that by setting the status with detail information
-            // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-            // "Could not control device at IP address x.x.x.x");
-        }
     }
 
     @Override
