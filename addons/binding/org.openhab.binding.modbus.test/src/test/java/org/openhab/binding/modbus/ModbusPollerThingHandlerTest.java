@@ -124,6 +124,8 @@ public class ModbusPollerThingHandlerTest {
 
         assertThat(endpoint.getStatus(), is(equalTo(ThingStatus.ONLINE)));
         // no need to test endpoint otherwise, see other unit tests
+        // start tracking assertions separately for the tests
+        reset(modbusManager);
     }
 
     private void hookItemRegistry(ThingHandler thingHandler)
@@ -183,7 +185,6 @@ public class ModbusPollerThingHandlerTest {
         thingHandler.initialize();
         assertThat(poller.getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
-        // polling not setup
         verify(modbusManager).registerRegularPoll(argThat(pollTaskMatcherSupplier.get()), eq(150l), eq(0L));
         verifyNoMoreInteractions(modbusManager);
     }
