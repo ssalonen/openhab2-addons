@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.smarthome.config.core.Configuration;
@@ -51,6 +52,20 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 @RunWith(MockitoJUnitRunner.class)
 public class ModbusPollerThingHandlerTest {
 
+    private static class Triplet<T1, T2, T3> {
+        T1 obj1;
+        T2 obj2;
+        T3 obj3;
+
+        public Triplet(T1 obj1, T2 obj2, T3 obj3) {
+            super();
+            this.obj1 = obj1;
+            this.obj2 = obj2;
+            this.obj3 = obj3;
+        }
+
+    }
+
     @Mock
     private ModbusManager modbusManager;
 
@@ -62,6 +77,8 @@ public class ModbusPollerThingHandlerTest {
     private List<Thing> things = new ArrayList<>();
 
     private ModbusTcpThingHandler tcpThingHandler;
+
+    @Mock
     private ThingHandlerCallback thingCallback;
 
     private static BridgeBuilder createTcpThingBuilder(String id) {
@@ -113,7 +130,6 @@ public class ModbusPollerThingHandlerTest {
         tcpConfig.put("id", 9);
         endpoint = createTcpThingBuilder("tcpendpoint").withConfiguration(tcpConfig).build();
 
-        thingCallback = Mockito.mock(ThingHandlerCallback.class);
         hookStatusUpdates(endpoint);
 
         tcpThingHandler = new ModbusTcpThingHandler(endpoint, () -> modbusManager);
@@ -328,6 +344,144 @@ public class ModbusPollerThingHandlerTest {
         verify(readwrite2Handler).onError(request, error);
         verifyNoMoreInteractions(readwrite1Handler);
         verifyNoMoreInteractions(readwrite2Handler);
+    }
+
+    @Test
+    public void testReadCallbackWithTwoPollersShouldWorkIndependently()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        Function<Integer, Triplet<ModbusPollerThingHandlerImpl, ModbusReadWriteThingHandler, ModbusReadWriteThingHandler>> createPollersAndReadWrite = (
+                Integer length) -> {
+            Configuration pollerConfig = new Configuration();
+            pollerConfig.put("refresh", 150L);
+            pollerConfig.put("start", 5);
+            pollerConfig.put("length", length);
+            pollerConfig.put("type", "coil");
+            Bridge poller = createPollerThingBuilder("poller" + "_" + length.toString()).withConfiguration(pollerConfig)
+                    .withBridge(endpoint.getUID()).build();
+            registerThingToMockRegistry(poller);
+            hookStatusUpdates(poller);
+
+            ModbusPollerThingHandlerImpl pollerThingHandler = new ModbusPollerThingHandlerImpl(poller,
+                    () -> modbusManager);
+            pollerThingHandler.setCallback(thingCallback);
+            poller.setHandler(pollerThingHandler);
+            try {
+                hookItemRegistry(pollerThingHandler);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+
+            Bridge readwrite1 = createReadWriteThingBuilder("readwriter1" + "_" + length.toString())
+                    .withBridge(poller.getUID()).build();
+            ModbusReadWriteThingHandler readwrite1Handler = Mockito.mock(ModbusReadWriteThingHandler.class);
+            readwrite1.setHandler(readwrite1Handler);
+            registerThingToMockRegistry(readwrite1);
+            hookStatusUpdates(readwrite1);
+
+            Bridge readwrite2 = createReadWriteThingBuilder("readwriter2" + "_" + length.toString())
+                    .withBridge(poller.getUID()).build();
+            ModbusReadWriteThingHandler readwrite2Handler = Mockito.mock(ModbusReadWriteThingHandler.class);
+            readwrite2.setHandler(readwrite2Handler);
+            registerThingToMockRegistry(readwrite2);
+            hookStatusUpdates(readwrite2);
+            return new Triplet<ModbusPollerThingHandlerImpl, ModbusReadWriteThingHandler, ModbusReadWriteThingHandler>(
+                    pollerThingHandler, readwrite1Handler, readwrite2Handler);
+        };
+
+        Triplet<ModbusPollerThingHandlerImpl, ModbusReadWriteThingHandler, ModbusReadWriteThingHandler> poller1objs = createPollersAndReadWrite
+                .apply(13);
+        ModbusPollerThingHandlerImpl poller1Handler = poller1objs.obj1;
+        ModbusReadWriteThingHandler poller1readwrite1Handler = poller1objs.obj2;
+        ModbusReadWriteThingHandler poller1readwrite2Handler = poller1objs.obj3;
+        poller1Handler.initialize();
+
+        Triplet<ModbusPollerThingHandlerImpl, ModbusReadWriteThingHandler, ModbusReadWriteThingHandler> poller2objs = createPollersAndReadWrite
+                .apply(12);
+        ModbusPollerThingHandlerImpl poller2Handler = poller2objs.obj1;
+        ModbusReadWriteThingHandler poller2readwrite1Handler = poller2objs.obj2;
+        ModbusReadWriteThingHandler poller2readwrite2Handler = poller2objs.obj3;
+        poller2Handler.initialize();
+
+        // Capture reference callback
+        final AtomicReference<ModbusReadCallback> callbackPoller1Ref = new AtomicReference<>();
+        final AtomicReference<ModbusReadCallback> callbackPoller2Ref = new AtomicReference<>();
+        verify(modbusManager, times(2)).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
+
+            @Override
+            public void describeTo(Description description) {
+            }
+
+            @Override
+            protected boolean matchesSafely(PollTask item) {
+                if (item.getRequest().getDataLength() == 13) {
+                    callbackPoller1Ref.set(item.getCallback());
+                } else {
+                    callbackPoller2Ref.set(item.getCallback());
+                }
+                return true;
+
+            }
+        }), eq(150l), eq(0L));
+
+        ModbusReadCallback callback1 = callbackPoller1Ref.get();
+        ModbusReadCallback callback2 = callbackPoller2Ref.get();
+
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        BitArray bits = Mockito.mock(BitArray.class);
+        ModbusRegisterArray registers = Mockito.mock(ModbusRegisterArray.class);
+        Exception error = Mockito.mock(Exception.class);
+
+        // verify poller1 callbacks
+        callback1.onBits(request, bits);
+        verify(poller1readwrite1Handler).onBits(request, bits);
+        verify(poller1readwrite2Handler).onBits(request, bits);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite2Handler);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+
+        callback1.onRegisters(request, registers);
+        verify(poller1readwrite1Handler).onRegisters(request, registers);
+        verify(poller1readwrite2Handler).onRegisters(request, registers);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite2Handler);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+
+        callback1.onError(request, error);
+        verify(poller1readwrite1Handler).onError(request, error);
+        verify(poller1readwrite2Handler).onError(request, error);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite2Handler);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+
+        // verify poller2 callbacks
+        callback2.onBits(request, bits);
+        verify(poller2readwrite1Handler).onBits(request, bits);
+        verify(poller2readwrite2Handler).onBits(request, bits);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+
+        callback2.onRegisters(request, registers);
+        verify(poller2readwrite1Handler).onRegisters(request, registers);
+        verify(poller2readwrite2Handler).onRegisters(request, registers);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+
+        callback2.onError(request, error);
+        verify(poller2readwrite1Handler).onError(request, error);
+        verify(poller2readwrite2Handler).onError(request, error);
+        verifyNoMoreInteractions(poller2readwrite1Handler);
+        verifyNoMoreInteractions(poller2readwrite2Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+        verifyNoMoreInteractions(poller1readwrite1Handler);
+
     }
 
     @Test
