@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
@@ -70,7 +71,8 @@ public class ModbusReadHandlerTest {
         }).when(thingCallback).stateUpdated(any(), any());
     }
 
-    private ModbusReadThingHandler createReadHandler(String id, Bridge bridge)
+    private ModbusReadThingHandler createReadHandler(String id, Bridge bridge,
+            Consumer<ThingBuilder> builderConfigurator)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         ThingUID thingUID = new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_WRITE, id);
         ThingBuilder builder = ThingBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_WRITE, thingUID)
@@ -99,6 +101,9 @@ public class ModbusReadHandlerTest {
 
     @Test
     public void testOnRegistersSpecificTriggerMatchingAndTransformation() {
+        // create (mock?) bridge
+        // createReadHandler, with configuration
+        // createReadHandler("read1")
     }
 
     @Test
