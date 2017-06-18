@@ -6,6 +6,7 @@ import static org.junit.Assert.assertThat;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
@@ -28,7 +29,6 @@ public class ModbusTcpThingHandlerTest {
 
     @Mock
     private ModbusManager modbusManager;
-    private Bridge thing;
 
     private static BridgeBuilder createTcpThingBuilder(String id) {
         return BridgeBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_TCP,
@@ -54,7 +54,7 @@ public class ModbusTcpThingHandlerTest {
         expectedPoolConfiguration.setPassivateBorrowMinMillis(1);
         expectedPoolConfiguration.setReconnectAfterMillis(4);
 
-        thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
+        Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
         ThingHandlerCallback thingCallback = Mockito.mock(ThingHandlerCallback.class);
         Mockito.doAnswer(invocation -> {
             thing.setStatusInfo(invocation.getArgumentAt(1, ThingStatusInfo.class));
@@ -75,7 +75,90 @@ public class ModbusTcpThingHandlerTest {
         orderedVerify.verify(modbusManager).addListener(thingHandler);
         orderedVerify.verify(modbusManager).setEndpointPoolConfiguration(thingHandler.asSlaveEndpoint(),
                 expectedPoolConfiguration);
-
     }
 
+    @Test
+    public void testTwoDifferentEndpointWithDifferentParameters() {
+        // thing1
+        Configuration thingConfig = new Configuration();
+        thingConfig.put("host", "thisishost");
+        thingConfig.put("port", 44);
+        thingConfig.put("connectMaxTries", 1);
+        thingConfig.put("timeBetweenTransactionsMillis", 1);
+
+        final Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
+        ThingHandlerCallback thingCallback = Mockito.mock(ThingHandlerCallback.class);
+        Mockito.doAnswer(invocation -> {
+            thing.setStatusInfo(invocation.getArgumentAt(1, ThingStatusInfo.class));
+            return null;
+        }).when(thingCallback).statusUpdated(Matchers.same(thing), Matchers.any());
+
+        ModbusTcpThingHandler thingHandler = new ModbusTcpThingHandler(thing, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        thingHandler.initialize();
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
+        poolConfiguration.setPassivateBorrowMinMillis(2);
+        // Different endpoint (port 45), so should not affect this thing
+        thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 45), poolConfiguration);
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
+
+    @Test
+    public void testTwoIdenticalEndpointWithDifferentParameters() {
+        // thing1
+        Configuration thingConfig = new Configuration();
+        thingConfig.put("host", "thisishost");
+        thingConfig.put("port", 44);
+        thingConfig.put("connectMaxTries", 1);
+        thingConfig.put("timeBetweenTransactionsMillis", 1);
+
+        final Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
+        ThingHandlerCallback thingCallback = Mockito.mock(ThingHandlerCallback.class);
+        Mockito.doAnswer(invocation -> {
+            thing.setStatusInfo(invocation.getArgumentAt(1, ThingStatusInfo.class));
+            return null;
+        }).when(thingCallback).statusUpdated(Matchers.same(thing), Matchers.any());
+
+        ModbusTcpThingHandler thingHandler = new ModbusTcpThingHandler(thing, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        thingHandler.initialize();
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
+        poolConfiguration.setPassivateBorrowMinMillis(2);
+        // Same endpoint and different parameters -> OFFLINE
+        thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 44), poolConfiguration);
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+        assertThat(thing.getStatusInfo().getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+    }
+
+    @Test
+    public void testTwoIdenticalEndpointWithSameParameters() {
+        // thing1
+        Configuration thingConfig = new Configuration();
+        thingConfig.put("host", "thisishost");
+        thingConfig.put("port", 44);
+        thingConfig.put("connectMaxTries", 1);
+        thingConfig.put("timeBetweenTransactionsMillis", 1);
+
+        final Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
+        ThingHandlerCallback thingCallback = Mockito.mock(ThingHandlerCallback.class);
+        Mockito.doAnswer(invocation -> {
+            thing.setStatusInfo(invocation.getArgumentAt(1, ThingStatusInfo.class));
+            return null;
+        }).when(thingCallback).statusUpdated(Matchers.same(thing), Matchers.any());
+
+        ModbusTcpThingHandler thingHandler = new ModbusTcpThingHandler(thing, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        thingHandler.initialize();
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
+        poolConfiguration.setPassivateBorrowMinMillis(1);
+        // Same endpoint and same parameters -> should not affect this thing
+        thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 44), poolConfiguration);
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
 }

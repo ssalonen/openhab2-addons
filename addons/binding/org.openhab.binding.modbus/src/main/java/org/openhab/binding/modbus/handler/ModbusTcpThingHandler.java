@@ -90,7 +90,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration otherConfig) {
         synchronized (this) {
             if (this.configuration != null && endpoint.equals(this.endpoint)
-                    && !this.configuration.equals(configuration)) {
+                    && !this.configuration.equals(otherConfig)) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
                                 "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}",
