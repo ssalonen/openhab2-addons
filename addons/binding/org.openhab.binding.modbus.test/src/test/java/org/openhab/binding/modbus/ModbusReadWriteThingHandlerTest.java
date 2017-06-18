@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.library.types.DecimalType;
@@ -24,6 +25,7 @@ import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
@@ -137,6 +139,15 @@ public class ModbusReadWriteThingHandlerTest {
 
     private ModbusReadWriteThingHandler createInitializedReadWriteWithHandler(String id)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        ModbusReadWriteThingHandler readwriteHandler = createInitializedReadWriteWithHandler(id, poller.getUID(), null);
+        assertThat(readwriteHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+        return readwriteHandler;
+
+    }
+
+    private ModbusReadWriteThingHandler createInitializedReadWriteWithHandler(String id, ThingUID bridge,
+            Consumer<ModbusReadWriteThingHandler> beforeInitHook)
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         ThingUID thingUID = new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_READ_WRITE, id);
         BridgeBuilder builder = BridgeBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_READ_WRITE, thingUID)
                 .withLabel("label for " + id);
@@ -145,7 +156,10 @@ public class ModbusReadWriteThingHandlerTest {
             String channelAcceptedType = entry.getValue();
             builder = builder.withChannel(new Channel(new ChannelUID(thingUID, channelId), channelAcceptedType));
         }
-        Bridge readwrite = builder.withBridge(poller.getUID()).build();
+        if (bridge != null) {
+            builder = builder.withBridge(poller.getUID());
+        }
+        Bridge readwrite = builder.build();
         registerThingToMockRegistry(readwrite);
         hookStatusUpdates(readwrite);
         hookStateUpdates(readwrite);
@@ -155,8 +169,10 @@ public class ModbusReadWriteThingHandlerTest {
         hookLinkRegistry(readwriteThingHandler);
         readwriteThingHandler.setCallback(thingCallback);
         readwrite.setHandler(readwriteThingHandler);
+        if (beforeInitHook != null) {
+            beforeInitHook.accept(readwriteThingHandler);
+        }
         readwriteThingHandler.initialize();
-        assertThat(readwrite.getStatus(), is(equalTo(ThingStatus.ONLINE)));
         return readwriteThingHandler;
     }
 
@@ -463,5 +479,28 @@ public class ModbusReadWriteThingHandlerTest {
         verify(write2Handler, never()).handleCommand(any(), any());
         verify(write3Handler, never()).handleCommand(any(), any());
         verify(read2Handler, never()).onBits(any(), any());
+    }
+
+    @Test
+    public void testInitializeWithNoBridge()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        ModbusReadWriteThingHandler readwriteThingHandler = createInitializedReadWriteWithHandler("readwrite1", null,
+                null);
+
+        assertThat(readwriteThingHandler.getThing().getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+        assertThat(readwriteThingHandler.getThing().getStatusInfo().getStatusDetail(),
+                is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
+    }
+
+    @Test
+    public void testInitializeWithOfflineBridge()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        ModbusReadWriteThingHandler readwriteThingHandler = createInitializedReadWriteWithHandler("readwrite1",
+                poller.getUID(), handler -> poller
+                        .setStatusInfo(new ThingStatusInfo(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "")));
+
+        assertThat(readwriteThingHandler.getThing().getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+        assertThat(readwriteThingHandler.getThing().getStatusInfo().getStatusDetail(),
+                is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
     }
 }

@@ -671,7 +671,6 @@ public class ModbusPollerThingHandlerTest {
         assertThat(poller.getStatusInfo().getStatusDetail(), is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
 
         verifyNoMoreInteractions(modbusManager);
-
     }
 
 }
