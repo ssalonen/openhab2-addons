@@ -240,7 +240,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     @Override
-    public synchronized void onBits(ModbusReadRequestBlueprint request, BitArray coils) {
+    public synchronized void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
         boolean boolValue;
         DecimalType numericState;
         Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes;
@@ -248,7 +248,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             if (getThing().getStatus() != ThingStatus.ONLINE) {
                 return;
             }
-            boolValue = coils.getBit(config.getStart());
+            boolValue = bits.getBit(config.getStart());
             numericState = boolValue ? new DecimalType(BigDecimal.ONE) : DecimalType.ZERO;
             channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized();
         }

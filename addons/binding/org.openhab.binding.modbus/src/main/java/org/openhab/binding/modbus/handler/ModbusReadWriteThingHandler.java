@@ -118,14 +118,13 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     private void maybeUpdateStateFromReadHandler(ModbusReadThingHandler readHandler) {
         Optional<Map<ChannelUID, State>> optionalLastState = readHandler.getLastState();
-        optionalLastState.ifPresent(lastState -> lastState.forEach((uid, state) -> {
-            if (!channelsToCopyFromRead.contains(uid)) {
+        optionalLastState.ifPresent(lastState -> lastState.forEach((childChannelUid, state) -> {
+            ChannelUID channelUid = new ChannelUID(getThing().getUID(), childChannelUid.getId());
+            if (!channelsToCopyFromRead.contains(channelUid)) {
                 return;
             }
 
-            if (getThing().getChannel(uid.getId()) != null) {
-                updateState(uid.getId(), state);
-            }
+            updateState(channelUid, state);
         }));
     }
 
