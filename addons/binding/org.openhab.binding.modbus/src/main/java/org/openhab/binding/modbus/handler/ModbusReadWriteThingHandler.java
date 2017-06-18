@@ -42,8 +42,8 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;
-    private volatile Set<Channel> channelsToCopyFromRead;
-    private volatile Set<Channel> channelsToDelegateWriteCommands;
+    private volatile Set<ChannelUID> channelsToCopyFromRead;
+    private volatile Set<ChannelUID> channelsToDelegateWriteCommands;
 
     public ModbusReadWriteThingHandler(Bridge bridge) {
         super(bridge);
@@ -73,10 +73,10 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         updateStatus(ThingStatus.INITIALIZING);
         config = getConfigAs(ModbusWriteConfiguration.class);
         channelsToCopyFromRead = Stream.of(ModbusBindingConstants.DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE)
-                .map(channel -> getThing().getChannel(channel)).collect(Collectors.toSet());
+                .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
         channelsToDelegateWriteCommands = Stream
                 .of(ModbusBindingConstants.DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE)
-                .map(channel -> getThing().getChannel(channel)).collect(Collectors.toSet());
+                .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
         updateStatus(ThingStatus.ONLINE);
     }
 
@@ -130,10 +130,9 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     }
 
     private void forEachChildWriter(Consumer<ModbusWriteThingHandler> consumer) {
-        List<ModbusWriteThingHandler> readers = getWriters();
-        // Call each readers callback, and update this bridge's items (matching by channel id)
-        readers.stream().forEach(reader -> {
-            consumer.accept(reader);
+        List<ModbusWriteThingHandler> writers = getWriters();
+        writers.stream().forEach(writer -> {
+            consumer.accept(writer);
         });
     }
 
