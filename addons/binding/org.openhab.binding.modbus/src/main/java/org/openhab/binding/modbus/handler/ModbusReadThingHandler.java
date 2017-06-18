@@ -160,14 +160,17 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             }
         }
 
+        // First index of polled items (e.g. registers or coils) that is needed to read the object. For example, the
+        // index of the register that corresponds to the first 16bits of float32 object.
         int firstObjectIndex;
         if (valueTypeBitCount < 16) {
-            firstObjectIndex = config.getStart() / functionObjectBitSize;
+            firstObjectIndex = (config.getStart() * valueTypeBitCount) / functionObjectBitSize;
         } else {
             firstObjectIndex = config.getStart();
         }
-        int objectCount = Math.max(1, valueTypeBitCount / functionObjectBitSize);
-        int lastObjectIndex = firstObjectIndex + objectCount - 1;
+        // Convert object size to polled items. E.g. float32 -> 2 (registers)
+        int objectSizeInPolledItemCount = Math.max(1, valueTypeBitCount / functionObjectBitSize);
+        int lastObjectIndex = firstObjectIndex + objectSizeInPolledItemCount - 1;
         int pollObjectCount = pollTask.getRequest().getDataLength();
 
         if (firstObjectIndex >= pollObjectCount || lastObjectIndex >= pollObjectCount) {
