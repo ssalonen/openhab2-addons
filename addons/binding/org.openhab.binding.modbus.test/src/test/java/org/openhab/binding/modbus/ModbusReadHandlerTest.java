@@ -465,6 +465,7 @@ public class ModbusReadHandlerTest {
         // linkRegistry.getLinks (for identifying linked channels)
 
         // FIXME: hook itemRegitry to ItemChannelLinkRegistry
+        // FIXME: link all channels to dummy items from channelToAcceptedType
         // links.add(new ItemChannelLink("foobar", channelUID))
 
         assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
