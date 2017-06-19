@@ -34,7 +34,6 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.junit.Before;
@@ -65,8 +64,6 @@ public class ModbusReadWriteThingHandlerTest {
 
     @Mock
     private ThingRegistry thingRegistry;
-
-    private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistry();
 
     private ModbusTcpThingHandler tcpThingHandler;
     private Bridge endpoint;
@@ -130,13 +127,6 @@ public class ModbusReadWriteThingHandlerTest {
         thingRegisteryField.set(thingHandler, thingRegistry);
     }
 
-    private void hookLinkRegistry(ThingHandler thingHandler)
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-        Field linkRegistryField = BaseThingHandler.class.getDeclaredField("linkRegistry");
-        linkRegistryField.setAccessible(true);
-        linkRegistryField.set(thingHandler, linkRegistry);
-    }
-
     private ModbusReadWriteThingHandler createInitializedReadWriteWithHandler(String id)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         ModbusReadWriteThingHandler readwriteHandler = createInitializedReadWriteWithHandler(id, poller.getUID(), null);
@@ -166,7 +156,6 @@ public class ModbusReadWriteThingHandlerTest {
 
         ModbusReadWriteThingHandler readwriteThingHandler = new ModbusReadWriteThingHandler(readwrite);
         hookItemRegistry(readwriteThingHandler);
-        hookLinkRegistry(readwriteThingHandler);
         readwriteThingHandler.setCallback(thingCallback);
         readwrite.setHandler(readwriteThingHandler);
         if (beforeInitHook != null) {
