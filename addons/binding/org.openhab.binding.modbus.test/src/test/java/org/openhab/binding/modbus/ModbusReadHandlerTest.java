@@ -6,7 +6,10 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +17,9 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
+import org.eclipse.smarthome.core.common.registry.Provider;
+import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -29,6 +35,9 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
+import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
+import org.eclipse.smarthome.core.thing.link.ItemChannelLinkProvider;
+import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.types.State;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +48,7 @@ import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
+import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
@@ -63,13 +73,33 @@ public class ModbusReadHandlerTest {
 
     }
 
+    private class ItemChannelLinkProviderImpl implements ItemChannelLinkProvider {
+
+        @Override
+        public void addProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
+        }
+
+        @Override
+        public Collection<ItemChannelLink> getAll() {
+            return links;
+        }
+
+        @Override
+        public void removeProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
+        }
+
+    }
+
     private List<Thing> things = new ArrayList<>();
+    private List<ItemChannelLink> links = new ArrayList<>();
 
     @Mock
     private ThingHandlerCallback thingCallback;
 
     @Mock
     private ThingRegistry thingRegistry;
+
+    private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistry();
 
     private Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();
 
@@ -91,11 +121,39 @@ public class ModbusReadHandlerTest {
         }
     }
 
-    private void hookItemRegistry(ThingHandler thingHandler)
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-        Field thingRegisteryField = BaseThingHandler.class.getDeclaredField("thingRegistry");
-        thingRegisteryField.setAccessible(true);
-        thingRegisteryField.set(thingHandler, thingRegistry);
+    private void hookItemRegistry(ThingHandler thingHandler) {
+        Field thingRegisteryField;
+        try {
+            thingRegisteryField = BaseThingHandler.class.getDeclaredField("thingRegistry");
+
+            thingRegisteryField.setAccessible(true);
+            thingRegisteryField.set(thingHandler, thingRegistry);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        } catch (SecurityException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void hookLinkRegistry(ThingHandler thingHandler) {
+        Field linkRegistryField;
+        try {
+            linkRegistryField = BaseThingHandler.class.getDeclaredField("linkRegistry");
+            linkRegistryField.setAccessible(true);
+            linkRegistryField.set(thingHandler, linkRegistry);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        } catch (SecurityException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void hookStatusUpdates(Thing thing) {
@@ -155,8 +213,7 @@ public class ModbusReadHandlerTest {
     }
 
     private ModbusReadThingHandler createReadHandler(String id, Bridge bridge,
-            Function<ThingBuilder, ThingBuilder> builderConfigurator)
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+            Function<ThingBuilder, ThingBuilder> builderConfigurator) {
         ThingUID thingUID = new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_WRITE, id);
         ThingBuilder builder = ThingBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_WRITE, thingUID)
                 .withLabel("label for " + id);
@@ -176,6 +233,7 @@ public class ModbusReadHandlerTest {
 
         ModbusReadThingHandler readThingHandler = new ModbusReadThingHandler(read);
         hookItemRegistry(readThingHandler);
+        hookLinkRegistry(readThingHandler);
         read.setHandler(readThingHandler);
         readThingHandler.setCallback(thingCallback);
         readThingHandler.initialize();
@@ -193,16 +251,23 @@ public class ModbusReadHandlerTest {
             }
             throw new IllegalArgumentException("UID is unknown: " + uid.getAsString());
         });
-    }
-
-    @Test
-    public void testOnBits() {
-
+        try {
+            Method addProviderMethod = AbstractRegistry.class.getMethod("addProvider", Provider.class);
+            addProviderMethod.setAccessible(true);
+            addProviderMethod.invoke(linkRegistry, new ItemChannelLinkProviderImpl());
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void testOutOfBoundsGeneric(int pollLength, int smallestStartThatIsInvalid,
-            ModbusReadFunctionCode functionCode, String valueType)
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+            ModbusReadFunctionCode functionCode, String valueType) {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
 
         // Minimally mocked request
@@ -239,161 +304,189 @@ public class ModbusReadHandlerTest {
     }
 
     @Test
-    public void testCoilsOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testCoilsOutOfIndex() {
         // value type plays no role with coils
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_COILS, null);
     }
 
     @Test
-    public void testDiscreteOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testDiscreteOutOfIndex() {
         // value type plays no role with discrete
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_DISCRETES, null);
     }
 
     @Test
-    public void testHoldingInt8OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingInt8OutOfIndex() {
         testOutOfBoundsGeneric(3, 7, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT8);
     }
 
     @Test
-    public void testHoldingBitOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingBitOutOfIndex() {
         testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_BIT);
     }
 
     @Test
-    public void testHoldingInt16OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingInt16OutOfIndex() {
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT16);
     }
 
     @Test
-    public void testHoldingUInt16OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingUInt16OutOfIndex() {
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_UINT16);
     }
 
     @Test
-    public void testHoldingInt32OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingInt32OutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT32);
     }
 
     @Test
-    public void testHoldingUInt32OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingUInt32OutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_UINT32);
     }
 
     @Test
-    public void testHoldingInt32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT32_SWAP);
     }
 
     @Test
-    public void testHoldingUInt32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingUInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_UINT32_SWAP);
     }
 
     @Test
-    public void testHoldingFloat32SOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingFloat32SOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_FLOAT32);
     }
 
     @Test
-    public void testHoldingFloat32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testHoldingFloat32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_FLOAT32_SWAP);
     }
 
     @Test
-    public void testInputRegisterInt8OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterInt8OutOfIndex() {
         testOutOfBoundsGeneric(3, 7, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT8);
     }
 
     @Test
-    public void testInputRegisterBitOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterBitOutOfIndex() {
         testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_BIT);
     }
 
     @Test
-    public void testInputRegisterInt16OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterInt16OutOfIndex() {
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT16);
     }
 
     @Test
-    public void testInputRegisterUInt16OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterUInt16OutOfIndex() {
         testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_UINT16);
     }
 
     @Test
-    public void testInputRegisterInt32OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterInt32OutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT32);
     }
 
     @Test
-    public void testInputRegisterUInt32OutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterUInt32OutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_UINT32);
     }
 
     @Test
-    public void testInputRegisterInt32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT32_SWAP);
     }
 
     @Test
-    public void testInputRegisterUInt32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterUInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_UINT32_SWAP);
     }
 
     @Test
-    public void testInputRegisterFloat32SOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterFloat32SOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_FLOAT32);
     }
 
     @Test
-    public void testInputRegisterFloat32SwapOutOfIndex()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testInputRegisterFloat32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_FLOAT32_SWAP);
     }
 
     @Test
-    public void testOnRegistersSpecificTriggerMatchingAndTransformation()
-            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+    public void testOnRegistersSpecificTriggerMatchingAndTransformation() {
 
     }
 
     @Test
     public void testOnRegistersSpecificTriggerNotMatching() {
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Tuple<Bridge, Bridge> bridgeThings = createReadWriteAndPoller("readwrite1", "poller1", task);
+        Bridge readwrite = bridgeThings.obj1;
+        Bridge poller = bridgeThings.obj2;
+
+        Configuration readConfig = new Configuration();
+        readConfig.put("start", 0);
+        readConfig.put("trigger", "1");
+        readConfig.put("transform", "default");
+        // readConfig.put("valueType", valueType);
+        ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
+                builder -> builder.withConfiguration(readConfig));
+        // linkRegistery.getLinkedItems (for datatpyes)
+        // linkRegistry.getLinks (for identifying linked channels)
+
+        // FIXME: hook itemRegitry to ItemChannelLinkRegistry
+        // links.add(new ItemChannelLink("foobar", channelUID))
+
+        assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        BitArray bits = new BitArray() {
+
+            @Override
+            public int size() {
+                return 1;
+            }
+
+            @Override
+            public boolean getBit(int index) {
+                return false;
+            }
+        };
+
+        readHandler.onBits(request, bits);
+
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(0)));
     }
 
     @Test
@@ -402,6 +495,11 @@ public class ModbusReadHandlerTest {
 
     @Test
     public void testOnRegistersFloat32() {
+    }
+
+    @Test
+    public void testOnBits() {
+
     }
 
     @Test
