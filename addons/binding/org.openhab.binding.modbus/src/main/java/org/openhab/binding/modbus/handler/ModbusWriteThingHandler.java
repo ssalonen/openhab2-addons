@@ -238,6 +238,8 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
 
         if (!transformedCommand.isPresent()) {
             // transformation failed, return
+            logger.warn("Cannot process command {} with channel {} since transformation was unsuccessful", command,
+                    channelUID);
             return;
         }
 
