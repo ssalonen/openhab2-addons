@@ -7,9 +7,15 @@
 		</supported-bridge-type-refs>
 		<label>Modbus write definition</label>
 		<channels>
-			<channel id="switch" typeId="switch-type" />
-			<channel id="number" typeId="number-type" />
-			<channel id="string" typeId="string-type" />
+            <channel id="switch" typeId="switch-type" />
+            <channel id="contact" typeId="contact-type" />
+            <channel id="datetime" typeId="datetime-type" />
+            <channel id="dimmer" typeId="dimmer-type" />
+            <channel id="number" typeId="number-type" />
+            <channel id="string" typeId="string-type" />
+            <channel id="rollershutter" typeId="rollershutter-type" />
+            <channel id="lastWriteSuccess" typeId="last-successful-write-type" />
+            <channel id="lastWriteError" typeId="last-erroring-write-type" />
 		</channels>
 		<config-description>
 			<!-- where to write -->

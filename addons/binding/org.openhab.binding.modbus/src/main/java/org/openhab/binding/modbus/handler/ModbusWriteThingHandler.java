@@ -16,8 +16,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.library.types.OnOffType;
-import org.eclipse.smarthome.core.library.types.OpenClosedType;
+import org.eclipse.smarthome.core.library.types.DateTimeType;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -28,6 +27,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
@@ -311,6 +311,24 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         updateStatus(ThingStatus.ONLINE);
     }
 
+    private void updateBridgeWithWriteError(DateTimeType now, ModbusWriteRequestBlueprint request, Exception error) {
+        Bridge readwrite = getBridgeOfThing(getThing());
+        if (readwrite == null) {
+            return;
+        }
+        ModbusReadWriteThingHandler handler = (ModbusReadWriteThingHandler) readwrite.getHandler();
+        handler.onWriteError(now, request, error);
+    }
+
+    private void updateBridgeWithSuccessfulWrite(DateTimeType now) {
+        Bridge readwrite = getBridgeOfThing(getThing());
+        if (readwrite == null) {
+            return;
+        }
+        ModbusReadWriteThingHandler handler = (ModbusReadWriteThingHandler) readwrite.getHandler();
+        handler.onSuccessfulWrite(now);
+    }
+
     @Override
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
         super.bridgeStatusChanged(bridgeStatusInfo);
@@ -319,26 +337,34 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
 
     @Override
     public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+        DateTimeType now = new DateTimeType();
         logger.error("Unsuccessful write: {} {}", error.getClass().getName(), error.getMessage());
+        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR, now);
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
+                "Error with writing request %s: %s: %s", request, error.getClass().getName(), error.getMessage()));
+        updateBridgeWithWriteError(now, request, error);
     }
 
     @Override
     public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
-        // The binding does not respond in any way to sucessful writes except logging
         logger.debug("Successful write, matching request {}", request);
+        DateTimeType now = new DateTimeType();
+        updateStatus(ThingStatus.ONLINE);
+        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS, now);
+        updateBridgeWithSuccessfulWrite(now);
     }
 
-    private boolean containsOnOff(List<Class<? extends Command>> channelAcceptedDataTypes) {
-        return channelAcceptedDataTypes.stream().anyMatch(clz -> {
-            return clz.equals(OnOffType.class);
-        });
-    }
-
-    private boolean containsOpenClosed(List<Class<? extends Command>> acceptedDataTypes) {
-        return acceptedDataTypes.stream().anyMatch(clz -> {
-            return clz.equals(OpenClosedType.class);
-        });
-    }
+    // private boolean containsOnOff(List<Class<? extends Command>> channelAcceptedDataTypes) {
+    // return channelAcceptedDataTypes.stream().anyMatch(clz -> {
+    // return clz.equals(OnOffType.class);
+    // });
+    // }
+    //
+    // private boolean containsOpenClosed(List<Class<? extends Command>> acceptedDataTypes) {
+    // return acceptedDataTypes.stream().anyMatch(clz -> {
+    // return clz.equals(OpenClosedType.class);
+    // });
+    // }
 
     private Bridge getBridgeOfThing(Thing thing) {
         ThingUID bridgeUID = thing.getBridgeUID();
