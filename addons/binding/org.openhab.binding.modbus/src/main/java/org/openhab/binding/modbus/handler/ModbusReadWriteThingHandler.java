@@ -70,7 +70,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.INITIALIZING);
+        updateStatus(ThingStatus.UNKNOWN);
         config = getConfigAs(ModbusWriteConfiguration.class);
         channelsToCopyFromRead = Stream.of(ModbusBindingConstants.DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE)
                 .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
@@ -111,7 +111,14 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         logger.warn("Read write thing handler got read error: {} {}", error.getClass().getName(), error.getMessage());
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
                 "Read write thing handler got read error: {} {}", error.getClass().getName(), error.getMessage()));
-        forEachChildReader(reader -> reader.onError(request, error));
+        forEachChildReader(reader -> {
+            reader.onError(request, error);
+            synchronized (this) {
+                maybeUpdateStateFromReadHandler(reader);
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                        String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
+            }
+        });
     }
 
     private void forEachChildReader(Consumer<ModbusReadThingHandler> consumer) {
@@ -124,14 +131,26 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     private void maybeUpdateStateFromReadHandler(ModbusReadThingHandler readHandler) {
         Optional<Map<ChannelUID, State>> optionalLastState = readHandler.getLastState();
-        optionalLastState.ifPresent(lastState -> lastState.forEach((childChannelUid, state) -> {
-            ChannelUID channelUid = new ChannelUID(getThing().getUID(), childChannelUid.getId());
-            if (!channelsToCopyFromRead.contains(channelUid)) {
-                return;
-            }
+        synchronized (this) {
+            optionalLastState.ifPresent(lastState -> lastState.forEach((childChannelUid, state) -> {
+                ChannelUID channelUid = new ChannelUID(getThing().getUID(), childChannelUid.getId());
+                if (!channelsToCopyFromRead.contains(channelUid)) {
+                    return;
+                }
 
-            updateState(channelUid, state);
-        }));
+                tryUpdateState(channelUid, state);
+            }));
+        }
+    }
+
+    private void tryUpdateState(ChannelUID uid, State state) {
+        try {
+            updateState(uid, state);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Error updating state '{}' (type {}) to channel {}: {} {}", state,
+                    Optional.ofNullable(state).map(s -> s.getClass().getName()).orElse("null"), uid,
+                    e.getClass().getName(), e.getMessage());
+        }
     }
 
     private void forEachChildWriter(Consumer<ModbusWriteThingHandler> consumer) {
