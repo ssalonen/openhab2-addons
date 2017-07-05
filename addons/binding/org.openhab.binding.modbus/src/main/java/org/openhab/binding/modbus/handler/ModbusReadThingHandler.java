@@ -13,7 +13,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
@@ -58,7 +60,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     private volatile Map<ChannelUID, State> lastState;
     private volatile Transformation transformation;
     private volatile String trigger;
-    private volatile List<Channel> linkedChannels;
+    private volatile List<Channel> linkedDataChannels;
 
     public ModbusReadThingHandler(Thing thing) {
         super(thing);
@@ -74,7 +76,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.INITIALIZING);
+        updateStatus(ThingStatus.UNKNOWN);
         synchronized (lastStateLock) {
             lastState = null;
         }
@@ -82,14 +84,16 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         trigger = config.getTrigger();
         transformation = new Transformation(config.getTransform());
 
-        linkedChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
-                .collect(Collectors.toList());
+        Set<ChannelUID> dataChannelUIds = Stream.of(ModbusBindingConstants.DATA_CHANNELS)
+                .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
+        linkedDataChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
+                .filter(channel -> dataChannelUIds.contains(channel.getUID())).collect(Collectors.toList());
 
         validateConfiguration();
     }
 
     public synchronized void validateConfiguration() {
-        updateStatus(ThingStatus.INITIALIZING);
+        updateStatus(ThingStatus.UNKNOWN);
         Bridge readwrite = getBridgeOfThing(getThing());
         if (readwrite == null) {
             logger.debug("ReadThing '{}' has no ReadThing bridge. Aborting config validation", getThing().getLabel());
@@ -233,8 +237,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             boolValue = !numericState.equals(DecimalType.ZERO);
             channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized();
         }
-        Map<ChannelUID, State> state = processUpdatedValue(numericState, transformation, linkedChannels, trigger,
-                channelAcceptedDataTypes, boolValue);
+        Map<ChannelUID, State> state = processUpdatedValue(numericState, channelAcceptedDataTypes, boolValue);
         synchronized (lastStateLock) {
             lastState = state;
         }
@@ -256,8 +259,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             channelAcceptedDataTypes = getLinkedChannelDataTypesUnsynchronized();
         }
 
-        Map<ChannelUID, State> state = processUpdatedValue(numericState, transformation, linkedChannels, trigger,
-                channelAcceptedDataTypes, boolValue);
+        Map<ChannelUID, State> state = processUpdatedValue(numericState, channelAcceptedDataTypes, boolValue);
         synchronized (lastStateLock) {
             lastState = state;
         }
@@ -269,20 +271,32 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     public synchronized void onError(ModbusReadRequestBlueprint request, Exception error) {
         logger.error("Thing {} received read error: {} {}", getThing(), error.getClass().getName(), error.getMessage(),
                 error);
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-                String.format("%s: %s", error.getClass().getName(), error.getMessage()));
-        updateState(ModbusBindingConstants.CHANNEL_LAST_ERROR, new DateTimeType());
+        Map<ChannelUID, State> states = new HashMap<>();
+        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_ERROR), new DateTimeType());
+
+        synchronized (this) {
+            // Update channels
+            states.forEach((uid, state) -> {
+                tryUpdateState(uid, state);
+            });
+
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                    String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
+            synchronized (lastStateLock) {
+                lastState = states;
+            }
+        }
+
     }
 
     public Optional<Map<ChannelUID, State>> getLastState() {
         return Optional.ofNullable(lastState);
     }
 
-    private Map<ChannelUID, State> processUpdatedValue(DecimalType numericState, Transformation transformation,
-            List<Channel> linkedChannels, String trigger,
+    private Map<ChannelUID, State> processUpdatedValue(DecimalType numericState,
             Map<ChannelUID, List<Class<? extends State>>> channelAcceptedDataTypes, boolean boolValue) {
         Map<ChannelUID, State> states = new HashMap<>();
-        linkedChannels.forEach(channel -> {
+        linkedDataChannels.stream().forEach(channel -> {
             ChannelUID channelUID = channel.getUID();
             List<Class<? extends State>> acceptedDataTypes = channelAcceptedDataTypes.get(channelUID);
             if (acceptedDataTypes.isEmpty()) {
@@ -311,28 +325,50 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             }
 
             State transformedState;
-            if (transformation == null || transformation.isIdentityTransform()) {
+            if (transformation.isIdentityTransform()) {
                 if (boolLikeState != null) {
+                    // A bit of smartness for ON/OFF and OPEN/CLOSED with boolean like items
                     transformedState = boolLikeState;
                 } else {
-                    transformedState = numericState;
+                    // Numeric states always go through transformation. This allows value of 17.5 to be converted to
+                    // 17.5% with percent types (instead of raising error)
+                    transformedState = transformation.transformState(bundleContext, acceptedDataTypes, numericState);
                 }
             } else {
                 transformedState = transformation.transformState(bundleContext, acceptedDataTypes, numericState);
             }
 
-            if (transformedState != null) {
+            if (transformedState == null) {
+                logger.warn("Channel {} will not be updated since transformation was unsuccesful", channel.getUID());
+            } else {
                 states.put(channel.getUID(), transformedState);
             }
         });
+        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_SUCCESS),
+                new DateTimeType());
 
-        // Update channels
-        states.forEach((uid, state) -> updateState(uid, state));
+        synchronized (this) {
+            updateStatus(ThingStatus.ONLINE);
+            // Update channels
+            states.forEach((uid, state) -> {
+                tryUpdateState(uid, state);
+            });
+        }
         return states;
     }
 
+    private void tryUpdateState(ChannelUID uid, State state) {
+        try {
+            updateState(uid, state);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Error updating state '{}' (type {}) to channel {}: {} {}", state,
+                    Optional.ofNullable(state).map(s -> s.getClass().getName()).orElse("null"), uid,
+                    e.getClass().getName(), e.getMessage());
+        }
+    }
+
     private Map<ChannelUID, List<Class<? extends State>>> getLinkedChannelDataTypesUnsynchronized() {
-        return linkedChannels.stream().collect(Collectors.toMap(channel -> channel.getUID(), channel -> {
+        return linkedDataChannels.stream().collect(Collectors.toMap(channel -> channel.getUID(), channel -> {
             Optional<Item> item = linkRegistry.getLinkedItems(channel.getUID()).stream().findFirst();
             if (!item.isPresent()) {
                 return Collections.emptyList();
