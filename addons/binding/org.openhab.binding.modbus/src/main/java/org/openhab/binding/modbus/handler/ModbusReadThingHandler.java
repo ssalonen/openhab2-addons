@@ -32,6 +32,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.Transformation;
@@ -70,6 +71,8 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     public void handleCommand(ChannelUID channelUID, Command command) {
         // All channels are read-only for now
         // TODO: handle REFRESH
+        if (command.equals(RefreshType.REFRESH)) {
+        }
     }
 
     @Override
@@ -84,12 +87,28 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         trigger = config.getTrigger();
         transformation = new Transformation(config.getTransform());
 
-        Set<ChannelUID> dataChannelUIds = Stream.of(ModbusBindingConstants.DATA_CHANNELS)
-                .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
-        linkedDataChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
-                .filter(channel -> dataChannelUIds.contains(channel.getUID())).collect(Collectors.toList());
+        updateLinkedDataChannels();
 
         validateConfiguration();
+    }
+
+    @Override
+    public void channelLinked(ChannelUID channelUID) {
+        updateLinkedDataChannels();
+        handleCommand(channelUID, RefreshType.REFRESH);
+    }
+
+    @Override
+    public void channelUnlinked(ChannelUID channelUID) {
+        updateLinkedDataChannels();
+    }
+
+    private void updateLinkedDataChannels() {
+        Set<ChannelUID> dataChannelUIDs = Stream.of(ModbusBindingConstants.DATA_CHANNELS)
+                .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
+        linkedDataChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
+                .filter(channel -> dataChannelUIDs.contains(channel.getUID())).collect(Collectors.toList());
+
     }
 
     public synchronized void validateConfiguration() {
@@ -272,7 +291,8 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         logger.error("Thing {} received read error: {} {}", getThing(), error.getClass().getName(), error.getMessage(),
                 error);
         Map<ChannelUID, State> states = new HashMap<>();
-        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR), new DateTimeType());
+        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR),
+                new DateTimeType());
 
         synchronized (this) {
             // Update channels
