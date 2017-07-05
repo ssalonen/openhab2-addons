@@ -49,7 +49,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
     @Override
     public void initialize() {
         synchronized (this) {
-            updateStatus(ThingStatus.INITIALIZING);
+            updateStatus(ThingStatus.UNKNOWN);
             this.configuration = null;
         }
 
