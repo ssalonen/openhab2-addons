@@ -274,7 +274,7 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     }
 
     public void validateConfiguration() {
-        updateStatus(ThingStatus.INITIALIZING);
+        updateStatus(ThingStatus.UNKNOWN);
         Bridge readwrite = getBridgeOfThing(getThing());
         if (readwrite == null) {
             logger.debug("WriteThing '{}' has no ReadThing bridge. Aborting config validation", getThing().getLabel());
