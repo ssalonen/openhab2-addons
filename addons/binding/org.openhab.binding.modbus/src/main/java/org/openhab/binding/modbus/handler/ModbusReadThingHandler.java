@@ -242,7 +242,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             lastState = state;
         }
 
-        updateState(ModbusBindingConstants.CHANNEL_LAST_SUCCESS, new DateTimeType());
+        updateState(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS, new DateTimeType());
     }
 
     @Override
@@ -264,7 +264,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             lastState = state;
         }
 
-        updateState(ModbusBindingConstants.CHANNEL_LAST_SUCCESS, new DateTimeType());
+        updateState(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS, new DateTimeType());
     }
 
     @Override
@@ -272,7 +272,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         logger.error("Thing {} received read error: {} {}", getThing(), error.getClass().getName(), error.getMessage(),
                 error);
         Map<ChannelUID, State> states = new HashMap<>();
-        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_ERROR), new DateTimeType());
+        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR), new DateTimeType());
 
         synchronized (this) {
             // Update channels
@@ -344,7 +344,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
                 states.put(channel.getUID(), transformedState);
             }
         });
-        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_SUCCESS),
+        states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS),
                 new DateTimeType());
 
         synchronized (this) {
