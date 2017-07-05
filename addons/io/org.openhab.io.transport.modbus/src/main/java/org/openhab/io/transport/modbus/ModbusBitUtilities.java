@@ -136,14 +136,8 @@ public class ModbusBitUtilities {
 
         DecimalType numericCommand;
         if (command instanceof OnOffType || command instanceof OpenClosedType) {
-            if (command.equals(OnOffType.ON) || command.equals(OpenClosedType.OPEN)) {
-                numericCommand = DecimalType.ZERO;
-            } else if (command.equals(OnOffType.OFF) || command.equals(OpenClosedType.CLOSED)) {
-                numericCommand = new DecimalType(BigDecimal.ONE);
-            } else {
-                throw new IllegalArgumentException(
-                        String.format("Did not expect to get '%s' with OnOffType and OpenClosedType command", command));
-            }
+            numericCommand = translateCommand2Boolean(command).get() ? new DecimalType(BigDecimal.ONE)
+                    : DecimalType.ZERO;
         } else if (command instanceof DecimalType) {
             numericCommand = (DecimalType) command;
         } else {
