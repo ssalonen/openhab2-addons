@@ -155,8 +155,29 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
 
-        if (validateIndex(pollTask)) {
-            updateStatus(ThingStatus.ONLINE);
+        if (!validateIndex(pollTask)) {
+            return;
+        }
+        if (!validateValueType(pollTask)) {
+            return;
+        }
+
+        updateStatus(ThingStatus.ONLINE);
+    }
+
+    private boolean validateValueType(PollTask pollTask) {
+        ModbusReadFunctionCode functionCode = pollTask.getRequest().getFunctionCode();
+        if ((functionCode == ModbusReadFunctionCode.READ_COILS
+                || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES)
+                && !config.getValueType().equals(ModbusBitUtilities.VALUE_TYPE_BIT)) {
+            logger.error(
+                    "ReadThing {}: Only valueType='{}' supported with coils or discrete inputs {}. Value type was: {}",
+                    getThing(), ModbusBitUtilities.VALUE_TYPE_BIT, config.getValueType());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
+                    .format("Only valueType='%s' supported with coils or discrete inputs", config.getValueType()));
+            return false;
+        } else {
+            return true;
         }
     }
 
@@ -203,8 +224,9 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             logger.error("ReadThing {} is out of bounds: {}", getThing(), errmsg);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, errmsg);
             return false;
+        } else {
+            return true;
         }
-        return true;
     }
 
     /**
