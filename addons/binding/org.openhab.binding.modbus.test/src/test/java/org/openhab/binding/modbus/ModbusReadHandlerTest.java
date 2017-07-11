@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
-import org.eclipse.smarthome.core.common.registry.Provider;
 import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
@@ -252,11 +252,12 @@ public class ModbusReadHandlerTest {
             throw new IllegalArgumentException("UID is unknown: " + uid.getAsString());
         });
         try {
-            Method addProviderMethod = AbstractRegistry.class.getMethod("addProvider", Provider.class);
+            Method addProviderMethod = Stream.of(AbstractRegistry.class.getDeclaredMethods())
+                    .filter(m -> m.getName().equals("addProvider")).findFirst()
+                    .orElseThrow(() -> new RuntimeException("addProvider method not found"));
             addProviderMethod.setAccessible(true);
             addProviderMethod.invoke(linkRegistry, new ItemChannelLinkProviderImpl());
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
+
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         } catch (IllegalArgumentException e) {
@@ -294,10 +295,10 @@ public class ModbusReadHandlerTest {
 
         // start - 1 should be ok
         Configuration readConfig2 = new Configuration();
-        readConfig.put("start", smallestStartThatIsInvalid - 1);
-        readConfig.put("trigger", "*");
-        readConfig.put("transform", "default");
-        readConfig.put("valueType", valueType);
+        readConfig2.put("start", smallestStartThatIsInvalid - 1);
+        readConfig2.put("trigger", "*");
+        readConfig2.put("transform", "default");
+        readConfig2.put("valueType", valueType);
         ModbusReadThingHandler readHandler2 = createReadHandler("read1", readwrite,
                 builder -> builder.withConfiguration(readConfig2));
         assertThat(readHandler2.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
@@ -306,13 +307,12 @@ public class ModbusReadHandlerTest {
     @Test
     public void testCoilsOutOfIndex() {
         // value type plays no role with coils
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_COILS, null);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_BIT);
     }
 
     @Test
     public void testDiscreteOutOfIndex() {
-        // value type plays no role with discrete
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_DISCRETES, null);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_BIT);
     }
 
     @Test
@@ -458,7 +458,7 @@ public class ModbusReadHandlerTest {
         readConfig.put("start", 0);
         readConfig.put("trigger", "1");
         readConfig.put("transform", "default");
-        // readConfig.put("valueType", valueType);
+        readConfig.put("valueType", ModbusBitUtilities.VALUE_TYPE_BIT);
         ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
                 builder -> builder.withConfiguration(readConfig));
         // linkRegistery.getLinkedItems (for datatpyes)
@@ -507,4 +507,52 @@ public class ModbusReadHandlerTest {
     public void testOnError() {
     }
 
+    private void testValueTypeGeneric(ModbusReadFunctionCode functionCode, String valueType,
+            ThingStatus expectedStatus) {
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(3).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Tuple<Bridge, Bridge> bridgeThings = createReadWriteAndPoller("readwrite1", "poller1", task);
+        Bridge readwrite = bridgeThings.obj1;
+
+        Configuration readConfig = new Configuration();
+        readConfig.put("start", 1);
+        readConfig.put("trigger", "*");
+        readConfig.put("transform", "default");
+        readConfig.put("valueType", valueType);
+        ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
+                builder -> builder.withConfiguration(readConfig));
+        assertThat(readHandler.getThing().getStatus(), is(equalTo(expectedStatus)));
+    }
+
+    @Test
+    public void testCoilDoesNotAcceptFloat32ValueType() {
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_FLOAT32,
+                ThingStatus.OFFLINE);
+    }
+
+    @Test
+    public void testCoilAcceptsBitValueType() {
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_BIT, ThingStatus.ONLINE);
+    }
+
+    @Test
+    public void testDiscreteInputDoesNotAcceptFloat32ValueType() {
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_FLOAT32,
+                ThingStatus.OFFLINE);
+    }
+
+    @Test
+    public void testDiscreteInputAcceptsBitValueType() {
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_BIT,
+                ThingStatus.ONLINE);
+    }
 }
