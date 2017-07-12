@@ -20,6 +20,8 @@ import java.util.stream.Stream;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
 import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
+import org.eclipse.smarthome.core.items.ItemProvider;
+import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -48,6 +50,7 @@ import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
+import org.openhab.core.items.Item;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
@@ -89,8 +92,13 @@ public class ModbusReadHandlerTest {
         }
 
     }
+    
+    private class ItemRegistryImpl extends  AbstractRegistry<Item, String, ItemProvider> implements ItemRegistry {
+
+    };
 
     private List<Thing> things = new ArrayList<>();
+    private Map<String, Item> items = new HashMap<>();
     private List<ItemChannelLink> links = new ArrayList<>();
 
     @Mock
@@ -98,6 +106,49 @@ public class ModbusReadHandlerTest {
 
     @Mock
     private ThingRegistry thingRegistry;
+
+    private ItemRegistry itemRegistry = 
+
+    // @Override
+    // public void removeItemRegistryChangeListener(ItemRegistryChangeListener listener) {
+    // throw new NotImplementedException();
+    //
+    // }
+    //
+    // @Override
+    // public boolean isValidItemName(String itemName) {
+    // throw new NotImplementedException();
+    // }
+    //
+    // @Override
+    // public Collection<Item> getItems(String pattern) {
+    // throw new NotImplementedException();
+    // }
+    //
+    // @Override
+    // public Collection<Item> getItems() {
+    // throw new NotImplementedException();
+    // }
+    //
+    // @Override
+    // public Item getItemByPattern(String name) throws ItemNotFoundException, ItemNotUniqueException {
+    // throw new NotImplementedException();
+    // }
+    //
+    // @Override
+    // public Item getItem(String name) throws ItemNotFoundException {
+    // Item item = items.get(name);
+    // if (item == null) {
+    // throw new ItemNotFoundException(name);
+    // }
+    // return item;
+    // }
+    //
+    // @Override
+    // public void addItemRegistryChangeListener(ItemRegistryChangeListener listener) {
+    // throw new NotImplementedException();
+    // }
+    // };
 
     private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistry();
 
@@ -125,7 +176,6 @@ public class ModbusReadHandlerTest {
         Field thingRegisteryField;
         try {
             thingRegisteryField = BaseThingHandler.class.getDeclaredField("thingRegistry");
-
             thingRegisteryField.setAccessible(true);
             thingRegisteryField.set(thingHandler, thingRegistry);
         } catch (NoSuchFieldException e) {
@@ -251,6 +301,9 @@ public class ModbusReadHandlerTest {
             }
             throw new IllegalArgumentException("UID is unknown: " + uid.getAsString());
         });
+        //
+        // add link provider to link registery
+        //
         try {
             Method addProviderMethod = Stream.of(AbstractRegistry.class.getDeclaredMethods())
                     .filter(m -> m.getName().equals("addProvider")).findFirst()
@@ -265,6 +318,37 @@ public class ModbusReadHandlerTest {
         } catch (InvocationTargetException e) {
             throw new RuntimeException(e);
         }
+
+        //
+        // add thing registry to link registry
+        //
+        try {
+            Field itemRegistryField = ItemChannelLinkRegistry.class.getDeclaredField("thingRegistry");
+            itemRegistryField.setAccessible(true);
+            itemRegistryField.set(linkRegistry, thingRegistry);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+
+        //
+        // add item registry to link registry
+        //
+        try {
+            Field itemRegistryField = ItemChannelLinkRegistry.class.getDeclaredField("itemRegistry");
+            itemRegistryField.setAccessible(true);
+            itemRegistryField.set(linkRegistry, itemRegistry);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private void testOutOfBoundsGeneric(int pollLength, int smallestStartThatIsInvalid,
@@ -317,7 +401,7 @@ public class ModbusReadHandlerTest {
 
     @Test
     public void testHoldingInt8OutOfIndex() {
-        testOutOfBoundsGeneric(3, 7, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
+        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 ModbusBitUtilities.VALUE_TYPE_INT8);
     }
 
@@ -377,7 +461,9 @@ public class ModbusReadHandlerTest {
 
     @Test
     public void testInputRegisterInt8OutOfIndex() {
-        testOutOfBoundsGeneric(3, 7, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT8);
+        // 3 registers => room for 6 x 8bit integers. Last valid read index is thus 5, and smallest invalid start index
+        // is 6.
+        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT8);
     }
 
     @Test
@@ -435,7 +521,7 @@ public class ModbusReadHandlerTest {
     }
 
     @Test
-    public void testOnRegistersSpecificTriggerNotMatching() {
+    public void testOnBitsSpecificTriggerNotMatching() {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
 
         int pollLength = 3;
@@ -456,7 +542,7 @@ public class ModbusReadHandlerTest {
 
         Configuration readConfig = new Configuration();
         readConfig.put("start", 0);
-        readConfig.put("trigger", "1");
+        readConfig.put("trigger", "1"); // should match only on true value
         readConfig.put("transform", "default");
         readConfig.put("valueType", ModbusBitUtilities.VALUE_TYPE_BIT);
         ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
@@ -470,7 +556,7 @@ public class ModbusReadHandlerTest {
 
         assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
-        BitArray bits = new BitArray() {
+        BitArray oneFalseBit = new BitArray() {
 
             @Override
             public int size() {
@@ -483,11 +569,81 @@ public class ModbusReadHandlerTest {
             }
         };
 
-        readHandler.onBits(request, bits);
+        readHandler.onBits(request, oneFalseBit);
 
         assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
         Map<ChannelUID, State> state = readHandler.getLastState().get();
-        assertThat(state.size(), is(equalTo(0)));
+        assertThat(state.size(), is(equalTo(1)));
+        ChannelUID channelUID = state.keySet().stream().findFirst().get();
+
+        assertThat(channelUID.getThingUID(), is(equalTo(readHandler.getThing().getUID())));
+        assertThat(channelUID.getId(), is(equalTo(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS)));
+
+    }
+
+    @Test
+    public void testOnBitsSpecificTriggerMatching() {
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Tuple<Bridge, Bridge> bridgeThings = createReadWriteAndPoller("readwrite1", "poller1", task);
+        Bridge readwrite = bridgeThings.obj1;
+        Bridge poller = bridgeThings.obj2;
+
+        Configuration readConfig = new Configuration();
+        readConfig.put("start", 0);
+        readConfig.put("trigger", "0"); // should match only on false value
+        readConfig.put("transform", "default");
+        readConfig.put("valueType", ModbusBitUtilities.VALUE_TYPE_BIT);
+        ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
+                builder -> builder.withConfiguration(readConfig));
+        // linkRegistery.getLinkedItems (for datatpyes)
+        // linkRegistry.getLinks (for identifying linked channels)
+
+        // FIXME: hook itemRegitry to ItemChannelLinkRegistry
+        // FIXME: link all channels to dummy items from channelToAcceptedType
+
+        // links.add(new ItemChannelLink("foobar", channelUID));
+
+        assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        BitArray oneFalseBit = new BitArray() {
+
+            @Override
+            public int size() {
+                return 1;
+            }
+
+            @Override
+            public boolean getBit(int index) {
+                return false;
+            }
+        };
+
+        readHandler.onBits(request, oneFalseBit);
+
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(2)));
+
+        assertThat(
+                state.keySet().stream()
+                        .filter(channelUID -> channelUID.getId()
+                                .equals(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS))
+                        .findFirst().isPresent(),
+                is(equalTo(true)));
+
     }
 
     @Test

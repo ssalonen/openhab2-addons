@@ -171,7 +171,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
                 || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES)
                 && !config.getValueType().equals(ModbusBitUtilities.VALUE_TYPE_BIT)) {
             logger.error(
-                    "ReadThing {}: Only valueType='{}' supported with coils or discrete inputs {}. Value type was: {}",
+                    "ReadThing {}: Only valueType='{}' supported with coils or discrete inputs. Value type was: {}",
                     getThing(), ModbusBitUtilities.VALUE_TYPE_BIT, config.getValueType());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
                     .format("Only valueType='%s' supported with coils or discrete inputs", config.getValueType()));
@@ -221,7 +221,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             String errmsg = String.format(
                     "Out-of-bounds: tried to read %s elements with index %d to %d (zero based index). Poller reads only %d %s elements which means that maximum index (zero-indexed) is %d",
                     dataElement, firstObjectIndex, lastObjectIndex, pollObjectCount, dataElement, pollObjectCount);
-            logger.error("ReadThing {} is out of bounds: {}", getThing(), errmsg);
+            logger.error("ReadThing '{}' is out of bounds: {}", getThing().getLabel(), errmsg);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, errmsg);
             return false;
         } else {
