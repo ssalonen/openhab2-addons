@@ -6,8 +6,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -15,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
 import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
+import org.eclipse.smarthome.core.internal.items.ItemRegistryImpl;
+import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemProvider;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -50,7 +48,6 @@ import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
-import org.openhab.core.items.Item;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
@@ -61,6 +58,7 @@ import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 
 import com.google.common.collect.ImmutableMap;
 
+@SuppressWarnings("restriction")
 @RunWith(MockitoJUnitRunner.class)
 public class ModbusReadHandlerTest {
 
@@ -76,25 +74,50 @@ public class ModbusReadHandlerTest {
 
     }
 
-    private class ItemChannelLinkProviderImpl implements ItemChannelLinkProvider {
+    private class ItemChannelLinkRegistryTestImpl extends ItemChannelLinkRegistry {
+        public ItemChannelLinkRegistryTestImpl() {
+            super();
+            this.setItemRegistry(itemRegistry);
+            this.setThingRegistry(thingRegistry);
 
-        @Override
-        public void addProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
+            addProvider(new ItemChannelLinkProvider() {
+
+                @Override
+                public void addProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
+                }
+
+                @Override
+                public Collection<ItemChannelLink> getAll() {
+                    return links;
+                }
+
+                @Override
+                public void removeProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
+                }
+            });
         }
+    };
 
-        @Override
-        public Collection<ItemChannelLink> getAll() {
-            return links;
+    private class ItemRegistryTestImpl extends ItemRegistryImpl {
+        public ItemRegistryTestImpl() {
+            super();
+
+            addProvider(new ItemProvider() {
+
+                @Override
+                public void addProviderChangeListener(ProviderChangeListener<Item> listener) {
+                }
+
+                @Override
+                public Collection<Item> getAll() {
+                    return items.values();
+                }
+
+                @Override
+                public void removeProviderChangeListener(ProviderChangeListener<Item> listener) {
+                }
+            });
         }
-
-        @Override
-        public void removeProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
-        }
-
-    }
-    
-    private class ItemRegistryImpl extends  AbstractRegistry<Item, String, ItemProvider> implements ItemRegistry {
-
     };
 
     private List<Thing> things = new ArrayList<>();
@@ -107,52 +130,10 @@ public class ModbusReadHandlerTest {
     @Mock
     private ThingRegistry thingRegistry;
 
-    private ItemRegistry itemRegistry = 
+    private ItemRegistry itemRegistry = new ItemRegistryTestImpl();
+    private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistryTestImpl();
 
-    // @Override
-    // public void removeItemRegistryChangeListener(ItemRegistryChangeListener listener) {
-    // throw new NotImplementedException();
-    //
-    // }
-    //
-    // @Override
-    // public boolean isValidItemName(String itemName) {
-    // throw new NotImplementedException();
-    // }
-    //
-    // @Override
-    // public Collection<Item> getItems(String pattern) {
-    // throw new NotImplementedException();
-    // }
-    //
-    // @Override
-    // public Collection<Item> getItems() {
-    // throw new NotImplementedException();
-    // }
-    //
-    // @Override
-    // public Item getItemByPattern(String name) throws ItemNotFoundException, ItemNotUniqueException {
-    // throw new NotImplementedException();
-    // }
-    //
-    // @Override
-    // public Item getItem(String name) throws ItemNotFoundException {
-    // Item item = items.get(name);
-    // if (item == null) {
-    // throw new ItemNotFoundException(name);
-    // }
-    // return item;
-    // }
-    //
-    // @Override
-    // public void addItemRegistryChangeListener(ItemRegistryChangeListener listener) {
-    // throw new NotImplementedException();
-    // }
-    // };
-
-    private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistry();
-
-    private Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();
+    Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();
 
     private Map<String, String> channelToAcceptedType = ImmutableMap.<String, String> builder()
             .put(ModbusBindingConstants.CHANNEL_SWITCH, "Switch").put(ModbusBindingConstants.CHANNEL_CONTACT, "Contact")
@@ -161,7 +142,6 @@ public class ModbusReadHandlerTest {
             .put(ModbusBindingConstants.CHANNEL_STRING, "String")
             .put(ModbusBindingConstants.CHANNEL_ROLLERSHUTTER, "Rollershutter").build();
 
-    @SuppressWarnings("restriction")
     private void registerThingToMockRegistry(Thing thing) {
         things.add(thing);
         // update bridge with the new child thing
@@ -301,53 +281,6 @@ public class ModbusReadHandlerTest {
             }
             throw new IllegalArgumentException("UID is unknown: " + uid.getAsString());
         });
-        //
-        // add link provider to link registery
-        //
-        try {
-            Method addProviderMethod = Stream.of(AbstractRegistry.class.getDeclaredMethods())
-                    .filter(m -> m.getName().equals("addProvider")).findFirst()
-                    .orElseThrow(() -> new RuntimeException("addProvider method not found"));
-            addProviderMethod.setAccessible(true);
-            addProviderMethod.invoke(linkRegistry, new ItemChannelLinkProviderImpl());
-
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-
-        //
-        // add thing registry to link registry
-        //
-        try {
-            Field itemRegistryField = ItemChannelLinkRegistry.class.getDeclaredField("thingRegistry");
-            itemRegistryField.setAccessible(true);
-            itemRegistryField.set(linkRegistry, thingRegistry);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-
-        //
-        // add item registry to link registry
-        //
-        try {
-            Field itemRegistryField = ItemChannelLinkRegistry.class.getDeclaredField("itemRegistry");
-            itemRegistryField.setAccessible(true);
-            itemRegistryField.set(linkRegistry, itemRegistry);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
 
     }
 
