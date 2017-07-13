@@ -6,12 +6,14 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Function;
 
 import org.eclipse.smarthome.config.core.Configuration;
@@ -19,7 +21,18 @@ import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
 import org.eclipse.smarthome.core.internal.items.ItemRegistryImpl;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemProvider;
-import org.eclipse.smarthome.core.items.ItemRegistry;
+import org.eclipse.smarthome.core.library.items.ContactItem;
+import org.eclipse.smarthome.core.library.items.DateTimeItem;
+import org.eclipse.smarthome.core.library.items.DimmerItem;
+import org.eclipse.smarthome.core.library.items.NumberItem;
+import org.eclipse.smarthome.core.library.items.RollershutterItem;
+import org.eclipse.smarthome.core.library.items.StringItem;
+import org.eclipse.smarthome.core.library.items.SwitchItem;
+import org.eclipse.smarthome.core.library.types.DecimalType;
+import org.eclipse.smarthome.core.library.types.OnOffType;
+import org.eclipse.smarthome.core.library.types.OpenClosedType;
+import org.eclipse.smarthome.core.library.types.PercentType;
+import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -53,6 +66,10 @@ import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusRegister;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusRegisterArrayImpl;
+import org.openhab.io.transport.modbus.ModbusRegisterImpl;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 
@@ -79,7 +96,9 @@ public class ModbusReadHandlerTest {
             super();
             this.setItemRegistry(itemRegistry);
             this.setThingRegistry(thingRegistry);
+        }
 
+        public void update() {
             addProvider(new ItemChannelLinkProvider() {
 
                 @Override
@@ -101,7 +120,9 @@ public class ModbusReadHandlerTest {
     private class ItemRegistryTestImpl extends ItemRegistryImpl {
         public ItemRegistryTestImpl() {
             super();
+        }
 
+        public void update() {
             addProvider(new ItemProvider() {
 
                 @Override
@@ -110,7 +131,7 @@ public class ModbusReadHandlerTest {
 
                 @Override
                 public Collection<Item> getAll() {
-                    return items.values();
+                    return items;
                 }
 
                 @Override
@@ -120,8 +141,19 @@ public class ModbusReadHandlerTest {
         }
     };
 
+    private static final Map<String, Class<? extends Item>> channelToItemClass = new HashMap<>();
+    static {
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_SWITCH, SwitchItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_CONTACT, ContactItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_DATETIME, DateTimeItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_DIMMER, DimmerItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_NUMBER, NumberItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_STRING, StringItem.class);
+        channelToItemClass.put(ModbusBindingConstants.CHANNEL_ROLLERSHUTTER, RollershutterItem.class);
+    }
+
     private List<Thing> things = new ArrayList<>();
-    private Map<String, Item> items = new HashMap<>();
+    private List<Item> items = new ArrayList<>();
     private List<ItemChannelLink> links = new ArrayList<>();
 
     @Mock
@@ -130,8 +162,8 @@ public class ModbusReadHandlerTest {
     @Mock
     private ThingRegistry thingRegistry;
 
-    private ItemRegistry itemRegistry = new ItemRegistryTestImpl();
-    private ItemChannelLinkRegistry linkRegistry = new ItemChannelLinkRegistryTestImpl();
+    private ItemRegistryTestImpl itemRegistry = new ItemRegistryTestImpl();
+    private ItemChannelLinkRegistryTestImpl linkRegistry = new ItemChannelLinkRegistryTestImpl();
 
     Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();
 
@@ -268,6 +300,14 @@ public class ModbusReadHandlerTest {
         readThingHandler.setCallback(thingCallback);
         readThingHandler.initialize();
         return readThingHandler;
+    }
+
+    /**
+     * Updates item and link registries such that added items and links are reflected in handlers
+     */
+    private void updateItemsAndLinks() {
+        itemRegistry.update();
+        linkRegistry.update();
     }
 
     @Before
@@ -453,12 +493,12 @@ public class ModbusReadHandlerTest {
 
     }
 
-    @Test
-    public void testOnBitsSpecificTriggerNotMatching() {
+    private ModbusReadThingHandler testReadHandlingGeneric(ModbusReadFunctionCode functionCode, int start,
+            String trigger, String transform, String valueType, BitArray bits, ModbusRegisterArray registers,
+            Exception error) {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
 
         int pollLength = 3;
-        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
 
         // Minimally mocked request
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
@@ -474,101 +514,110 @@ public class ModbusReadHandlerTest {
         Bridge poller = bridgeThings.obj2;
 
         Configuration readConfig = new Configuration();
-        readConfig.put("start", 0);
-        readConfig.put("trigger", "1"); // should match only on true value
-        readConfig.put("transform", "default");
-        readConfig.put("valueType", ModbusBitUtilities.VALUE_TYPE_BIT);
-        ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
-                builder -> builder.withConfiguration(readConfig));
-        // linkRegistery.getLinkedItems (for datatpyes)
-        // linkRegistry.getLinks (for identifying linked channels)
+        readConfig.put("start", start);
+        readConfig.put("trigger", trigger); // should match only on false value
+        readConfig.put("transform", transform);
+        readConfig.put("valueType", valueType);
 
-        // FIXME: hook itemRegitry to ItemChannelLinkRegistry
-        // FIXME: link all channels to dummy items from channelToAcceptedType
-        // links.add(new ItemChannelLink("foobar", channelUID))
+        String thingId = "read1";
+        //
+        // Bind all channels to corresponding channels
+        //
+        for (String channel : channelToItemClass.keySet()) {
+            String itemName = channel + "item";
+            links.add(new ItemChannelLink(itemName,
+                    new ChannelUID(new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_WRITE, thingId), channel)));
+            Class<?> clz = channelToItemClass.get(channel);
+            Item item;
+            try {
+                item = (Item) clz.getConstructor(String.class).newInstance(itemName);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InstantiationException e) {
+                throw new RuntimeException(e);
+            }
+            items.add(item);
+        }
+
+        updateItemsAndLinks();
+
+        ModbusReadThingHandler readHandler = createReadHandler(thingId, readwrite,
+                builder -> builder.withConfiguration(readConfig));
 
         assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
-        BitArray oneFalseBit = new BitArray() {
+        if (bits != null) {
+            assert registers == null;
+            assert error == null;
+            readHandler.onBits(request, bits);
+        } else if (registers != null) {
+            assert error == null;
+            readHandler.onRegisters(request, registers);
+        } else {
+            assert registers == null;
+            readHandler.onError(request, error);
+        }
+        return readHandler;
+    }
 
-            @Override
-            public int size() {
-                return 1;
-            }
+    @Test
+    public void testOnBitsSpecificTriggerNotMatching() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "0",
+                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
 
-            @Override
-            public boolean getBit(int index) {
-                return false;
-            }
-        };
+                    @Override
+                    public int size() {
+                        return 1;
+                    }
 
-        readHandler.onBits(request, oneFalseBit);
+                    @Override
+                    public boolean getBit(int index) {
+                        return true; // true does not match trigger=0
+                    }
+                }, null, null);
 
         assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
         Map<ChannelUID, State> state = readHandler.getLastState().get();
         assertThat(state.size(), is(equalTo(1)));
-        ChannelUID channelUID = state.keySet().stream().findFirst().get();
 
-        assertThat(channelUID.getThingUID(), is(equalTo(readHandler.getThing().getUID())));
-        assertThat(channelUID.getId(), is(equalTo(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS)));
+        assertThat(
+                state.keySet().stream()
+                        .filter(channelUID -> channelUID.getId()
+                                .equals(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS))
+                        .findFirst().isPresent(),
+                is(equalTo(true)));
+    }
 
+    private static void assertThatStateContains(Map<ChannelUID, State> state, String channelId, Object value) {
+        Optional<ChannelUID> uid = state.keySet().stream().filter(channelUID -> channelUID.getId().equals(channelId))
+                .findFirst();
+        assertThat(uid.isPresent(), is(equalTo(true)));
+        assertThat(state.get(uid.get()), is(equalTo(value)));
     }
 
     @Test
-    public void testOnBitsSpecificTriggerMatching() {
-        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+    public void testOnBitsSpecificTriggerMatchingZero() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "0",
+                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
 
-        int pollLength = 3;
-        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+                    @Override
+                    public int size() {
+                        return 1;
+                    }
 
-        // Minimally mocked request
-        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
-        doReturn(pollLength).when(request).getDataLength();
-        doReturn(functionCode).when(request).getFunctionCode();
-
-        PollTask task = Mockito.mock(PollTask.class);
-        doReturn(endpoint).when(task).getEndpoint();
-        doReturn(request).when(task).getRequest();
-
-        Tuple<Bridge, Bridge> bridgeThings = createReadWriteAndPoller("readwrite1", "poller1", task);
-        Bridge readwrite = bridgeThings.obj1;
-        Bridge poller = bridgeThings.obj2;
-
-        Configuration readConfig = new Configuration();
-        readConfig.put("start", 0);
-        readConfig.put("trigger", "0"); // should match only on false value
-        readConfig.put("transform", "default");
-        readConfig.put("valueType", ModbusBitUtilities.VALUE_TYPE_BIT);
-        ModbusReadThingHandler readHandler = createReadHandler("read1", readwrite,
-                builder -> builder.withConfiguration(readConfig));
-        // linkRegistery.getLinkedItems (for datatpyes)
-        // linkRegistry.getLinks (for identifying linked channels)
-
-        // FIXME: hook itemRegitry to ItemChannelLinkRegistry
-        // FIXME: link all channels to dummy items from channelToAcceptedType
-
-        // links.add(new ItemChannelLink("foobar", channelUID));
-
-        assertThat(readHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
-
-        BitArray oneFalseBit = new BitArray() {
-
-            @Override
-            public int size() {
-                return 1;
-            }
-
-            @Override
-            public boolean getBit(int index) {
-                return false;
-            }
-        };
-
-        readHandler.onBits(request, oneFalseBit);
+                    @Override
+                    public boolean getBit(int index) {
+                        return false;
+                    }
+                }, null, null);
 
         assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
         Map<ChannelUID, State> state = readHandler.getLastState().get();
-        assertThat(state.size(), is(equalTo(2)));
+        assertThat(state.size(), is(equalTo(7)));
 
         assertThat(
                 state.keySet().stream()
@@ -577,23 +626,125 @@ public class ModbusReadHandlerTest {
                         .findFirst().isPresent(),
                 is(equalTo(true)));
 
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_CONTACT, OpenClosedType.CLOSED);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_SWITCH, OnOffType.OFF);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_DIMMER, OnOffType.OFF);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_NUMBER, new DecimalType(0));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_ROLLERSHUTTER, new PercentType(0));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_STRING, new StringType("0"));
+        // no datetime, conversion not possible without transformation
     }
 
     @Test
-    public void testOnRegistersSpecificTriggerMatching() {
+    public void testOnBitsSpecificTriggerMatchingOne() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "1",
+                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
+
+                    @Override
+                    public int size() {
+                        return 1;
+                    }
+
+                    @Override
+                    public boolean getBit(int index) {
+                        return true;
+                    }
+                }, null, null);
+
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(7)));
+
+        assertThat(
+                state.keySet().stream()
+                        .filter(channelUID -> channelUID.getId()
+                                .equals(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS))
+                        .findFirst().isPresent(),
+                is(equalTo(true)));
+
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_CONTACT, OpenClosedType.OPEN);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_SWITCH, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_DIMMER, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_NUMBER, new DecimalType(1));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_ROLLERSHUTTER, new PercentType(1));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_STRING, new StringType("1"));
+        // no datetime, conversion not possible without transformation
     }
 
     @Test
-    public void testOnRegistersFloat32() {
+    public void testOnRegistersSpecificTriggerMatchingInt16MinusThree() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
+                "-3", "default", ModbusBitUtilities.VALUE_TYPE_INT16, null,
+                new ModbusRegisterArrayImpl(new ModbusRegister[] { new ModbusRegisterImpl((byte) 0xff, (byte) 0xfd) }),
+                null);
+
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(6)));
+
+        assertThat(
+                state.keySet().stream()
+                        .filter(channelUID -> channelUID.getId()
+                                .equals(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS))
+                        .findFirst().isPresent(),
+                is(equalTo(true)));
+
+        // -3 converts to "true"
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_CONTACT, OpenClosedType.OPEN);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_SWITCH, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_DIMMER, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_NUMBER, new DecimalType(-3));
+        // roller shutter fails since -3 is invalid value (not between 0...100)
+        // assertThatStateContains(state, ModbusBindingConstants.CHANNEL_ROLLERSHUTTER, new PercentType(1));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_STRING, new StringType("-3"));
+        // no datetime, conversion not possible without transformation
     }
 
     @Test
-    public void testOnBits() {
+    public void testOnRegistersWildcardTriggerFloat32TwoPointThree() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
+                "*", "default", ModbusBitUtilities.VALUE_TYPE_FLOAT32, null,
+                new ModbusRegisterArrayImpl(new ModbusRegister[] { new ModbusRegisterImpl((byte) 0x40, (byte) 0x13),
+                        new ModbusRegisterImpl((byte) 0x33, (byte) 0x33) }),
+                null);
 
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(7)));
+
+        assertThat(
+                state.keySet().stream()
+                        .filter(channelUID -> channelUID.getId()
+                                .equals(ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS))
+                        .findFirst().isPresent(),
+                is(equalTo(true)));
+
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_CONTACT, OpenClosedType.OPEN);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_SWITCH, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_DIMMER, OnOffType.ON);
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_NUMBER, new DecimalType(2.299999952316284));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_ROLLERSHUTTER,
+                new PercentType("2.299999952316284"));
+        assertThatStateContains(state, ModbusBindingConstants.CHANNEL_STRING, new StringType("2.299999952316284"));
+        // no datetime, conversion not possible without transformation
     }
 
     @Test
     public void testOnError() {
+        ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
+                "*", "default", ModbusBitUtilities.VALUE_TYPE_FLOAT32, null, null, new Exception("fooerror"));
+
+        assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
+        Map<ChannelUID, State> state = readHandler.getLastState().get();
+        assertThat(state.size(), is(equalTo(1)));
+        assertThat(state.keySet().stream()
+                .filter(channelUID -> channelUID.getId().equals(ModbusBindingConstants.CHANNEL_LAST_READ_ERROR))
+                .findFirst().isPresent(), is(equalTo(true)));
+    }
+
+    @Test
+    public void testTransformationTODO() {
+
     }
 
     private void testValueTypeGeneric(ModbusReadFunctionCode functionCode, String valueType,
