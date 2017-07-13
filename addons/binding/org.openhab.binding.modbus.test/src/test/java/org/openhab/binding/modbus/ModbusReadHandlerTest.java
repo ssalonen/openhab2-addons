@@ -521,7 +521,7 @@ public class ModbusReadHandlerTest {
 
         String thingId = "read1";
         //
-        // Bind all channels to corresponding channels
+        // Bind all channels to corresponding items
         //
         for (String channel : channelToItemClass.keySet()) {
             String itemName = channel + "item";
