@@ -555,10 +555,13 @@ public class ModbusReadHandlerTest {
             assert error == null;
             readHandler.onBits(request, bits);
         } else if (registers != null) {
+            assert bits == null;
             assert error == null;
             readHandler.onRegisters(request, registers);
         } else {
+            assert bits == null;
             assert registers == null;
+            assert error != null;
             readHandler.onError(request, error);
         }
         return readHandler;
