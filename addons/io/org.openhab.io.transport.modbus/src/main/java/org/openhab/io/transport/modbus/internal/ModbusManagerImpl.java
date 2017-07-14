@@ -412,6 +412,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callback.onError(request, new ModbusConnectionException(endpoint));
+                return;
             }
 
             ModbusTransaction transaction = createTransactionForEndpoint(endpoint, connection);
