@@ -11,7 +11,7 @@
 		<label>Poll definition</label>
 		<description>Modbus poll definition</description>
 		<config-description>
-			<parameter name="refresh" type="integer" min="1" max="86400">
+			<parameter name="refresh" type="integer" min="0">
 				<label>interval</label>
 				<description>Poll interval in milliseconds. Use zero to disable automatic polling.</description>
 				<default>500</default>

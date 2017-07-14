@@ -93,8 +93,8 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
                     && !this.configuration.equals(otherConfig)) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}",
-                                endpoint, this.thing, this.configuration, otherConfig));
+                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Check that all slaves pointing to same host/port share the connection details.",
+                                endpoint, this.thing.getLabel(), this.configuration, otherConfig));
             }
         }
     }
