@@ -20,6 +20,7 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
 import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
+import org.openhab.binding.modbus.handler.ModbusSerialThingHandler;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.binding.modbus.handler.ModbusWriteThingHandler;
 import org.openhab.io.transport.modbus.ModbusManager;
@@ -41,6 +42,7 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = new HashSet<>();
     static {
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_TCP);
+        SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_SERIAL);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_POLLER);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_READ_WRITE);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_WRITE);
@@ -60,6 +62,9 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
             return new ModbusTcpThingHandler((Bridge) thing, () -> manager);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_SERIAL)) {
+            logger.debug("createHandler Modbus serial");
+            return new ModbusSerialThingHandler((Bridge) thing, () -> manager);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
             logger.debug("createHandler Modbus poller");
             return new ModbusPollerThingHandlerImpl((Bridge) thing, () -> manager);
@@ -73,7 +78,8 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
             logger.debug("createHandler write");
             return new ModbusWriteThingHandler(thing);
         }
-        logger.info("createHandler for unknown thing");
+        logger.error("createHandler for unknown thing type uid {}. Thing label was: {}", thing.getThingTypeUID(),
+                thing.getLabel());
 
         return null;
     }

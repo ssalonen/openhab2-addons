@@ -18,6 +18,7 @@ import org.openhab.binding.modbus.internal.config.ModbusSerialConfiguration;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
+import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
 
     private Logger logger = LoggerFactory.getLogger(ModbusSerialThingHandler.class);
     private ModbusSerialConfiguration config;
-    private volatile ModbusSlaveEndpoint endpoint;
+    private volatile ModbusSerialSlaveEndpoint endpoint;
     private Supplier<ModbusManager> managerRef;
     private volatile EndpointPoolConfiguration configuration;
 
@@ -53,9 +54,6 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
         }
 
         this.config = getConfigAs(ModbusSerialConfiguration.class);
-        // FIXME:
-        // new SerialParameters
-        // endpoint = new ModbusSerialSlaveEndpoint(config.getHost(), config.getPort());
 
         EndpointPoolConfiguration configNew = new EndpointPoolConfiguration();
         configNew.setConnectMaxTries(config.getConnectMaxTries());
@@ -65,6 +63,10 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
         // Never reconnect serial connections "automatically"
         configNew.setInterConnectDelayMillis(1000);
         configNew.setReconnectAfterMillis(-1);
+
+        endpoint = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(), config.getFlowControlIn(),
+                config.getFlowControlOut(), config.getDataBits(), config.getStopBits(), config.getParity(),
+                config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
 
         synchronized (this) {
             managerRef.get().addListener(this);
@@ -96,8 +98,8 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
                     && !this.configuration.equals(configuration)) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}",
-                                endpoint, this.thing, this.configuration, otherConfig));
+                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
+                                endpoint, this.thing, this.configuration, otherConfig, this.endpoint.getPortName()));
             }
         }
     }
