@@ -79,7 +79,6 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.UNKNOWN);
         synchronized (lastStateLock) {
             lastState = null;
         }
@@ -112,7 +111,6 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     public synchronized void validateConfiguration() {
-        updateStatus(ThingStatus.UNKNOWN);
         Bridge readwrite = getBridgeOfThing(getThing());
         if (readwrite == null) {
             logger.debug("ReadThing '{}' has no ReadThing bridge. Aborting config validation", getThing().getLabel());
@@ -122,9 +120,16 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         if (readwrite.getStatus() != ThingStatus.ONLINE) {
             logger.debug("ReadWrite bridge '{}' of ReadThing '{}' is offline. Aborting config validation",
                     readwrite.getLabel(), getThing().getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                    String.format("Read-write bridge %s is offline", readwrite.getLabel()));
-            return;
+            if (readwrite.getStatusInfo().getStatusDetail() == ThingStatusDetail.COMMUNICATION_ERROR
+                    && this.getThing().getStatusInfo().getStatus() == ThingStatus.OFFLINE
+                    && this.getThing().getStatusInfo().getStatusDetail() == ThingStatusDetail.COMMUNICATION_ERROR) {
+                // Communication error has been communicated already by readwrite to this thing handler
+                return;
+            } else {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                        String.format("Read-write bridge %s is offline", readwrite.getLabel()));
+                return;
+            }
         }
 
         Bridge poller = getBridgeOfThing(readwrite);
@@ -310,8 +315,8 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void onError(ModbusReadRequestBlueprint request, Exception error) {
-        logger.error("Thing {} received read error: {} {}", getThing(), error.getClass().getName(), error.getMessage(),
-                error);
+        logger.error("Thing {} received read error: {} {}. Stack trace follows for unexpected errors.",
+                getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
         Map<ChannelUID, State> states = new HashMap<>();
         states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR),
                 new DateTimeType());
