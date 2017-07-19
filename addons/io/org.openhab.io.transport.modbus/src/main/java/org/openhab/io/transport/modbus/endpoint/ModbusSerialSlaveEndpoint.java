@@ -30,7 +30,29 @@ public class ModbusSerialSlaveEndpoint implements ModbusSlaveEndpoint {
         toStringStyle.setUseShortClassName(true);
     }
 
-    public ModbusSerialSlaveEndpoint(SerialParameters serialParameters) {
+    public ModbusSerialSlaveEndpoint(String portName, int baudRate, int flowControlIn, int flowControlOut, int databits,
+            int stopbits, int parity, String encoding, boolean echo, int receiveTimeoutMillis) {
+        this(new SerialParameters(portName, baudRate, flowControlIn, flowControlOut, databits, stopbits, parity,
+                encoding, echo, receiveTimeoutMillis));
+    }
+
+    public ModbusSerialSlaveEndpoint(String portName, int baudRate, String flowControlIn, String flowControlOut,
+            int databits, String stopbits, String parity, String encoding, boolean echo, int receiveTimeoutMillis) {
+        SerialParameters parameters = new SerialParameters();
+        parameters.setPortName(portName);
+        parameters.setBaudRate(baudRate);
+        parameters.setFlowControlIn(flowControlIn);
+        parameters.setFlowControlOut(flowControlOut);
+        parameters.setDatabits(databits);
+        parameters.setStopbits(stopbits);
+        parameters.setParity(parity);
+        parameters.setEncoding(encoding);
+        parameters.setEcho(echo);
+        parameters.setReceiveTimeoutMillis(receiveTimeoutMillis);
+        this.serialParameters = parameters;
+    }
+
+    private ModbusSerialSlaveEndpoint(SerialParameters serialParameters) {
         this.serialParameters = serialParameters;
     }
 
@@ -41,6 +63,10 @@ public class ModbusSerialSlaveEndpoint implements ModbusSlaveEndpoint {
     @Override
     public <R> R accept(ModbusSlaveEndpointVisitor<R> factory) {
         return factory.visit(this);
+    }
+
+    public String getPortName() {
+        return serialParameters.getPortName();
     }
 
     @Override

@@ -1,17 +1,17 @@
 package org.openhab.binding.modbus.internal.config;
 
-import java.math.BigDecimal;
-
 public class ModbusSerialConfiguration {
     private String port;
     private int id;
     private int baud;
-    private BigDecimal stopBits;
+    private String stopBits;
     private String parity;
     private int dataBits;
     private String encoding;
     private boolean echo;
     private int receiveTimeoutMillis;
+    private String flowControlIn;
+    private String flowControlOut;
     private int timeBetweenTransactionsMillis;
     private int connectMaxTries;
     private int connectTimeoutMillis;
@@ -40,11 +40,11 @@ public class ModbusSerialConfiguration {
         this.baud = baud;
     }
 
-    public BigDecimal getStopBits() {
+    public String getStopBits() {
         return stopBits;
     }
 
-    public void setStopBits(BigDecimal stopBits) {
+    public void setStopBits(String stopBits) {
         this.stopBits = stopBits;
     }
 
@@ -86,6 +86,22 @@ public class ModbusSerialConfiguration {
 
     public void setReceiveTimeoutMillis(int receiveTimeoutMillis) {
         this.receiveTimeoutMillis = receiveTimeoutMillis;
+    }
+
+    public String getFlowControlIn() {
+        return flowControlIn;
+    }
+
+    public void setFlowControlIn(String flowControlIn) {
+        this.flowControlIn = flowControlIn;
+    }
+
+    public String getFlowControlOut() {
+        return flowControlOut;
+    }
+
+    public void setFlowControlOut(String flowControlOut) {
+        this.flowControlOut = flowControlOut;
     }
 
     public int getTimeBetweenTransactionsMillis() {
