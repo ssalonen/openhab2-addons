@@ -24,4 +24,9 @@ public class ModbusConnectionException extends Exception {
         return endpoint;
     }
 
+    @Override
+    public String getMessage() {
+        return String.format("Error connecting to endpoint %s", endpoint);
+    }
+
 }
