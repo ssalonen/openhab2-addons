@@ -187,6 +187,10 @@ public class ModbusManagerImpl implements ModbusManager {
         connectionPool = genericKeyedObjectPool;
     }
 
+    public ModbusManagerImpl() {
+        scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
+    }
+
     private void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
