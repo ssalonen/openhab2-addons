@@ -15,6 +15,7 @@ public interface ModbusManager {
      *
      * @author Sami Salonen
      *
+     * @see ModbusManager.registerRegularPoll
      */
     public interface PollTask {
         /**
@@ -70,10 +71,29 @@ public interface ModbusManager {
         ModbusWriteCallback getCallback();
     }
 
+    /**
+     * Submit one-time poll task. The method returns immediately
+     *
+     * @param task
+     * @return
+     */
     public ScheduledFuture<?> submitOneTimePoll(PollTask task);
 
+    /**
+     * Register regularly polled task. The method returns immediately
+     *
+     * @param task
+     * @return
+     */
     public void registerRegularPoll(PollTask task, long pollPeriodMillis, long initialDelayMillis);
 
+    /**
+     * Unregister regularly polled task
+     *
+     * @param task
+     * @return whether poll task was unregistered. Poll task is not unregistered in case of unexpected errors or
+     *         non-existing poll task
+     */
     public boolean unregisterRegularPoll(PollTask task);
 
     public ScheduledFuture<?> submitOneTimeWrite(WriteTask task);

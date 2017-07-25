@@ -476,11 +476,6 @@ public class ModbusManagerImpl implements ModbusManager {
         scheduledPollTasks.put(task, future);
     }
 
-    /**
-     *
-     * @return whether poll task was unregistered. Poll task is not unregistered in case of unexpected errors or
-     *         non-existing poll task
-     */
     @Override
     public boolean unregisterRegularPoll(PollTask task) {
         // cancel poller
