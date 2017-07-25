@@ -10,13 +10,29 @@ package org.openhab.binding.helios.internal;
 import java.net.InetAddress;
 import java.util.Arrays;
 
+import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
+import org.openhab.io.transport.modbus.ModbusRegister;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusRegisterArrayImpl;
+import org.openhab.io.transport.modbus.ModbusRegisterImpl;
+import org.openhab.io.transport.modbus.ModbusResponse;
+import org.openhab.io.transport.modbus.ModbusWriteCallback;
+import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
+import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
+import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdException;
+
 import com.ghgande.j2mod.modbus.io.ModbusTCPTransaction;
 import com.ghgande.j2mod.modbus.msg.ReadMultipleRegistersRequest;
 import com.ghgande.j2mod.modbus.msg.ReadMultipleRegistersResponse;
 import com.ghgande.j2mod.modbus.msg.WriteMultipleRegistersRequest;
 import com.ghgande.j2mod.modbus.net.TCPMasterConnection;
 import com.ghgande.j2mod.modbus.procimg.Register;
-import com.ghgande.j2mod.modbus.procimg.SimpleRegister;
+
+import net.wimpi.modbus.ModbusException;;
 
 /**
  * This class is responsible for communicating with the Helios modbus.
@@ -24,6 +40,53 @@ import com.ghgande.j2mod.modbus.procimg.SimpleRegister;
  * @author Bernhard Bauer - Initial contribution
  */
 public class HeliosCommunicator {
+
+    private class WriteTaskImpl implements WriteTask {
+        private ModbusRegisterArray registers;
+        private ModbusWriteCallback callback;
+
+        public WriteTaskImpl(ModbusRegister[] registersArray, ModbusWriteCallback callback) {
+            this.registers = new ModbusRegisterArrayImpl(registersArray);
+            this.callback = callback;
+        }
+
+        @Override
+        public ModbusSlaveEndpoint getEndpoint() {
+            return new ModbusTCPSlaveEndpoint(host, port);
+        }
+
+        @Override
+        public ModbusWriteRequestBlueprint getRequest() {
+            return new ModbusWriteRegisterRequestBlueprint() {
+
+                @Override
+                public int getReference() {
+                    return startAddress;
+                }
+
+                @Override
+                public int getUnitID() {
+                    return unit;
+                }
+
+                @Override
+                public ModbusWriteFunctionCode getFunctionCode() {
+                    return ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS;
+                }
+
+                @Override
+                public ModbusRegisterArray getRegisters() {
+                    return registers;
+                }
+
+            };
+        }
+
+        @Override
+        public ModbusWriteCallback getCallback() {
+            return callback;
+        }
+    }
 
     /**
      * Default port
@@ -69,6 +132,7 @@ public class HeliosCommunicator {
 
     /**
      * Constructor to set the member variables
+     *
      * @param host IP Address
      * @param port Port (502)
      * @param address Modbus address (180)
@@ -84,7 +148,7 @@ public class HeliosCommunicator {
             this.conn = new TCPMasterConnection(InetAddress.getByName(host));
             this.conn.setPort(port);
             this.conn.connect();
-            //((ModbusTCPTransport) this.conn.getModbusTransport()).setHeadless();
+            // ((ModbusTCPTransport) this.conn.getModbusTransport()).setHeadless();
         } catch (Exception e) {
             System.err.println(e.getClass().toString());
         }
@@ -92,26 +156,28 @@ public class HeliosCommunicator {
 
     /**
      * Constructor to set the member variables (using default values for anything but the host IP address
+     *
      * @param host IP Address
      */
     public HeliosCommunicator(String host) {
-        this(host, HeliosCommunicator.DEFAULT_PORT, HeliosCommunicator.DEFAULT_UNIT, HeliosCommunicator.DEFAULT_START_ADDRESS);
+        this(host, HeliosCommunicator.DEFAULT_PORT, HeliosCommunicator.DEFAULT_UNIT,
+                HeliosCommunicator.DEFAULT_START_ADDRESS);
     }
-
 
     /**
      * Sets a variable in the Helios device
+     *
      * @param variableName The variable name
      * @param value The new value
-     * @return The value if the transaction succeeded, <tt>null</tt> otherwise
-     * @throws HeliosException
      */
-    public String setValue(String variableName, String value) throws HeliosException {
+    public void setValue(String variableName, String value) throws HeliosException {
 
         HeliosVariable v = this.vMap.getVariable(variableName);
 
         // check range if applicable
-        if ((v.getAccess() == HeliosVariable.ACCESS_W) || (v.getAccess() == HeliosVariable.ACCESS_RW)) { // changing value is allowed
+        if ((v.getAccess() == HeliosVariable.ACCESS_W) || (v.getAccess() == HeliosVariable.ACCESS_RW)) { // changing
+                                                                                                         // value is
+                                                                                                         // allowed
 
             boolean inAllowedRange = false;
 
@@ -119,9 +185,11 @@ public class HeliosCommunicator {
                 if (v.getMinVal() instanceof Integer) {
                     inAllowedRange = (((Integer) v.getMinVal()).intValue() <= Integer.parseInt(value));
                     if (v.getMaxVal() instanceof Integer) {
-                        inAllowedRange = inAllowedRange && (((Integer) v.getMaxVal()).intValue() >= Integer.parseInt(value));
+                        inAllowedRange = inAllowedRange
+                                && (((Integer) v.getMaxVal()).intValue() >= Integer.parseInt(value));
                     } else { // Long
-                        inAllowedRange = inAllowedRange && (((Long) v.getMaxVal()).longValue() >= Long.parseLong(value));
+                        inAllowedRange = inAllowedRange
+                                && (((Long) v.getMaxVal()).longValue() >= Long.parseLong(value));
                     }
                 } else if (v.getMinVal() instanceof Double) {
                     inAllowedRange = (((Double) v.getMinVal()).doubleValue() <= Double.parseDouble(value))
@@ -134,24 +202,37 @@ public class HeliosCommunicator {
             if (inAllowedRange) {
                 String payload = v.getVariableString() + "=" + value;
 
-                // create request
-                WriteMultipleRegistersRequest request = new WriteMultipleRegistersRequest(this.startAddress, this.preparePayload(payload));
-                request.setUnitID(this.unit);
+                ModbusManager manager = null; // TODO: hook as OSGI services
+                manager.submitOneTimeWrite(new WriteTaskImpl(this.preparePayload(payload), new ModbusWriteCallback() {
+                    /**
+                     * Callback handler method for cases when an error occurred with write
+                     *
+                     * Note that only one of the two is called: onError, onResponse
+                     *
+                     * @request ModbusWriteRequestBlueprint representing the request
+                     * @param Exception representing the issue with the request. Instance of
+                     *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusException}.
+                     */
+                    @Override
+                    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+                        // throw new HeliosException("Communication with Helios device failed: " + error.getMessage());
+                        System.err.println("Communication with Helios device failed: " + error.getMessage());
+                    }
 
-                // communicate with modbus
-                try {
-                    ModbusTCPTransaction trans = new ModbusTCPTransaction(this.conn);
+                    /**
+                     * Callback handler method for successful writes
+                     *
+                     * Note that only one of the two is called: onError, onResponse
+                     *
+                     * @param request ModbusWriteRequestBlueprint representing the request
+                     * @param response response matching the write request
+                     */
+                    @Override
+                    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
+                        // no-op
+                    }
+                }));
 
-                    // send request
-                    trans.setRequest(request);
-                    trans.setReconnecting(true);
-                    trans.execute();
-
-                    return value;
-
-                } catch (Exception e) {
-                    throw new HeliosException("Communication with Helios device failed");
-                }
             } else {
                 throw new HeliosException("Value is outside of allowed range");
             }
@@ -162,6 +243,7 @@ public class HeliosCommunicator {
 
     /**
      * Read a variable from the Helios device
+     *
      * @param variableName The variable name
      * @return The value
      * @throws HeliosException
@@ -172,7 +254,8 @@ public class HeliosCommunicator {
         String payload = v.getVariableString();
 
         // create request 1
-        WriteMultipleRegistersRequest request1 = new WriteMultipleRegistersRequest(this.startAddress, this.preparePayload(payload));
+        WriteMultipleRegistersRequest request1 = new WriteMultipleRegistersRequest(this.startAddress,
+                this.preparePayload(payload));
         request1.setUnitID(this.unit);
 
         // create request 2
@@ -189,7 +272,7 @@ public class HeliosCommunicator {
             trans.execute();
 
             // receive response
-            //WriteMultipleRegistersResponse response1 = (WriteMultipleRegistersResponse) trans.getResponse();
+            // WriteMultipleRegistersResponse response1 = (WriteMultipleRegistersResponse) trans.getResponse();
 
             // send request 2
             trans.setRequest(request2);
@@ -206,13 +289,13 @@ public class HeliosCommunicator {
         }
     }
 
-
     /**
      * Prepares the payload for the request
+     *
      * @param payload The String representation of the payload
      * @return The Register representation of the payload
      */
-    private Register[] preparePayload(String payload) {
+    private ModbusRegister[] preparePayload(String payload) {
 
         // determine number of registers
         int l = (payload.length() + 1) / 2; // +1 because we need to include at least one termination symbol 0x00
@@ -220,7 +303,7 @@ public class HeliosCommunicator {
             l++;
         }
 
-        Register reg[] = new Register[l];
+        ModbusRegister reg[] = new ModbusRegister[l];
         byte[] b = payload.getBytes();
         int ch = 0;
         for (int i = 0; i < reg.length; i++) {
@@ -228,13 +311,14 @@ public class HeliosCommunicator {
             ch++;
             byte b2 = ch < b.length ? b[ch] : (byte) 0x00;
             ch++;
-            reg[i] = new SimpleRegister(b1, b2);
+            reg[i] = new ModbusRegisterImpl(b1, b2);
         }
         return reg;
     }
 
     /**
      * Decodes the Helios device' response and returns the actual value of the variable
+     *
      * @param response The registers received from the Helios device
      * @return The value or <tt>null</tt> if an error occurred
      */
