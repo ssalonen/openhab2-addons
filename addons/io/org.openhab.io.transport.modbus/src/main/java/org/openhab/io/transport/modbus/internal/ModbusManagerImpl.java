@@ -469,11 +469,19 @@ public class ModbusManagerImpl implements ModbusManager {
 
     @Override
     public void registerRegularPoll(PollTask task, long pollPeriodMillis, long initialDelayMillis) {
-        ScheduledFuture<?> future = scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
-            logger.debug("Executing scheduled ({}ms) poll task {}", pollPeriodMillis, task);
-            this.executeOneTimePoll(task, false);
-        }, initialDelayMillis, pollPeriodMillis, TimeUnit.MILLISECONDS);
-        scheduledPollTasks.put(task, future);
+        scheduledPollTasks.compute(task, (prevTask, prevFuture) -> {
+            ScheduledFuture<?> future = scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
+                logger.debug("Executing scheduled ({}ms) poll task {}", pollPeriodMillis, task);
+                this.executeOneTimePoll(task, false);
+            }, initialDelayMillis, pollPeriodMillis, TimeUnit.MILLISECONDS);
+
+            // Unregister previous regular poll
+            if (prevFuture != null) {
+                unregisterRegularPoll(prevTask);
+            }
+            return future;
+        });
+
     }
 
     @Override
