@@ -1,8 +1,11 @@
 package org.openhab.io.transport.modbus.internal;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
+import org.apache.commons.lang.StringUtils;
 import org.openhab.io.transport.modbus.ModbusRegister;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 
@@ -50,6 +53,13 @@ public class RegisterArrayWrappingInputRegister implements ModbusRegisterArray {
     @Override
     public int size() {
         return wrapped.length;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder("RegisterArrayWrappingInputRegister(hiLowBytes=[ ").append(StringUtils.join(
+                Stream.of(wrapped).map(reg -> reg.toBytes()).map(bytes -> Arrays.toString(bytes)).iterator(), ", "))
+                .append(" ])").toString();
     }
 
 }

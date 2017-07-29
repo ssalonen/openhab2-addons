@@ -1,5 +1,7 @@
 package org.openhab.io.transport.modbus.internal;
 
+import java.util.Arrays;
+
 import org.openhab.io.transport.modbus.BitArray;
 
 import net.wimpi.modbus.util.BitVector;
@@ -23,6 +25,12 @@ public class BitArrayWrappingBitVector implements BitArray {
     @Override
     public int size() {
         return this.wrapped.size();
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder("BitArrayWrappingBitVector(bytes=").append(Arrays.toString(this.wrapped.getBytes()))
+                .append(")").toString();
     }
 
 }
