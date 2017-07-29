@@ -1,12 +1,13 @@
 package org.openhab.io.transport.modbus.internal;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -16,6 +17,8 @@ import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.SwallowedExceptionListener;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
+import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
+import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManagerListener;
@@ -76,6 +79,22 @@ public class ModbusManagerImpl implements ModbusManager {
 
     }
 
+    private static class ThreadPoolManagerImpl extends ExpressionThreadPoolManager {
+
+        public ThreadPoolManagerImpl() {
+            super();
+
+        }
+
+        void configureDefaults() {
+            Map<String, Object> props = new HashMap<>(2);
+            // 10 threads for polling
+            props.put(MODBUS_POLLER_THREAD_POOL_NAME, String.valueOf(MODBUS_POLLER_THREADS));
+            props.put(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME, String.valueOf(MODBUS_POLLER_CALLBACK_THREADS));
+            modified(props);
+        }
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(ModbusManagerImpl.class);
 
     /**
@@ -93,6 +112,12 @@ public class ModbusManagerImpl implements ModbusManager {
      * here https://community.openhab.org/t/connection-pooling-in-modbus-binding/5246/111?u=ssalonen
      */
     public static final long DEFAULT_SERIAL_INTER_TRANSACTION_DELAY_MILLIS = 35;
+
+    public static final long MODBUS_POLLER_THREADS = 10;
+    public static final long MODBUS_POLLER_CALLBACK_THREADS = 5;
+
+    private static final String MODBUS_POLLER_THREAD_POOL_NAME = "MODBUS_POLLER_THREAD_POOL";
+    private static final String MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME = "MODBUS_POLLER_CALLBACK_THREAD_POOL";
 
     private static GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
 
@@ -138,7 +163,17 @@ public class ModbusManagerImpl implements ModbusManager {
     private static ModbusSlaveConnectionFactoryImpl connectionFactory;
 
     private volatile Map<PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
-    private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(10);
+
+    private static ThreadPoolManagerImpl threadManager = new ThreadPoolManagerImpl();
+
+    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor = ThreadPoolManagerImpl
+            .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
+    private static ExecutorService callbackThreadPool = ThreadPoolManagerImpl
+            .getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
+
+    static {
+        threadManager.configureDefaults();
+    }
     private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<ModbusManagerListener>();
 
     static {
@@ -191,7 +226,7 @@ public class ModbusManagerImpl implements ModbusManager {
         scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    private void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
+    private static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
@@ -415,7 +450,9 @@ public class ModbusManagerImpl implements ModbusManager {
                     // Check poll task is still registered (this is all asynchronous)
                     verifyTaskIsRegistered(task);
                 }
-                callback.onError(request, new ModbusConnectionException(endpoint));
+                callbackThreadPool.execute(() -> {
+                    callback.onError(request, new ModbusConnectionException(endpoint));
+                });
                 return;
             }
 
@@ -441,7 +478,9 @@ public class ModbusManagerImpl implements ModbusManager {
                     // Check poll task is still registered (this is all asynchronous)
                     verifyTaskIsRegistered(task);
                 }
-                callback.onError(request, e);
+                callbackThreadPool.execute(() -> {
+                    callback.onError(request, e);
+                });
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for read (FC={}, transaction ID={}) {}", response.getFunctionCode(),
@@ -456,9 +495,13 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                callbackThreadPool.execute(() -> {
+                    callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                });
             } else {
-                invokeCallbackWithResponse(request, callback, response);
+                callbackThreadPool.execute(() -> {
+                    invokeCallbackWithResponse(request, callback, response);
+                });
             }
         } catch (PollTaskUnregistered e) {
             logger.warn("Poll task was unregistered -- not executing/proceeding with the poll", e);
