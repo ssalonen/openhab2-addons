@@ -53,6 +53,9 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        if (getThing().getStatus() != ThingStatus.ONLINE) {
+            return;
+        }
         if (!channelsToDelegateWriteCommands.contains(channelUID)) {
             return;
         }
