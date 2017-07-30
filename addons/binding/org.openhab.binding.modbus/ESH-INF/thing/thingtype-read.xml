@@ -21,7 +21,7 @@
 			<!-- what to read -->
 			<parameter name="start" type="integer">
 				<label>Address</label>
-				<description>Start address of the value and/or to read</description>
+				<description>Start address to start reading the value. Relative to polled registers, coils or discrete inputs.</description>
 				<default>0</default>
 			</parameter>
 			<parameter name="trigger" type="text">

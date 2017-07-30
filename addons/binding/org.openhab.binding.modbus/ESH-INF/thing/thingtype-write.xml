@@ -21,7 +21,7 @@
 			<!-- where to write -->
 			<parameter name="start" type="integer">
 				<label>Address</label>
-				<description>Start address of the register and/or coils to write</description>
+				<description>Address of the first holding register or coils in the write. Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is.</description>
 				<default>0</default>
 			</parameter>
 			<parameter name="type" type="text" required="true">
