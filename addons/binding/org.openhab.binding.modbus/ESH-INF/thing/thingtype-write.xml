@@ -26,7 +26,7 @@
 			</parameter>
 			<parameter name="type" type="text" required="true">
 				<label>Type</label>
-				<description>Type of data to write</description>
+				<description>Type of data to write. Coil uses function code 5. Holding register uses function code 4 or 16, depending on "Use FC16" parameter.</description>
 				<options>
 					<option value="coil">coil, or digital out (DO)</option>
 					<option value="holding">holding register</option>
