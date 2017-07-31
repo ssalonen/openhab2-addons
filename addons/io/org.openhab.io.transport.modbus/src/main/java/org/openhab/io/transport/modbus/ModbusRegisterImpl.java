@@ -4,6 +4,11 @@ import java.util.Arrays;
 
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
+/**
+ * <p>ModbusRegisterImpl class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class ModbusRegisterImpl implements ModbusRegister {
 
     private SimpleInputRegister wrapped;

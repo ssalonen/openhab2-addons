@@ -5,6 +5,11 @@ import java.util.concurrent.ScheduledFuture;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
+/**
+ * <p>ModbusManager interface.</p>
+ *
+ * @author Sami Salonen
+ */
 public interface ModbusManager {
 
     /**

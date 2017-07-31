@@ -6,7 +6,6 @@ package org.openhab.io.transport.modbus;
  * Only function code is exposed, which allows detecting MODBUS exception codes from normal codes.
  *
  * @author Sami Salonen
- *
  */
 public interface ModbusResponse {
 

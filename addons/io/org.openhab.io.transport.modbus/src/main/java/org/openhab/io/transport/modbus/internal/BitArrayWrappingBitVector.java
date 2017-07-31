@@ -6,6 +6,11 @@ import org.openhab.io.transport.modbus.BitArray;
 
 import net.wimpi.modbus.util.BitVector;
 
+/**
+ * <p>BitArrayWrappingBitVector class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class BitArrayWrappingBitVector implements BitArray {
 
     private BitVector wrapped;

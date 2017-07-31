@@ -48,6 +48,7 @@ import net.wimpi.modbus.net.UDPMasterConnection;
  *
  * Note that the implementation must be thread safe.
  *
+ * @author Sami Salonen
  */
 public class ModbusSlaveConnectionFactoryImpl
         extends BaseKeyedPooledObjectFactory<ModbusSlaveEndpoint, ModbusSlaveConnection> {

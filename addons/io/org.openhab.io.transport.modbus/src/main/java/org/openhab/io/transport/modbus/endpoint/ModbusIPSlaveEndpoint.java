@@ -17,6 +17,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  * Common base class for ip based endpoints. Endpoint differentiates different modbus slaves only by the ip address
  * (string) and port name.
  *
+ * @author Sami Salonen
  */
 public abstract class ModbusIPSlaveEndpoint implements ModbusSlaveEndpoint {
 

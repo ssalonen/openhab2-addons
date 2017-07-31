@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ * <p>ModbusRegister interface.</p>
+ *
+ * @author Sami Salonen
+ */
 public interface ModbusRegister {
     public byte[] getBytes();
 

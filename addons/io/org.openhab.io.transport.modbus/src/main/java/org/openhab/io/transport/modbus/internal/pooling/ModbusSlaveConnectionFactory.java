@@ -15,6 +15,7 @@ import net.wimpi.modbus.net.ModbusSlaveConnection;
 /**
  * Factory for ModbusSlaveConnection objects using endpoint definition.
  *
+ * @author Sami Salonen
  */
 public interface ModbusSlaveConnectionFactory extends ModbusSlaveEndpointVisitor<ModbusSlaveConnection> {
 

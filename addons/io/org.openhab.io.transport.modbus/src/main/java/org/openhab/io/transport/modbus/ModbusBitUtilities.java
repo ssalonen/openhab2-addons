@@ -12,6 +12,11 @@ import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.types.Command;
 
+/**
+ * <p>ModbusBitUtilities class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class ModbusBitUtilities {
     static final public String VALUE_TYPE_BIT = "bit";
     static final public String VALUE_TYPE_INT8 = "int8";

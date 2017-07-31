@@ -4,6 +4,11 @@ import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdExc
 
 import net.wimpi.modbus.ModbusException;
 
+/**
+ * <p>ModbusReadCallback interface.</p>
+ *
+ * @author Sami Salonen
+ */
 public interface ModbusReadCallback {
 
     /**

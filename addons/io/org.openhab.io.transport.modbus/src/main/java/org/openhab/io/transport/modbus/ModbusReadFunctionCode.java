@@ -4,7 +4,6 @@ package org.openhab.io.transport.modbus;
  * Modbus read function codes supported by this binding
  *
  * @author Sami Salonen
- *
  */
 public enum ModbusReadFunctionCode {
     READ_COILS,

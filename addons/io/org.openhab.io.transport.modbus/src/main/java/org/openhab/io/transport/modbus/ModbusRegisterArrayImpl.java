@@ -2,6 +2,11 @@ package org.openhab.io.transport.modbus;
 
 import org.apache.commons.lang.StringUtils;
 
+/**
+ * <p>ModbusRegisterArrayImpl class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class ModbusRegisterArrayImpl implements ModbusRegisterArray {
 
     private ModbusRegister[] registers;

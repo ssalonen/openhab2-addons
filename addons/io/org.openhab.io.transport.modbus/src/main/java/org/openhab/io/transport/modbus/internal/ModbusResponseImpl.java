@@ -4,6 +4,11 @@ import org.openhab.io.transport.modbus.ModbusResponse;
 
 import net.wimpi.modbus.msg.ModbusMessage;
 
+/**
+ * <p>ModbusResponseImpl class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class ModbusResponseImpl implements ModbusResponse {
 
     private int responseFunctionCode;

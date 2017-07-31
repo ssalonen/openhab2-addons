@@ -68,6 +68,11 @@ import net.wimpi.modbus.net.UDPMasterConnection;
 import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
+/**
+ * <p>ModbusManagerImpl class.</p>
+ *
+ * @author Sami Salonen
+ */
 public class ModbusManagerImpl implements ModbusManager {
 
     private static class PollTaskUnregistered extends Exception {

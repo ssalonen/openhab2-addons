@@ -18,6 +18,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  *
  * This class implements equals hashcode constract, and thus is suitable for use as keys in HashMaps, for example.
  *
+ * @author Sami Salonen
  */
 public class EndpointPoolConfiguration {
 

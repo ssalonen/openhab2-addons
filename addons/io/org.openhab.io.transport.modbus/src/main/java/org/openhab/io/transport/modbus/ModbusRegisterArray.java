@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ * <p>ModbusRegisterArray interface.</p>
+ *
+ * @author Sami Salonen
+ */
 public interface ModbusRegisterArray {
     /**
      * Return register at the given index
