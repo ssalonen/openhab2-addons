@@ -2,6 +2,11 @@ package org.openhab.io.transport.modbus;
 
 import net.wimpi.modbus.Modbus;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public interface ModbusWriteRequestBlueprint {
 
     /**

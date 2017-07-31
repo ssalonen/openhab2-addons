@@ -7,9 +7,14 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
- * @author Sami Salonen
  */
 package org.openhab.io.transport.modbus.endpoint;
+
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusUDPSlaveEndpoint extends ModbusIPSlaveEndpoint {
 
     public ModbusUDPSlaveEndpoint(String address, int port) {

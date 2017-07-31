@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public interface ModbusWriteCoilRequestBlueprint extends ModbusWriteRequestBlueprint {
 
     public BitArray getCoils();

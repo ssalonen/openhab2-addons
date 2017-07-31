@@ -7,10 +7,14 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
- * @author Sami Salonen
  */
 package org.openhab.io.transport.modbus.internal;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 @SuppressWarnings("serial")
 public class ModbusUnexpectedTransactionIdException extends Exception {
 
