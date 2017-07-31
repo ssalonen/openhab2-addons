@@ -1,5 +1,10 @@
 package org.openhab.binding.modbus.internal.config;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusTcpConfiguration {
     private String host;
     private int port;

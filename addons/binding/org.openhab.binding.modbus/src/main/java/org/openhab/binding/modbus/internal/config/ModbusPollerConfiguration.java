@@ -1,5 +1,10 @@
 package org.openhab.binding.modbus.internal.config;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusPollerConfiguration {
     private long refresh;
     private int start;

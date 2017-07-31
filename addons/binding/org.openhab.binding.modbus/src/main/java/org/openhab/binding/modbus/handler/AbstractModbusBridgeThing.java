@@ -4,6 +4,11 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public abstract class AbstractModbusBridgeThing extends BaseBridgeHandler {
 
     public AbstractModbusBridgeThing(Bridge bridge) {
