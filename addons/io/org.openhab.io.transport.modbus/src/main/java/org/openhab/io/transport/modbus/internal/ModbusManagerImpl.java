@@ -3,6 +3,7 @@ package org.openhab.io.transport.modbus.internal;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
@@ -618,6 +619,11 @@ public class ModbusManagerImpl implements ModbusManager {
     @Override
     public void removeListener(ModbusManagerListener listener) {
         listeners.remove(listener);
+    }
+
+    @Override
+    public Set<PollTask> getRegisteredRegularPolls() {
+        return this.scheduledPollTasks.keySet();
     }
 
 }
