@@ -41,6 +41,7 @@ import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusReadConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
@@ -179,13 +180,13 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         ModbusReadFunctionCode functionCode = pollTask.getRequest().getFunctionCode();
         if ((functionCode == ModbusReadFunctionCode.READ_COILS
                 || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES)
-                && !config.getValueType().equals(ModbusBitUtilities.VALUE_TYPE_BIT)) {
+                && !config.getValueType().equals(ModbusConstants.VALUE_TYPE_BIT)) {
             logger.error(
                     "ReadThing {}: Only valueType='{}' supported with coils or discrete inputs. Value type was: {}",
-                    getThing(), ModbusBitUtilities.VALUE_TYPE_BIT, config.getValueType());
+                    getThing(), ModbusConstants.VALUE_TYPE_BIT, config.getValueType());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                     String.format("Only valueType='%s' supported with coils or discrete inputs. Value type was: {}",
-                            ModbusBitUtilities.VALUE_TYPE_BIT, config.getValueType()));
+                            ModbusConstants.VALUE_TYPE_BIT, config.getValueType()));
             return false;
         } else {
             return true;
@@ -202,7 +203,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         String dataElement;
         if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
                 || pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-            valueTypeBitCount = ModbusBitUtilities.getBitCount(config.getValueType());
+            valueTypeBitCount = ModbusBitUtilities.getBitCountOfValueType(config.getValueType());
             functionObjectBitSize = 16;
             dataElement = "register";
         } else {

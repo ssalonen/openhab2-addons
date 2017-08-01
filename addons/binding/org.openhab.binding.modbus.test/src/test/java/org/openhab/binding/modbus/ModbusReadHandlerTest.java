@@ -62,7 +62,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
 import org.openhab.io.transport.modbus.BitArray;
-import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -364,128 +364,121 @@ public class ModbusReadHandlerTest {
     @Test
     public void testCoilsOutOfIndex() {
         // value type plays no role with coils
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_BIT);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_COILS, ModbusConstants.VALUE_TYPE_BIT);
     }
 
     @Test
     public void testDiscreteOutOfIndex() {
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_BIT);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusConstants.VALUE_TYPE_BIT);
     }
 
     @Test
     public void testHoldingInt8OutOfIndex() {
-        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_INT8);
+        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_INT8);
     }
 
     @Test
     public void testHoldingBitOutOfIndex() {
-        testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_BIT);
+        testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_BIT);
     }
 
     @Test
     public void testHoldingInt16OutOfIndex() {
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_INT16);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_INT16);
     }
 
     @Test
     public void testHoldingUInt16OutOfIndex() {
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_UINT16);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_UINT16);
     }
 
     @Test
     public void testHoldingInt32OutOfIndex() {
-        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_INT32);
+        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_INT32);
     }
 
     @Test
     public void testHoldingUInt32OutOfIndex() {
-        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_UINT32);
+        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, ModbusConstants.VALUE_TYPE_UINT32);
     }
 
     @Test
     public void testHoldingInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_INT32_SWAP);
+                ModbusConstants.VALUE_TYPE_INT32_SWAP);
     }
 
     @Test
     public void testHoldingUInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_UINT32_SWAP);
+                ModbusConstants.VALUE_TYPE_UINT32_SWAP);
     }
 
     @Test
     public void testHoldingFloat32SOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_FLOAT32);
+                ModbusConstants.VALUE_TYPE_FLOAT32);
     }
 
     @Test
     public void testHoldingFloat32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_FLOAT32_SWAP);
+                ModbusConstants.VALUE_TYPE_FLOAT32_SWAP);
     }
 
     @Test
     public void testInputRegisterInt8OutOfIndex() {
         // 3 registers => room for 6 x 8bit integers. Last valid read index is thus 5, and smallest invalid start index
         // is 6.
-        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT8);
+        testOutOfBoundsGeneric(3, 6, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_INT8);
     }
 
     @Test
     public void testInputRegisterBitOutOfIndex() {
-        testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_BIT);
+        testOutOfBoundsGeneric(3, 48, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_BIT);
     }
 
     @Test
     public void testInputRegisterInt16OutOfIndex() {
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT16);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_INT16);
     }
 
     @Test
     public void testInputRegisterUInt16OutOfIndex() {
-        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_UINT16);
+        testOutOfBoundsGeneric(3, 3, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_UINT16);
     }
 
     @Test
     public void testInputRegisterInt32OutOfIndex() {
-        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_INT32);
+        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_INT32);
     }
 
     @Test
     public void testInputRegisterUInt32OutOfIndex() {
-        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusBitUtilities.VALUE_TYPE_UINT32);
+        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_UINT32);
     }
 
     @Test
     public void testInputRegisterInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_INT32_SWAP);
+                ModbusConstants.VALUE_TYPE_INT32_SWAP);
     }
 
     @Test
     public void testInputRegisterUInt32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_UINT32_SWAP);
+                ModbusConstants.VALUE_TYPE_UINT32_SWAP);
     }
 
     @Test
     public void testInputRegisterFloat32SOutOfIndex() {
-        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_FLOAT32);
+        testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS, ModbusConstants.VALUE_TYPE_FLOAT32);
     }
 
     @Test
     public void testInputRegisterFloat32SwapOutOfIndex() {
         testOutOfBoundsGeneric(3, 2, ModbusReadFunctionCode.READ_INPUT_REGISTERS,
-                ModbusBitUtilities.VALUE_TYPE_FLOAT32_SWAP);
+                ModbusConstants.VALUE_TYPE_FLOAT32_SWAP);
     }
 
     @Test
@@ -570,7 +563,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnBitsSpecificTriggerNotMatching() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "0",
-                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
+                "default", ModbusConstants.VALUE_TYPE_BIT, new BitArray() {
 
                     @Override
                     public int size() {
@@ -605,7 +598,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnBitsSpecificTriggerMatchingZero() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "0",
-                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
+                "default", ModbusConstants.VALUE_TYPE_BIT, new BitArray() {
 
                     @Override
                     public int size() {
@@ -641,7 +634,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnBitsSpecificTriggerMatchingOne() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_COILS, 0, "1",
-                "default", ModbusBitUtilities.VALUE_TYPE_BIT, new BitArray() {
+                "default", ModbusConstants.VALUE_TYPE_BIT, new BitArray() {
 
                     @Override
                     public int size() {
@@ -677,7 +670,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnRegistersSpecificTriggerMatchingInt16MinusThree() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
-                "-3", "default", ModbusBitUtilities.VALUE_TYPE_INT16, null,
+                "-3", "default", ModbusConstants.VALUE_TYPE_INT16, null,
                 new ModbusRegisterArrayImpl(new ModbusRegister[] { new ModbusRegisterImpl((byte) 0xff, (byte) 0xfd) }),
                 null);
 
@@ -706,7 +699,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnRegistersWildcardTriggerFloat32TwoPointThree() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
-                "*", "default", ModbusBitUtilities.VALUE_TYPE_FLOAT32, null,
+                "*", "default", ModbusConstants.VALUE_TYPE_FLOAT32, null,
                 new ModbusRegisterArrayImpl(new ModbusRegister[] { new ModbusRegisterImpl((byte) 0x40, (byte) 0x13),
                         new ModbusRegisterImpl((byte) 0x33, (byte) 0x33) }),
                 null);
@@ -735,7 +728,7 @@ public class ModbusReadHandlerTest {
     @Test
     public void testOnError() {
         ModbusReadThingHandler readHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, 0,
-                "*", "default", ModbusBitUtilities.VALUE_TYPE_FLOAT32, null, null, new Exception("fooerror"));
+                "*", "default", ModbusConstants.VALUE_TYPE_FLOAT32, null, null, new Exception("fooerror"));
 
         assertThat(readHandler.getLastState().isPresent(), is(equalTo(true)));
         Map<ChannelUID, State> state = readHandler.getLastState().get();
@@ -778,24 +771,24 @@ public class ModbusReadHandlerTest {
 
     @Test
     public void testCoilDoesNotAcceptFloat32ValueType() {
-        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_FLOAT32,
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusConstants.VALUE_TYPE_FLOAT32,
                 ThingStatus.OFFLINE);
     }
 
     @Test
     public void testCoilAcceptsBitValueType() {
-        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusBitUtilities.VALUE_TYPE_BIT, ThingStatus.ONLINE);
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_COILS, ModbusConstants.VALUE_TYPE_BIT, ThingStatus.ONLINE);
     }
 
     @Test
     public void testDiscreteInputDoesNotAcceptFloat32ValueType() {
-        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_FLOAT32,
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusConstants.VALUE_TYPE_FLOAT32,
                 ThingStatus.OFFLINE);
     }
 
     @Test
     public void testDiscreteInputAcceptsBitValueType() {
-        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusBitUtilities.VALUE_TYPE_BIT,
+        testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusConstants.VALUE_TYPE_BIT,
                 ThingStatus.ONLINE);
     }
 }
