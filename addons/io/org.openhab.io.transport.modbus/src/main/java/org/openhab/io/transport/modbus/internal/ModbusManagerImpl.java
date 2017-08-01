@@ -1,7 +1,6 @@
 package org.openhab.io.transport.modbus.internal;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,7 +68,9 @@ import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
 /**
- * <p>ModbusManagerImpl class.</p>
+ * <p>
+ * ModbusManagerImpl class.
+ * </p>
  *
  * @author Sami Salonen
  */
@@ -82,22 +83,6 @@ public class ModbusManagerImpl implements ModbusManager {
 
         private static final long serialVersionUID = 6939730579178506885L;
 
-    }
-
-    private static class ThreadPoolManagerImpl extends ExpressionThreadPoolManager {
-
-        public ThreadPoolManagerImpl() {
-            super();
-
-        }
-
-        void configureDefaults() {
-            Map<String, Object> props = new HashMap<>(2);
-            // 10 threads for polling
-            props.put(MODBUS_POLLER_THREAD_POOL_NAME, String.valueOf(MODBUS_POLLER_THREADS));
-            props.put(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME, String.valueOf(MODBUS_POLLER_CALLBACK_THREADS));
-            modified(props);
-        }
     }
 
     private static final Logger logger = LoggerFactory.getLogger(ModbusManagerImpl.class);
@@ -169,16 +154,11 @@ public class ModbusManagerImpl implements ModbusManager {
 
     private volatile Map<PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
 
-    private static ThreadPoolManagerImpl threadManager = new ThreadPoolManagerImpl();
-
-    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor = ThreadPoolManagerImpl
+    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor = ExpressionThreadPoolManager
             .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
-    private static ExecutorService callbackThreadPool = ThreadPoolManagerImpl
+    private static ExecutorService callbackThreadPool = ExpressionThreadPoolManager
             .getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
 
-    static {
-        threadManager.configureDefaults();
-    }
     private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<ModbusManagerListener>();
 
     static {
