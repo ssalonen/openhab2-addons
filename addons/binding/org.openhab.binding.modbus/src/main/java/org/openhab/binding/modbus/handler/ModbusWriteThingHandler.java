@@ -30,18 +30,16 @@ import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
-import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
-import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusResponse;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
-import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
-import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprintImpl;
+import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
+import org.openhab.io.transport.modbus.WriteTaskImpl;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,135 +51,6 @@ import org.slf4j.LoggerFactory;
  * @author Sami Salonen - Initial contribution
  */
 public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusWriteCallback {
-
-    private static class SingleBitArray implements BitArray {
-
-        private boolean bit;
-
-        public SingleBitArray(boolean bit) {
-            this.bit = bit;
-        }
-
-        @Override
-        public boolean getBit(int index) {
-            if (index != 0) {
-                throw new IndexOutOfBoundsException();
-            }
-            return bit;
-        }
-
-        @Override
-        public int size() {
-            return 1;
-        }
-
-    }
-
-    private static class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilRequestBlueprint {
-        private int slaveId;
-        private int reference;
-        private BitArray bits;
-
-        public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data) {
-            super();
-            this.slaveId = slaveId;
-            this.reference = reference;
-            this.bits = new SingleBitArray(data);
-        }
-
-        @Override
-        public int getUnitID() {
-            return slaveId;
-        }
-
-        @Override
-        public int getReference() {
-            return reference;
-        }
-
-        @Override
-        public ModbusWriteFunctionCode getFunctionCode() {
-            return ModbusWriteFunctionCode.WRITE_COIL;
-        }
-
-        @Override
-        public BitArray getCoils() {
-            return bits;
-        }
-    }
-
-    private static class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegisterRequestBlueprint {
-        private int slaveId;
-        private int reference;
-        private ModbusRegisterArray registers;
-        private boolean writeMultiple;
-
-        public ModbusWriteRegisterRequestBlueprintImpl(int slaveId, int reference, ModbusRegisterArray registers,
-                boolean writeMultiple) {
-            super();
-            this.slaveId = slaveId;
-            this.reference = reference;
-            this.registers = registers;
-            this.writeMultiple = writeMultiple;
-
-            if (!writeMultiple && registers.size() > 1) {
-                throw new IllegalArgumentException("With multiple registers, writeMultiple must be true");
-            }
-        }
-
-        @Override
-        public int getReference() {
-            return reference;
-        }
-
-        @Override
-        public int getUnitID() {
-            return slaveId;
-        }
-
-        @Override
-        public ModbusWriteFunctionCode getFunctionCode() {
-            return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS
-                    : ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER;
-
-        }
-
-        @Override
-        public ModbusRegisterArray getRegisters() {
-            return registers;
-        }
-    }
-
-    private static class WriteTaskImpl implements WriteTask {
-
-        private ModbusSlaveEndpoint endpoint;
-        private ModbusWriteRequestBlueprint request;
-        private ModbusWriteCallback callback;
-
-        public WriteTaskImpl(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request,
-                ModbusWriteCallback callback) {
-            super();
-            this.endpoint = endpoint;
-            this.request = request;
-            this.callback = callback;
-        }
-
-        @Override
-        public ModbusSlaveEndpoint getEndpoint() {
-            return endpoint;
-        }
-
-        @Override
-        public ModbusWriteRequestBlueprint getRequest() {
-            return request;
-        }
-
-        @Override
-        public ModbusWriteCallback getCallback() {
-            return callback;
-        }
-
-    }
 
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;

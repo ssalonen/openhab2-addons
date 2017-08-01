@@ -11,10 +11,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -31,8 +27,9 @@ import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusReadRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.PollTaskImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +40,6 @@ import org.slf4j.LoggerFactory;
  * @author Sami Salonen - Initial contribution
  */
 public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing implements ModbusPollerThingHandler {
-    private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
-    static {
-        toStringStyle.setUseShortClassName(true);
-    }
 
     /**
      * {@link ModbusReadCallback} that delegates all tasks forward.
@@ -109,149 +102,28 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     /**
      * Immutable {@link ModbusReadRequestBlueprint} to read from endpoint represented by this Poller's bridge
      *
-     * Equals and hashCode implemented for PollTask. Two instances of this class are considered the same if they have
-     * the equal parameters (same slave id, start, length and function).
-     *
      * @author Sami Salonen
      *
      */
-    private class ModbusReadRequestBlueprintImpl implements ModbusReadRequestBlueprint {
+    private static class ModbusPollerReadRequest extends ModbusReadRequestBlueprintImpl {
 
-        private int slaveId;
-        private ModbusReadFunctionCode functionCode;
-        private int start;
-        private int length;
-
-        public ModbusReadRequestBlueprintImpl(ModbusEndpointThingHandler slaveEndpointThingHandler) {
-            super();
-            this.slaveId = slaveEndpointThingHandler.getSlaveId();
-            this.functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(config.getType());
-            if (this.functionCode == null) {
-                logger.error("Illegal function code: {}", config.getType());
-                throw new IllegalArgumentException("No function code found for " + config.getType());
+        private static ModbusReadFunctionCode getFunctionCode(String type) {
+            ModbusReadFunctionCode functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(type);
+            if (functionCode == null) {
+                throw new IllegalArgumentException("No function code found for " + type);
             }
-            start = config.getStart();
-            length = config.getLength();
-        }
-
-        @Override
-        public int getUnitID() {
-            return slaveId;
-        }
-
-        @Override
-        public int getReference() {
-            return start;
-        }
-
-        @Override
-        public ModbusReadFunctionCode getFunctionCode() {
             return functionCode;
         }
 
-        @Override
-        public int getDataLength() {
-            return length;
+        public ModbusPollerReadRequest(ModbusPollerConfiguration config,
+                ModbusEndpointThingHandler slaveEndpointThingHandler) {
+            super(slaveEndpointThingHandler.getSlaveId(), getFunctionCode(config.getType()), config.getStart(),
+                    config.getLength());
         }
-
-        @Override
-        public int hashCode() {
-            return new HashCodeBuilder(89, 3).append(slaveId).append(functionCode).append(start).append(length)
-                    .toHashCode();
-        }
-
-        @Override
-        public String toString() {
-            return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId)
-                    .append("functionCode", functionCode).append("start", start).append("length", length).toString();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (obj == this) {
-                return true;
-            }
-            if (obj.getClass() != getClass()) {
-                return false;
-            }
-            ModbusReadRequestBlueprintImpl rhs = (ModbusReadRequestBlueprintImpl) obj;
-            return new EqualsBuilder().append(slaveId, rhs.slaveId).append(functionCode, rhs.functionCode)
-                    .append(start, rhs.start).append(length, rhs.length).isEquals();
-        }
-
-    }
-
-    /**
-     * HashCode and equals should be defined such that two poll tasks considered the same only if their request,
-     * endpoint and callback are the same. This allows two differentiate poll tasks with different callbacks.
-     *
-     * @author Sami Salonen
-     *
-     */
-    private class PollTaskImpl implements PollTask {
-
-        private ModbusReadRequestBlueprintImpl request;
-        private ModbusSlaveEndpoint endpoint;
-
-        public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprintImpl request) {
-            super();
-            this.endpoint = endpoint;
-            this.request = request;
-        }
-
-        @Override
-        public ModbusReadRequestBlueprint getRequest() {
-            return request;
-        }
-
-        @Override
-        public ModbusSlaveEndpoint getEndpoint() {
-            return endpoint;
-        }
-
-        @Override
-        public ModbusReadCallback getCallback() {
-            return callbackDelegator;
-        }
-
-        @Override
-        public int hashCode() {
-            return new HashCodeBuilder(71, 5).append(request).append(getEndpoint()).append(getCallback()).toHashCode();
-        }
-
-        @Override
-        public String toString() {
-            return new ToStringBuilder(this, toStringStyle).append("request", request).append("endpoint", endpoint)
-                    .append("callback", getCallback()).toString();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (obj == this) {
-                return true;
-            }
-            if (obj.getClass() != getClass()) {
-                return false;
-            }
-            PollTaskImpl rhs = (PollTaskImpl) obj;
-            return new EqualsBuilder().append(request, rhs.request).append(endpoint, rhs.endpoint)
-                    .append(getCallback(), rhs.getCallback()).isEquals();
-        }
-
     }
 
     private Logger logger = LoggerFactory.getLogger(ModbusPollerThingHandlerImpl.class);
-    private ChannelUID stringChannelUid;
 
-    private volatile Exception lastResponseError;
-    private volatile BitArray lastResponseCoils;
-    private volatile ModbusRegisterArray lastResponseRegisters;
     private ModbusPollerConfiguration config;
     private volatile PollTask pollTask;
     private Supplier<ModbusManager> managerRef;
@@ -343,8 +215,8 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             return;
         }
 
-        ModbusReadRequestBlueprintImpl request = new ModbusReadRequestBlueprintImpl(slaveEndpointThingHandler);
-        pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request);
+        ModbusReadRequestBlueprintImpl request = new ModbusPollerReadRequest(config, slaveEndpointThingHandler);
+        pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request, callbackDelegator);
 
         if (config.getRefresh() <= 0L) {
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
