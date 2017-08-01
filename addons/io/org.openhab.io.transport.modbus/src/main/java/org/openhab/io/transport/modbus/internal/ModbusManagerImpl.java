@@ -131,14 +131,6 @@ public class ModbusManagerImpl implements ModbusManager {
         // disable JMX
         generalPoolConfig.setJmxEnabled(false);
     }
-    //
-    // /**
-    // * For testing
-    // */
-    // static KeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> getReconstructedConnectionPoolForTesting() {
-    // reconstructConnectionPool();
-    // return connectionPool;
-    // }
 
     /**
      * We use connection pool to ensure that only single transaction is ongoing per each endpoint. This is especially
