@@ -157,11 +157,11 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         ModbusPollerThingHandler handler = (ModbusPollerThingHandler) poller.getHandler();
         PollTask pollTask = handler.getPollTask();
         if (pollTask == null) {
-            logger.debug(
-                    "Poller '{}' of ReadWrite bridge '{}' of ReadThing '{}' has no active polling. Aborting config validation",
+            logger.warn(
+                    "Poller '{}' of ReadWrite bridge '{}' of ReadThing '{}' has no poll task. Aborting config validation",
                     poller.getLabel(), readwrite.getLabel(), getThing().getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                    String.format("Poller %s is configured not to poll", poller.getLabel()));
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    String.format("Poller '%s' configuration incomplete or with errors", poller.getLabel()));
             return;
         }
 
@@ -372,7 +372,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
                 }
 
                 if (transformedState == null) {
-                    logger.warn("Thing {}, channel {} will not be updated since transformation was unsuccesful",
+                    logger.debug("Thing {}, channel {} will not be updated since transformation was unsuccesful",
                             getThing().getLabel(), channelUID);
                 } else {
                     states.put(channelUID, transformedState);

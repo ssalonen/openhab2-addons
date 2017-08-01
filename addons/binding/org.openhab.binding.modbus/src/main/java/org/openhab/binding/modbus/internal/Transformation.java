@@ -206,7 +206,7 @@ public class Transformation {
                             + "transformed string '{}', transformation '{}'",
                     command, transformedCommand, commandAsString, transformed, transformation);
         } else {
-            logger.warn(
+            logger.debug(
                     "Could not transform item  command '{}' to a Command. Command as string '{}', "
                             + "transformed string '{}', transformation '{}'",
                     command, commandAsString, transformed, transformation);
@@ -231,7 +231,7 @@ public class Transformation {
         final String transformed = transform(context, stateAsString);
         State transformedState = TypeParser.parseState(types, transformed);
         if (transformedState == null) {
-            logger.warn(
+            logger.debug(
                     "Could not transform item state '{}' (of type {}) to a State (tried the following types: {})! Command as string '{}', "
                             + "transformed string '{}', transformation '{}'",
                     state, state.getClass().getSimpleName(), types, stateAsString, transformed, transformation);
