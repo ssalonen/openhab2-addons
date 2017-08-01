@@ -3,6 +3,11 @@ package org.openhab.io.transport.modbus;
 import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class WriteTaskImpl implements WriteTask {
 
     private ModbusSlaveEndpoint endpoint;

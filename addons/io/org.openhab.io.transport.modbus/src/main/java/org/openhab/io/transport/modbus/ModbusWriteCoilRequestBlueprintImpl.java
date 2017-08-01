@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilRequestBlueprint {
 
     private static class SingleBitArray implements BitArray {

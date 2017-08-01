@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegisterRequestBlueprint {
     private int slaveId;
     private int reference;

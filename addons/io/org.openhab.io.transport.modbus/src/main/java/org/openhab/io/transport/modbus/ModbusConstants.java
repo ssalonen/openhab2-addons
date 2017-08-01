@@ -1,5 +1,10 @@
 package org.openhab.io.transport.modbus;
 
+/**
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusConstants {
 
     static final public String VALUE_TYPE_BIT = "bit";
