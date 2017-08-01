@@ -322,7 +322,9 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         if (pollTask == null) {
             return;
         }
-        managerRef.get().unregisterRegularPoll(pollTask);
+        if (config.getRefresh() > 0L) {
+            managerRef.get().unregisterRegularPoll(pollTask);
+        }
         pollTask = null;
         updateStatus(ThingStatus.OFFLINE);
     }
