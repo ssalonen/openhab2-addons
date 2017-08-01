@@ -41,7 +41,6 @@ import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.BitArray;
-import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
@@ -159,18 +158,20 @@ public class ModbusPollerThingHandlerTest {
     }
 
     @Test
-    public void testInitializeNonPolling() {
+    public void testInitializeNonPolling()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         Configuration pollerConfig = new Configuration();
         pollerConfig.put("refresh", 0L); // 0 -> non polling
         pollerConfig.put("start", 5);
         pollerConfig.put("length", 9);
-        pollerConfig.put("type", ModbusBitUtilities.VALUE_TYPE_INT16);
+        pollerConfig.put("type", ModbusBindingConstants.READ_TYPE_HOLDING_REGISTER);
         poller = createPollerThingBuilder("poller").withConfiguration(pollerConfig).withBridge(endpoint.getUID())
                 .build();
         registerThingToMockRegistry(poller);
         hookStatusUpdates(poller);
 
         ModbusPollerThingHandlerImpl pollerThingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
+        hookItemRegistry(pollerThingHandler);
         pollerThingHandler.setCallback(thingCallback);
         poller.setHandler(pollerThingHandler);
         pollerThingHandler.initialize();

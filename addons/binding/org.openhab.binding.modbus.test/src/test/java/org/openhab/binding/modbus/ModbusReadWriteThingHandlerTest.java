@@ -49,7 +49,6 @@ import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.binding.modbus.handler.ModbusWriteThingHandler;
 import org.openhab.io.transport.modbus.BitArray;
-import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
@@ -120,7 +119,7 @@ public class ModbusReadWriteThingHandlerTest {
         }).when(thingCallback).stateUpdated(any(), any());
     }
 
-    private void hookItemRegistry(ThingHandler thingHandler)
+    private void hookThingRegistry(ThingHandler thingHandler)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         Field thingRegisteryField = BaseThingHandler.class.getDeclaredField("thingRegistry");
         thingRegisteryField.setAccessible(true);
@@ -155,7 +154,7 @@ public class ModbusReadWriteThingHandlerTest {
         hookStateUpdates(readwrite);
 
         ModbusReadWriteThingHandler readwriteThingHandler = new ModbusReadWriteThingHandler(readwrite);
-        hookItemRegistry(readwriteThingHandler);
+        hookThingRegistry(readwriteThingHandler);
         readwriteThingHandler.setCallback(thingCallback);
         readwrite.setHandler(readwriteThingHandler);
         if (beforeInitHook != null) {
@@ -210,7 +209,8 @@ public class ModbusReadWriteThingHandlerTest {
     }
 
     @Before
-    public void setUp() {
+    public void setUp()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         Mockito.when(thingRegistry.get(Matchers.any())).then(invocation -> {
             ThingUID uid = invocation.getArgumentAt(0, ThingUID.class);
             for (Thing thing : things) {
@@ -236,7 +236,7 @@ public class ModbusReadWriteThingHandlerTest {
         pollerConfig.put("refresh", 0L); // 0 -> non polling
         pollerConfig.put("start", 5);
         pollerConfig.put("length", 9);
-        pollerConfig.put("type", ModbusBitUtilities.VALUE_TYPE_INT16);
+        pollerConfig.put("type", ModbusBindingConstants.READ_TYPE_HOLDING_REGISTER);
         poller = createPollerThingBuilder("poller").withConfiguration(pollerConfig).withBridge(endpoint.getUID())
                 .build();
         registerThingToMockRegistry(poller);
@@ -244,6 +244,7 @@ public class ModbusReadWriteThingHandlerTest {
         hookStateUpdates(poller);
 
         ModbusPollerThingHandlerImpl pollerThingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
+        hookThingRegistry(pollerThingHandler);
         pollerThingHandler.setCallback(thingCallback);
         poller.setHandler(pollerThingHandler);
         pollerThingHandler.initialize();
@@ -315,12 +316,13 @@ public class ModbusReadWriteThingHandlerTest {
 
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         BitArray bits = Mockito.mock(BitArray.class);
-        doReturn(Optional.of(ImmutableMap.<ChannelUID, State> builder()
-                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_ROLLERSHUTTER),
-                        UpDownType.DOWN)
-                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
-                        new StringType("foobar"))
-                .build())).when(readHandler).getLastState();
+        doReturn(
+                Optional.of(ImmutableMap.<ChannelUID, State> builder()
+                        .put(new ChannelUID(readHandler.getThing().getUID(),
+                                ModbusBindingConstants.CHANNEL_ROLLERSHUTTER), UpDownType.DOWN)
+                        .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
+                                new StringType("foobar"))
+                        .build())).when(readHandler).getLastState();
 
         readwriteThingHandler.onBits(request, bits);
 
@@ -381,12 +383,13 @@ public class ModbusReadWriteThingHandlerTest {
 
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         ModbusRegisterArray registers = Mockito.mock(ModbusRegisterArray.class);
-        doReturn(Optional.of(ImmutableMap.<ChannelUID, State> builder()
-                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_ROLLERSHUTTER),
-                        UpDownType.DOWN)
-                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
-                        new StringType("foobar"))
-                .build())).when(readHandler).getLastState();
+        doReturn(
+                Optional.of(ImmutableMap.<ChannelUID, State> builder()
+                        .put(new ChannelUID(readHandler.getThing().getUID(),
+                                ModbusBindingConstants.CHANNEL_ROLLERSHUTTER), UpDownType.DOWN)
+                        .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
+                                new StringType("foobar"))
+                        .build())).when(readHandler).getLastState();
 
         readwriteThingHandler.onRegisters(request, registers);
 

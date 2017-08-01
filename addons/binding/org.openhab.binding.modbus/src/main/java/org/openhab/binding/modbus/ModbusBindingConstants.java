@@ -57,11 +57,16 @@ public class ModbusBindingConstants {
     public static final String[] DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE = { CHANNEL_SWITCH,
             CHANNEL_CONTACT, CHANNEL_DATETIME, CHANNEL_DIMMER, CHANNEL_NUMBER, CHANNEL_STRING, CHANNEL_ROLLERSHUTTER };
 
+    public static final String READ_TYPE_COIL = "coil";
+    public static final String READ_TYPE_HOLDING_REGISTER = "holding";
+    public static final String READ_TYPE_DISCRETE_INPUT = "discrete";
+    public static final String READ_TYPE_INPUT_REGISTER = "input";
+
     public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
     static {
-        READ_FUNCTION_CODES.put("coil", ModbusReadFunctionCode.READ_COILS);
-        READ_FUNCTION_CODES.put("discrete", ModbusReadFunctionCode.READ_INPUT_DISCRETES);
-        READ_FUNCTION_CODES.put("input", ModbusReadFunctionCode.READ_INPUT_REGISTERS);
-        READ_FUNCTION_CODES.put("holding", ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS);
+        READ_FUNCTION_CODES.put(READ_TYPE_COIL, ModbusReadFunctionCode.READ_COILS);
+        READ_FUNCTION_CODES.put(READ_TYPE_DISCRETE_INPUT, ModbusReadFunctionCode.READ_INPUT_DISCRETES);
+        READ_FUNCTION_CODES.put(READ_TYPE_INPUT_REGISTER, ModbusReadFunctionCode.READ_INPUT_REGISTERS);
+        READ_FUNCTION_CODES.put(READ_TYPE_HOLDING_REGISTER, ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS);
     }
 }
