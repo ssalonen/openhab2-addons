@@ -216,6 +216,11 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         }
         ModbusPollerThingHandler pollerHandler = (ModbusPollerThingHandler) pollerBridge.getHandler();
         PollTask pollTask = pollerHandler.getPollTask();
+        if (pollTask == null) {
+            logger.warn("WriteThing '{}': No poll task available. Not processing command '{}'", getThing().getLabel(),
+                    command);
+            return;
+        }
 
         int slaveId = pollTask.getRequest().getUnitID();
         ModbusSlaveEndpoint slaveEndpoint = pollTask.getEndpoint();

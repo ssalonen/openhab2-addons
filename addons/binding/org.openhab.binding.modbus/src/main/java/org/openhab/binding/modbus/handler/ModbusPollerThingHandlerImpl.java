@@ -332,10 +332,6 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR);
             throw new IllegalStateException("pollTask should be unregistered before registering a new one!");
         }
-        if (config.getRefresh() <= 0L) {
-            updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
-            return;
-        }
 
         ModbusEndpointThingHandler slaveEndpointThingHandler = getEndpointThingHandler();
         if (slaveEndpointThingHandler == null) {
@@ -347,8 +343,13 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
         ModbusReadRequestBlueprintImpl request = new ModbusReadRequestBlueprintImpl(slaveEndpointThingHandler);
         pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request);
-        managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
-        updateStatus(ThingStatus.ONLINE);
+
+        if (config.getRefresh() <= 0L) {
+            updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
+        } else {
+            managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
+            updateStatus(ThingStatus.ONLINE);
+        }
     }
 
     @Override
