@@ -44,9 +44,6 @@ public class ModbusBindingConstants {
     public static final String CHANNEL_LAST_WRITE_SUCCESS = "lastWriteSuccess";
     public static final String CHANNEL_LAST_WRITE_ERROR = "lastWriteError";
 
-    public static final String WRITE_TYPE_COIL = "coil";
-    public static final String WRITE_TYPE_HOLDING = "holding";
-
     public static final String[] DATA_CHANNELS = { CHANNEL_SWITCH, CHANNEL_CONTACT, CHANNEL_DATETIME, CHANNEL_DIMMER,
             CHANNEL_NUMBER, CHANNEL_STRING, CHANNEL_ROLLERSHUTTER };
 
@@ -56,6 +53,10 @@ public class ModbusBindingConstants {
 
     public static final String[] DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE = { CHANNEL_SWITCH,
             CHANNEL_CONTACT, CHANNEL_DATETIME, CHANNEL_DIMMER, CHANNEL_NUMBER, CHANNEL_STRING, CHANNEL_ROLLERSHUTTER };
+
+
+    public static final String WRITE_TYPE_COIL = "coil";
+    public static final String WRITE_TYPE_HOLDING = "holding";
 
     public static final String READ_TYPE_COIL = "coil";
     public static final String READ_TYPE_HOLDING_REGISTER = "holding";
