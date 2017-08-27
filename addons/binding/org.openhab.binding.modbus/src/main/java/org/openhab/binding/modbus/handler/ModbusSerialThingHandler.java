@@ -72,8 +72,8 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
         synchronized (this) {
             managerRef.get().addListener(this);
             poolConfiguration = poolConfigurationNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
             endpoint = endpointNew;
+            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
             updateStatus(ThingStatus.ONLINE);
         }
     }
@@ -97,13 +97,16 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
     }
 
     @Override
-    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration otherConfig) {
+    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
+            EndpointPoolConfiguration otherConfig) {
         synchronized (this) {
-            if (this.poolConfiguration != null && endpoint.equals(this.endpoint)
+            if (this.poolConfiguration != null && otherEndpoint.equals(this.endpoint)
                     && !this.poolConfiguration.equals(poolConfiguration)) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
-                        "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
-                        endpoint, this.thing, this.poolConfiguration, otherConfig, this.endpoint.getPortName()));
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                        String.format(
+                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
+                                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherConfig,
+                                this.endpoint.getPortName()));
             }
         }
     }

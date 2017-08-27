@@ -33,7 +33,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
 
     private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
     private ModbusTcpConfiguration config;
-    private volatile ModbusSlaveEndpoint endpoint;
+    private volatile ModbusTCPSlaveEndpoint endpoint;
     private Supplier<ModbusManager> managerRef;
     private volatile EndpointPoolConfiguration poolConfiguration;
 
@@ -54,7 +54,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
         }
 
         config = getConfigAs(ModbusTcpConfiguration.class);
-        ModbusSlaveEndpoint endpointNew = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
+        ModbusTCPSlaveEndpoint endpointNew = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
 
         EndpointPoolConfiguration poolConfigurationNew = new EndpointPoolConfiguration();
         poolConfigurationNew.setConnectMaxTries(config.getConnectMaxTries());
@@ -66,8 +66,8 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
         synchronized (this) {
             managerRef.get().addListener(this);
             poolConfiguration = poolConfigurationNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfigurationNew);
             endpoint = endpointNew;
+            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
             updateStatus(ThingStatus.ONLINE);
         }
     }
@@ -91,17 +91,19 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
     }
 
     @Override
-    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration otherConfig) {
+    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
+            EndpointPoolConfiguration otherConfig) {
         synchronized (this) {
             if (endpoint == null) {
                 return;
             }
-            if (this.poolConfiguration != null && endpoint.equals(this.endpoint)
-                    && !this.poolConfiguration.equals(otherConfig)) {
+            if (this.poolConfiguration != null && otherEndpoint.equals(this.endpoint)
+                    && !this.poolConfiguration.equals(poolConfiguration)) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Check that all slaves pointing to same host/port share the connection details.",
-                                endpoint, this.thing.getLabel(), this.poolConfiguration, otherConfig));
+                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to tcp slave '%s:%s' have same parameters.",
+                                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherConfig,
+                                this.endpoint.getAddress(), this.endpoint.getPort()));
             }
         }
     }
