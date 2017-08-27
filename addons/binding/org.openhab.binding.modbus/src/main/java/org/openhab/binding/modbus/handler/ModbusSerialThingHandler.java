@@ -64,14 +64,15 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
         configNew.setInterConnectDelayMillis(1000);
         configNew.setReconnectAfterMillis(-1);
 
-        endpoint = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(), config.getFlowControlIn(),
-                config.getFlowControlOut(), config.getDataBits(), config.getStopBits(), config.getParity(),
-                config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
+        ModbusSerialSlaveEndpoint endpointNew = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(),
+                config.getFlowControlIn(), config.getFlowControlOut(), config.getDataBits(), config.getStopBits(),
+                config.getParity(), config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
 
         synchronized (this) {
             managerRef.get().addListener(this);
             configuration = configNew;
             managerRef.get().setEndpointPoolConfiguration(endpoint, configuration);
+            endpoint = endpointNew;
             updateStatus(ThingStatus.ONLINE);
         }
     }

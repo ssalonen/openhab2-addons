@@ -54,7 +54,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
         }
 
         this.config = getConfigAs(ModbusTcpConfiguration.class);
-        endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
+        ModbusSlaveEndpoint endpointNew = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
 
         EndpointPoolConfiguration configNew = new EndpointPoolConfiguration();
         configNew.setConnectMaxTries(config.getConnectMaxTries());
@@ -67,6 +67,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
             managerRef.get().addListener(this);
             configuration = configNew;
             managerRef.get().setEndpointPoolConfiguration(endpoint, configuration);
+            endpoint = endpointNew;
             updateStatus(ThingStatus.ONLINE);
         }
     }
