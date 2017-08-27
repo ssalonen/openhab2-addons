@@ -30,6 +30,7 @@ import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.PollTaskImpl;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -214,9 +215,16 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             logger.debug("No bridge handler -- aborting init for {}", this);
             return;
         }
+        ModbusSlaveEndpoint endpoint = slaveEndpointThingHandler.asSlaveEndpoint();
+        if (endpoint == null) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, String.format(
+                    "Bridge '%s' not completely initialized", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
+            logger.debug("Bridge not initialized fully (no endpoint) -- aborting init for {}", this);
+            return;
+        }
 
         ModbusReadRequestBlueprintImpl request = new ModbusPollerReadRequest(config, slaveEndpointThingHandler);
-        pollTask = new PollTaskImpl(slaveEndpointThingHandler.asSlaveEndpoint(), request, callbackDelegator);
+        pollTask = new PollTaskImpl(endpoint, request, callbackDelegator);
 
         if (config.getRefresh() <= 0L) {
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
