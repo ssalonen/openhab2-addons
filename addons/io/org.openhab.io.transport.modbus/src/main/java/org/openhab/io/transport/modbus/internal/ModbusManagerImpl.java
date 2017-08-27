@@ -356,7 +356,8 @@ public class ModbusManagerImpl implements ModbusManager {
         try {
             connection = Optional.ofNullable(connectionPool.borrowObject(endpoint));
         } catch (Exception e) {
-            logger.warn("Error getting a new connection for endpoint {}. Error was: {}", endpoint, e.getMessage());
+            logger.warn("Error getting a new connection for endpoint {}. Error was: {} {}", endpoint,
+                    e.getClass().getName(), e.getMessage());
         }
         logger.trace("borrowing connection (got {}) for endpoint {} took {} ms", connection, endpoint,
                 System.currentTimeMillis() - start);
