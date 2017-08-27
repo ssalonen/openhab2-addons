@@ -74,7 +74,9 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
 
     @Override
     public void dispose() {
-        managerRef.get().removeListener(this);
+        if (managerRef != null) {
+            managerRef.get().removeListener(this);
+        }
     }
 
     @Override
