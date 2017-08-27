@@ -35,7 +35,7 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
     private ModbusTcpConfiguration config;
     private volatile ModbusSlaveEndpoint endpoint;
     private Supplier<ModbusManager> managerRef;
-    private volatile EndpointPoolConfiguration configuration;
+    private volatile EndpointPoolConfiguration poolConfiguration;
 
     public ModbusTcpThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
         super(bridge);
@@ -50,23 +50,23 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
     public void initialize() {
         synchronized (this) {
             updateStatus(ThingStatus.UNKNOWN);
-            this.configuration = null;
+            config = null;
         }
 
-        this.config = getConfigAs(ModbusTcpConfiguration.class);
+        config = getConfigAs(ModbusTcpConfiguration.class);
         ModbusSlaveEndpoint endpointNew = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
 
-        EndpointPoolConfiguration configNew = new EndpointPoolConfiguration();
-        configNew.setConnectMaxTries(config.getConnectMaxTries());
-        configNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
-        configNew.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
-        configNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
-        configNew.setReconnectAfterMillis(config.getReconnectAfterMillis());
+        EndpointPoolConfiguration poolConfigurationNew = new EndpointPoolConfiguration();
+        poolConfigurationNew.setConnectMaxTries(config.getConnectMaxTries());
+        poolConfigurationNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
+        poolConfigurationNew.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
+        poolConfigurationNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        poolConfigurationNew.setReconnectAfterMillis(config.getReconnectAfterMillis());
 
         synchronized (this) {
             managerRef.get().addListener(this);
-            configuration = configNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, configuration);
+            poolConfiguration = poolConfigurationNew;
+            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfigurationNew);
             endpoint = endpointNew;
             updateStatus(ThingStatus.ONLINE);
         }
@@ -84,18 +84,24 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
 
     @Override
     public int getSlaveId() {
+        if (config == null) {
+            throw new IllegalStateException("Poller not configured, but slave id is queried!");
+        }
         return config.getId();
     }
 
     @Override
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration otherConfig) {
         synchronized (this) {
-            if (this.configuration != null && endpoint.equals(this.endpoint)
-                    && !this.configuration.equals(otherConfig)) {
+            if (endpoint == null) {
+                return;
+            }
+            if (this.poolConfiguration != null && endpoint.equals(this.endpoint)
+                    && !this.poolConfiguration.equals(otherConfig)) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
                                 "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Check that all slaves pointing to same host/port share the connection details.",
-                                endpoint, this.thing.getLabel(), this.configuration, otherConfig));
+                                endpoint, this.thing.getLabel(), this.poolConfiguration, otherConfig));
             }
         }
     }

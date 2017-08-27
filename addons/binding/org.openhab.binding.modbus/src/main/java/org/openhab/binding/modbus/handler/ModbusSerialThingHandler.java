@@ -35,7 +35,7 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
     private ModbusSerialConfiguration config;
     private volatile ModbusSerialSlaveEndpoint endpoint;
     private Supplier<ModbusManager> managerRef;
-    private volatile EndpointPoolConfiguration configuration;
+    private volatile EndpointPoolConfiguration poolConfiguration;
 
     public ModbusSerialThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
         super(bridge);
@@ -50,19 +50,20 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
     public void initialize() {
         synchronized (this) {
             updateStatus(ThingStatus.UNKNOWN);
-            this.configuration = null;
+            config = null;
+            endpoint = null;
         }
 
-        this.config = getConfigAs(ModbusSerialConfiguration.class);
+        ModbusSerialConfiguration configNew = getConfigAs(ModbusSerialConfiguration.class);
 
-        EndpointPoolConfiguration configNew = new EndpointPoolConfiguration();
-        configNew.setConnectMaxTries(config.getConnectMaxTries());
-        configNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
-        configNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        EndpointPoolConfiguration poolConfigurationNew = new EndpointPoolConfiguration();
+        poolConfigurationNew.setConnectMaxTries(config.getConnectMaxTries());
+        poolConfigurationNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
+        poolConfigurationNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
 
         // Never reconnect serial connections "automatically"
-        configNew.setInterConnectDelayMillis(1000);
-        configNew.setReconnectAfterMillis(-1);
+        poolConfigurationNew.setInterConnectDelayMillis(1000);
+        poolConfigurationNew.setReconnectAfterMillis(-1);
 
         ModbusSerialSlaveEndpoint endpointNew = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(),
                 config.getFlowControlIn(), config.getFlowControlOut(), config.getDataBits(), config.getStopBits(),
@@ -70,8 +71,8 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
 
         synchronized (this) {
             managerRef.get().addListener(this);
-            configuration = configNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, configuration);
+            poolConfiguration = poolConfigurationNew;
+            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
             endpoint = endpointNew;
             updateStatus(ThingStatus.ONLINE);
         }
@@ -89,18 +90,20 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
 
     @Override
     public int getSlaveId() {
+        if (config == null) {
+            throw new IllegalStateException("Poller not configured, but slave id is queried!");
+        }
         return config.getId();
     }
 
     @Override
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration otherConfig) {
         synchronized (this) {
-            if (this.configuration != null && endpoint.equals(this.endpoint)
-                    && !this.configuration.equals(configuration)) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
-                                endpoint, this.thing, this.configuration, otherConfig, this.endpoint.getPortName()));
+            if (this.poolConfiguration != null && endpoint.equals(this.endpoint)
+                    && !this.poolConfiguration.equals(poolConfiguration)) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                        "Endpoint '%s' has conflicting parameters: parameters of this thing (%s) {} are different from {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
+                        endpoint, this.thing, this.poolConfiguration, otherConfig, this.endpoint.getPortName()));
             }
         }
     }
