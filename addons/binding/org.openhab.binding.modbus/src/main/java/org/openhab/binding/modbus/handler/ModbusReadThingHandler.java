@@ -214,9 +214,10 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         // textual name for the data element, e.g. register
         // (for logging)
         String dataElement;
+        ModbusConstants.ValueType valueType = ModbusConstants.ValueType.valueOf(config.getValueType());
         if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
                 || pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-            valueTypeBitCount = ModbusBitUtilities.getBitCountOfValueType(config.getValueType());
+            valueTypeBitCount = valueType.getBits();
             functionObjectBitSize = 16;
             dataElement = "register";
         } else {

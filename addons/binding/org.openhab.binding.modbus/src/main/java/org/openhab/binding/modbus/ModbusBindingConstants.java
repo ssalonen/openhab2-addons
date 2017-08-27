@@ -54,7 +54,6 @@ public class ModbusBindingConstants {
     public static final String[] DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE = { CHANNEL_SWITCH,
             CHANNEL_CONTACT, CHANNEL_DATETIME, CHANNEL_DIMMER, CHANNEL_NUMBER, CHANNEL_STRING, CHANNEL_ROLLERSHUTTER };
 
-
     public static final String WRITE_TYPE_COIL = "coil";
     public static final String WRITE_TYPE_HOLDING = "holding";
 
