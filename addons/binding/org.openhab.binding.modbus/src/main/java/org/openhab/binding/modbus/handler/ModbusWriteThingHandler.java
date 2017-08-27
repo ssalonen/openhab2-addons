@@ -121,6 +121,12 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         ModbusWriteRequestBlueprint request;
         if (config.getType().equals(WRITE_TYPE_COIL)) {
             Optional<Boolean> commandAsBoolean = ModbusBitUtilities.translateCommand2Boolean(transformedCommand.get());
+            if (!commandAsBoolean.isPresent()) {
+                logger.warn(
+                        "Cannot process command {} with channel {} since command is not OnOffType, OpenClosedType or Decimal trying to write to coil. Do not know how to convert to 0/1",
+                        command, channelUID);
+                return;
+            }
             boolean data = commandAsBoolean.get();
             request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference, data);
         } else if (config.getType().equals(WRITE_TYPE_HOLDING)) {
