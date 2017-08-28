@@ -341,8 +341,9 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         logger.trace("Thing '{}' with trigger '{}' matched numeric value '{}'? {}", getThing().getLabel(), trigger,
                 numericState, matchesTrigger);
         if (matchesTrigger) {
-            channelUIDToAcceptedDataTypes.keySet().stream().forEach(channelUID -> {
-                List<Class<? extends State>> acceptedDataTypes = channelUIDToAcceptedDataTypes.get(channelUID);
+            channelUIDToAcceptedDataTypes.entrySet().stream().forEach(entry -> {
+                ChannelUID channelUID = entry.getKey();
+                List<Class<? extends State>> acceptedDataTypes = entry.getValue();
                 if (acceptedDataTypes.isEmpty()) {
                     // Channel is not linked -- skip
                     return;
