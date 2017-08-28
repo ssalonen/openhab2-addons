@@ -27,6 +27,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
@@ -64,6 +65,11 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (getThing().getStatus() != ThingStatus.ONLINE) {
+            return;
+        }
+
+        if (RefreshType.REFRESH.equals(command)) {
+            // TODO: implement
             return;
         }
 
