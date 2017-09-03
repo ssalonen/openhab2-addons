@@ -1,5 +1,9 @@
 package org.openhab.io.transport.modbus;
 
+import java.util.stream.Stream;
+
+import org.eclipse.jdt.annotation.NonNull;
+
 /**
  *
  * @author Sami Salonen
@@ -20,11 +24,11 @@ public class ModbusConstants {
         UINT32_SWAP("uint32_swap", 32),
         FLOAT32_SWAP("float32_swap", 32);
 
-        private final String valueType;
+        private final @NonNull String configValue;
         private final int bits;
 
-        ValueType(String valueType, int bits) {
-            this.valueType = valueType;
+        ValueType(@NonNull String configValue, int bits) {
+            this.configValue = configValue;
             this.bits = bits;
         }
 
@@ -32,10 +36,20 @@ public class ModbusConstants {
             return bits;
         }
 
-        public String getValueType() {
-            return valueType;
+        public @NonNull String getConfigValue() {
+            return configValue;
         }
 
+        @Override
+        public String toString() {
+            return getConfigValue();
+        }
+
+        @SuppressWarnings("null")
+        public static @NonNull ValueType fromConfigValue(String configValueType) throws IllegalArgumentException {
+            return Stream.of(ValueType.values()).filter(v -> v.getConfigValue().equals(configValueType)).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid valueType"));
+        }
     }
 
 }

@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
 import org.eclipse.smarthome.core.library.items.DimmerItem;
@@ -43,6 +44,7 @@ import org.openhab.binding.modbus.internal.config.ModbusReadConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusConstants;
+import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
@@ -86,6 +88,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     private static Map<ChannelUID, List<Class<? extends State>>> channelUIDToAcceptedDataTypes;
+    private @Nullable ValueType valueType;
 
     public ModbusReadThingHandler(@NonNull Thing thing) {
         super(thing);
@@ -106,9 +109,15 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         synchronized (lastStateLock) {
             lastState = null;
         }
-        config = getConfigAs(ModbusReadConfiguration.class);
-        trigger = config.getTrigger();
-        transformation = new Transformation(config.getTransform());
+        try {
+            config = getConfigAs(ModbusReadConfiguration.class);
+            valueType = ValueType.fromConfigValue(config.getValueType());
+            trigger = config.getTrigger();
+            transformation = new Transformation(config.getTransform());
+        } catch (IllegalArgumentException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, e.toString());
+            return;
+        }
 
         channelUIDToAcceptedDataTypes = channelIdToAcceptedDataTypes.keySet().stream()
                 .collect(Collectors.toMap(channelId -> new ChannelUID(getThing().getUID(), channelId),
@@ -193,13 +202,13 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         ModbusReadFunctionCode functionCode = pollTask.getRequest().getFunctionCode();
         if ((functionCode == ModbusReadFunctionCode.READ_COILS
                 || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES)
-                && !config.getValueType().equals(ModbusConstants.VALUE_TYPE_BIT)) {
+                && !ModbusConstants.ValueType.BIT.equals(valueType)) {
             logger.error(
                     "ReadThing {}: Only valueType='{}' supported with coils or discrete inputs. Value type was: {}",
-                    getThing(), ModbusConstants.VALUE_TYPE_BIT, config.getValueType());
+                    getThing(), ModbusConstants.ValueType.BIT, config.getValueType());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                     String.format("Only valueType='%s' supported with coils or discrete inputs. Value type was: {}",
-                            ModbusConstants.VALUE_TYPE_BIT, config.getValueType()));
+                            ModbusConstants.ValueType.BIT, config.getValueType()));
             return false;
         } else {
             return true;
@@ -208,20 +217,17 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
     private boolean validateIndex(PollTask pollTask) {
         // bits represented by the value type, e.g. int32 -> 32
-        int valueTypeBitCount;
+        int valueTypeBitCount = valueType.getBits();
         // bits represented by the function code. For registers this is 16, for coils and discrete inputs it is 1.
         int functionObjectBitSize;
         // textual name for the data element, e.g. register
         // (for logging)
         String dataElement;
-        ModbusConstants.ValueType valueType = ModbusConstants.ValueType.valueOf(config.getValueType());
         if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_REGISTERS
                 || pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
-            valueTypeBitCount = valueType.getBits();
             functionObjectBitSize = 16;
             dataElement = "register";
         } else {
-            valueTypeBitCount = 1;
             functionObjectBitSize = 1;
             if (pollTask.getRequest().getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
                 dataElement = "coil";
@@ -296,7 +302,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
         DecimalType numericState = ModbusBitUtilities.extractStateFromRegisters(registers, config.getStart(),
-                config.getValueType());
+                valueType);
         boolean boolValue = !numericState.equals(DecimalType.ZERO);
         Map<ChannelUID, State> state = processUpdatedValue(numericState, boolValue);
         synchronized (lastStateLock) {

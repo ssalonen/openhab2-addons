@@ -3,7 +3,6 @@ package org.openhab.io.transport.modbus;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.Optional;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -20,15 +19,6 @@ import org.eclipse.smarthome.core.types.Command;
  * @author Sami Salonen
  */
 public class ModbusBitUtilities {
-    private static String[] VALUE_TYPE_8BIT = new String[] { ModbusConstants.VALUE_TYPE_INT8,
-            ModbusConstants.VALUE_TYPE_UINT8 };
-
-    private static String[] VALUE_TYPE_16BIT = new String[] { ModbusConstants.VALUE_TYPE_INT16,
-            ModbusConstants.VALUE_TYPE_UINT16 };
-
-    private static String[] VALUE_TYPE_32BIT = new String[] { ModbusConstants.VALUE_TYPE_FLOAT32,
-            ModbusConstants.VALUE_TYPE_INT32, ModbusConstants.VALUE_TYPE_UINT32, ModbusConstants.VALUE_TYPE_INT32_SWAP,
-            ModbusConstants.VALUE_TYPE_UINT32_SWAP, ModbusConstants.VALUE_TYPE_FLOAT32_SWAP };
 
     /**
      * Read data from registers and convert the result to DecimalType
@@ -74,63 +64,64 @@ public class ModbusBitUtilities {
      * @param index
      *            zero based item index. Interpretation of this depends on type
      * @param type
-     *            item type, e.g. unsigned 16bit integer (<tt>ModbusBindingProvider.VALUE_TYPE_UINT16</tt>)
+     *            item type, e.g. unsigned 16bit integer (<tt>ModbusBindingProvider.ValueType.UINT16</tt>)
      * @return number representation queried value
      * @throws IllegalArgumentException when <tt>type</tt> does not match a known type
      * @throws IndexOutOfBoundsException when <tt>index</tt> is out of bounds of registers
      *
      */
-    public static DecimalType extractStateFromRegisters(ModbusRegisterArray registers, int index, String type) {
-        if (type.equals(ModbusConstants.VALUE_TYPE_BIT)) {
+    public static DecimalType extractStateFromRegisters(ModbusRegisterArray registers, int index,
+            ModbusConstants.ValueType type) {
+        if (type.equals(ModbusConstants.ValueType.BIT)) {
             return new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1);
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT8)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT8)) {
             return new DecimalType(registers.getRegister(index / 2).getBytes()[1 - (index % 2)]);
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_UINT8)) {
+        } else if (type.equals(ModbusConstants.ValueType.UINT8)) {
             return new DecimalType((registers.getRegister(index / 2).toUnsignedShort() >> (8 * (index % 2))) & 0xff);
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT16)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT16)) {
             ByteBuffer buff = ByteBuffer.allocate(2);
             buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getShort(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_UINT16)) {
+        } else if (type.equals(ModbusConstants.ValueType.UINT16)) {
             return new DecimalType(registers.getRegister(index).toUnsignedShort());
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT32)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT32)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
             buff.put(registers.getRegister(index).getBytes());
             buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_UINT32)) {
+        } else if (type.equals(ModbusConstants.ValueType.UINT32)) {
             ByteBuffer buff = ByteBuffer.allocate(8);
             buff.position(4);
             buff.put(registers.getRegister(index).getBytes());
             buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_FLOAT32)) {
+        } else if (type.equals(ModbusConstants.ValueType.FLOAT32)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
             buff.put(registers.getRegister(index).getBytes());
             buff.put(registers.getRegister(index + 1).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT32_SWAP)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
             buff.put(registers.getRegister(index + 1).getBytes());
             buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_UINT32_SWAP)) {
+        } else if (type.equals(ModbusConstants.ValueType.UINT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(8);
             buff.position(4);
             buff.put(registers.getRegister(index + 1).getBytes());
             buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_FLOAT32_SWAP)) {
+        } else if (type.equals(ModbusConstants.ValueType.FLOAT32_SWAP)) {
             ByteBuffer buff = ByteBuffer.allocate(4);
             buff.put(registers.getRegister(index + 1).getBytes());
             buff.put(registers.getRegister(index).getBytes());
             return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
         } else {
-            throw new IllegalArgumentException(type);
+            throw new IllegalArgumentException(type.getConfigValue());
         }
     }
 
-    public static ModbusRegisterArray commandToRegisters(Command command, String type) {
+    public static ModbusRegisterArray commandToRegisters(Command command, ModbusConstants.ValueType type) {
 
         DecimalType numericCommand;
         if (command instanceof OnOffType || command instanceof OpenClosedType) {
@@ -144,7 +135,7 @@ public class ModbusBitUtilities {
                     command, command.getClass().getName()));
         }
 
-        if (type.equals(ModbusConstants.VALUE_TYPE_INT16) || type.equals(ModbusConstants.VALUE_TYPE_UINT16)) {
+        if (type.equals(ModbusConstants.ValueType.INT16) || type.equals(ModbusConstants.ValueType.UINT16)) {
             short shortValue = numericCommand.shortValue();
             // big endian byte ordering
             byte b1 = (byte) (shortValue >> 8);
@@ -152,7 +143,7 @@ public class ModbusBitUtilities {
 
             ModbusRegister register = new ModbusRegisterImpl(b1, b2);
             return new ModbusRegisterArrayImpl(new ModbusRegister[] { register });
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT32) || type.equals(ModbusConstants.VALUE_TYPE_UINT32)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT32) || type.equals(ModbusConstants.ValueType.UINT32)) {
             int intValue = numericCommand.intValue();
             // big endian byte ordering
             byte b1 = (byte) (intValue >> 24);
@@ -162,8 +153,8 @@ public class ModbusBitUtilities {
             ModbusRegister register = new ModbusRegisterImpl(b1, b2);
             ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
             return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_INT32_SWAP)
-                || type.equals(ModbusConstants.VALUE_TYPE_UINT32_SWAP)) {
+        } else if (type.equals(ModbusConstants.ValueType.INT32_SWAP)
+                || type.equals(ModbusConstants.ValueType.UINT32_SWAP)) {
             int intValue = numericCommand.intValue();
             // big endian byte ordering
             byte b1 = (byte) (intValue >> 24);
@@ -173,7 +164,7 @@ public class ModbusBitUtilities {
             ModbusRegister register = new ModbusRegisterImpl(b3, b4);
             ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
             return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_FLOAT32)) {
+        } else if (type.equals(ModbusConstants.ValueType.FLOAT32)) {
             float floatValue = numericCommand.floatValue();
             int intBits = Float.floatToIntBits(floatValue);
             // big endian byte ordering
@@ -184,7 +175,7 @@ public class ModbusBitUtilities {
             ModbusRegister register = new ModbusRegisterImpl(b1, b2);
             ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
             return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.VALUE_TYPE_FLOAT32_SWAP)) {
+        } else if (type.equals(ModbusConstants.ValueType.FLOAT32_SWAP)) {
             float floatValue = numericCommand.floatValue();
             int intBits = Float.floatToIntBits(floatValue);
             // big endian byte ordering
@@ -225,20 +216,6 @@ public class ModbusBitUtilities {
             return Optional.of(!command.equals(DecimalType.ZERO));
         }
         return Optional.empty();
-    }
-
-    public static int getBitCountOfValueType(String valueType) throws IllegalArgumentException {
-        if (Arrays.asList(VALUE_TYPE_32BIT).contains(valueType)) {
-            return 32;
-        } else if (Arrays.asList(VALUE_TYPE_16BIT).contains(valueType)) {
-            return 16;
-        } else if (Arrays.asList(VALUE_TYPE_8BIT).contains(valueType)) {
-            return 8;
-        } else if ("bit".equals(ModbusConstants.VALUE_TYPE_BIT)) {
-            return 1;
-        } else {
-            throw new IllegalArgumentException(valueType);
-        }
     }
 
 }

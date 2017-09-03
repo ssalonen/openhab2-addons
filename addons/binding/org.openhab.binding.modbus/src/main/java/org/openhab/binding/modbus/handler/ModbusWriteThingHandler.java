@@ -28,6 +28,7 @@ import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
@@ -52,6 +53,7 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;
     private volatile Transformation transformation;
+    private ValueType valueType;
 
     public ModbusWriteThingHandler(@NonNull Thing thing) {
         super(thing);
@@ -143,8 +145,7 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             boolean data = commandAsBoolean.get();
             request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference, data);
         } else if (config.getType().equals(WRITE_TYPE_HOLDING)) {
-            ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(),
-                    config.getValueType());
+            ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(), valueType);
             boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegister() || data.size() > 1;
             request = new ModbusWriteRegisterRequestBlueprintImpl(slaveId, reference, data, writeMultiple);
         } else {
@@ -161,8 +162,15 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        config = getConfigAs(ModbusWriteConfiguration.class);
-        transformation = new Transformation(config.getTransform());
+        try {
+            config = getConfigAs(ModbusWriteConfiguration.class);
+            valueType = ValueType.fromConfigValue(config.getValueType());
+            transformation = new Transformation(config.getTransform());
+        } catch (IllegalArgumentException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, e.toString());
+            return;
+        }
+
         validateConfiguration();
     }
 
