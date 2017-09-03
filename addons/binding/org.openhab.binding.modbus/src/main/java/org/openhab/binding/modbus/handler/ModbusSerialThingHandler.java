@@ -9,87 +9,55 @@ package org.openhab.binding.modbus.handler;
 
 import java.util.function.Supplier;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.ThingStatus;
-import org.eclipse.smarthome.core.thing.ThingStatusDetail;
-import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.config.ModbusSerialConfiguration;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
-import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
-        implements ModbusEndpointThingHandler, ModbusManagerListener {
+public class ModbusSerialThingHandler
+        extends AbstractModbusEndpointThingHandler<ModbusSerialSlaveEndpoint, ModbusSerialConfiguration> {
 
-    private Logger logger = LoggerFactory.getLogger(ModbusSerialThingHandler.class);
-    private ModbusSerialConfiguration config;
-    private volatile ModbusSerialSlaveEndpoint endpoint;
-    private Supplier<ModbusManager> managerRef;
-    private volatile EndpointPoolConfiguration poolConfiguration;
-
-    public ModbusSerialThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
-        super(bridge);
-        this.managerRef = managerRef;
+    public ModbusSerialThingHandler(@NonNull Bridge bridge, @NonNull Supplier<ModbusManager> managerRef) {
+        super(bridge, managerRef);
     }
 
+    @SuppressWarnings("null")
     @Override
-    public void handleCommand(ChannelUID channelUID, Command command) {
-    }
+    protected void configure() {
+        config = getConfigAs(ModbusSerialConfiguration.class);
 
-    @Override
-    public void initialize() {
-        synchronized (this) {
-            updateStatus(ThingStatus.UNKNOWN);
-            config = null;
-            endpoint = null;
-        }
-
-        ModbusSerialConfiguration configNew = getConfigAs(ModbusSerialConfiguration.class);
-
-        EndpointPoolConfiguration poolConfigurationNew = new EndpointPoolConfiguration();
-        poolConfigurationNew.setConnectMaxTries(config.getConnectMaxTries());
-        poolConfigurationNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
-        poolConfigurationNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        poolConfiguration = new EndpointPoolConfiguration();
+        poolConfiguration.setConnectMaxTries(config.getConnectMaxTries());
+        poolConfiguration.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
+        poolConfiguration.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
 
         // Never reconnect serial connections "automatically"
-        poolConfigurationNew.setInterConnectDelayMillis(1000);
-        poolConfigurationNew.setReconnectAfterMillis(-1);
+        poolConfiguration.setInterConnectDelayMillis(1000);
+        poolConfiguration.setReconnectAfterMillis(-1);
 
-        ModbusSerialSlaveEndpoint endpointNew = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(),
-                config.getFlowControlIn(), config.getFlowControlOut(), config.getDataBits(), config.getStopBits(),
-                config.getParity(), config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
+        endpoint = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(), config.getFlowControlIn(),
+                config.getFlowControlOut(), config.getDataBits(), config.getStopBits(), config.getParity(),
+                config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
 
-        synchronized (this) {
-            managerRef.get().addListener(this);
-            poolConfiguration = poolConfigurationNew;
-            endpoint = endpointNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
-            updateStatus(ThingStatus.ONLINE);
-        }
     }
 
+    @SuppressWarnings("null")
     @Override
-    public void dispose() {
-        if (managerRef != null) {
-            managerRef.get().removeListener(this);
-        }
+    protected String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig) {
+        return String.format(
+                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
+                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherPoolConfig,
+                this.endpoint.getPortName());
     }
 
-    @Override
-    public ModbusSlaveEndpoint asSlaveEndpoint() {
-        return endpoint;
-    }
-
+    @SuppressWarnings("null")
     @Override
     public int getSlaveId() {
         if (config == null) {
@@ -98,18 +66,4 @@ public class ModbusSerialThingHandler extends AbstractModbusBridgeThing
         return config.getId();
     }
 
-    @Override
-    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
-            EndpointPoolConfiguration otherConfig) {
-        synchronized (this) {
-            if (this.poolConfiguration != null && otherEndpoint.equals(this.endpoint)
-                    && !this.poolConfiguration.equals(poolConfiguration)) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to serial port '%s' have same parameters.",
-                                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherConfig,
-                                this.endpoint.getPortName()));
-            }
-        }
-    }
 }

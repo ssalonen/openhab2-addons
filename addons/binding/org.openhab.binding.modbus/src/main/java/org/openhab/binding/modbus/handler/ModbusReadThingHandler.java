@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
 import org.eclipse.smarthome.core.library.items.DimmerItem;
@@ -86,7 +87,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
     private static Map<ChannelUID, List<Class<? extends State>>> channelUIDToAcceptedDataTypes;
 
-    public ModbusReadThingHandler(Thing thing) {
+    public ModbusReadThingHandler(@NonNull Thing thing) {
         super(thing);
     }
 
@@ -155,9 +156,20 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
 
-        ModbusPollerThingHandler handler = (ModbusPollerThingHandler) poller.getHandler();
-        PollTask pollTask = handler.getPollTask();
-        if (pollTask == null) {
+        if (poller.getHandler() == null) {
+            logger.warn(
+                    "Poller '{}' of ReadWrite bridge '{}' of ReadThing '{}' has no handler. Aborting config validation",
+                    poller.getLabel(), readwrite.getLabel(), getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    String.format("Poller '%s' configuration incomplete or with errors", poller.getLabel()));
+            return;
+        }
+
+        @SuppressWarnings("null")
+        @NonNull
+        ModbusPollerThingHandler handler = (@NonNull ModbusPollerThingHandler) poller.getHandler();
+
+        if (handler.getPollTask() == null) {
             logger.warn(
                     "Poller '{}' of ReadWrite bridge '{}' of ReadThing '{}' has no poll task. Aborting config validation",
                     poller.getLabel(), readwrite.getLabel(), getThing().getLabel());
@@ -165,6 +177,7 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
                     String.format("Poller '%s' configuration incomplete or with errors", poller.getLabel()));
             return;
         }
+        PollTask pollTask = handler.getPollTask();
 
         if (!validateIndex(pollTask)) {
             return;

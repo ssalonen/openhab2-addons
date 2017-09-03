@@ -9,81 +9,51 @@ package org.openhab.binding.modbus.handler;
 
 import java.util.function.Supplier;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.ThingStatus;
-import org.eclipse.smarthome.core.thing.ThingStatusDetail;
-import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.internal.config.ModbusTcpConfiguration;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
-import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
-        implements ModbusEndpointThingHandler, ModbusManagerListener {
+public class ModbusTcpThingHandler
+        extends AbstractModbusEndpointThingHandler<ModbusTCPSlaveEndpoint, ModbusTcpConfiguration> {
 
-    private Logger logger = LoggerFactory.getLogger(ModbusTcpThingHandler.class);
-    private ModbusTcpConfiguration config;
-    private volatile ModbusTCPSlaveEndpoint endpoint;
-    private Supplier<ModbusManager> managerRef;
-    private volatile EndpointPoolConfiguration poolConfiguration;
-
-    public ModbusTcpThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
-        super(bridge);
-        this.managerRef = managerRef;
+    public ModbusTcpThingHandler(@NonNull Bridge bridge, @NonNull Supplier<ModbusManager> managerRef) {
+        super(bridge, managerRef);
     }
 
+    @SuppressWarnings("null")
     @Override
-    public void handleCommand(ChannelUID channelUID, Command command) {
-    }
-
-    @Override
-    public void initialize() {
-        synchronized (this) {
-            updateStatus(ThingStatus.UNKNOWN);
-            config = null;
-        }
-
+    protected void configure() {
         config = getConfigAs(ModbusTcpConfiguration.class);
-        ModbusTCPSlaveEndpoint endpointNew = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
 
-        EndpointPoolConfiguration poolConfigurationNew = new EndpointPoolConfiguration();
-        poolConfigurationNew.setConnectMaxTries(config.getConnectMaxTries());
-        poolConfigurationNew.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
-        poolConfigurationNew.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
-        poolConfigurationNew.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
-        poolConfigurationNew.setReconnectAfterMillis(config.getReconnectAfterMillis());
+        endpoint = new ModbusTCPSlaveEndpoint(config.getHost(), config.getPort());
 
-        synchronized (this) {
-            managerRef.get().addListener(this);
-            poolConfiguration = poolConfigurationNew;
-            endpoint = endpointNew;
-            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
-            updateStatus(ThingStatus.ONLINE);
-        }
+        poolConfiguration = new EndpointPoolConfiguration();
+        poolConfiguration.setConnectMaxTries(config.getConnectMaxTries());
+        poolConfiguration.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
+        poolConfiguration.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
+        poolConfiguration.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        poolConfiguration.setReconnectAfterMillis(config.getReconnectAfterMillis());
+
     }
 
+    @SuppressWarnings("null")
     @Override
-    public void dispose() {
-        if (managerRef != null) {
-            managerRef.get().removeListener(this);
-        }
+    protected String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig) {
+        return String.format(
+                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to tcp slave '%s:%s' have same parameters.",
+                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherPoolConfig,
+                this.endpoint.getAddress(), this.endpoint.getPort());
     }
 
-    @Override
-    public ModbusSlaveEndpoint asSlaveEndpoint() {
-        return endpoint;
-    }
-
+    @SuppressWarnings("null")
     @Override
     public int getSlaveId() {
         if (config == null) {
@@ -92,21 +62,4 @@ public class ModbusTcpThingHandler extends AbstractModbusBridgeThing
         return config.getId();
     }
 
-    @Override
-    public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
-            EndpointPoolConfiguration otherConfig) {
-        synchronized (this) {
-            if (endpoint == null) {
-                return;
-            }
-            if (this.poolConfiguration != null && otherEndpoint.equals(this.endpoint)
-                    && !this.poolConfiguration.equals(poolConfiguration)) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        String.format(
-                                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to tcp slave '%s:%s' have same parameters.",
-                                endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherConfig,
-                                this.endpoint.getAddress(), this.endpoint.getPort()));
-            }
-        }
-    }
 }

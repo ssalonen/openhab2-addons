@@ -9,16 +9,12 @@ package org.openhab.binding.modbus.handler;
 
 import static org.openhab.binding.modbus.ModbusBindingConstants.*;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.eclipse.smarthome.core.items.Item;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -56,9 +52,8 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;
     private volatile Transformation transformation;
-    private List<Channel> linkedChannels;
 
-    public ModbusWriteThingHandler(Thing thing) {
+    public ModbusWriteThingHandler(@NonNull Thing thing) {
         super(thing);
     }
 
@@ -89,7 +84,19 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
             return;
         }
-        ModbusPollerThingHandler pollerHandler = (ModbusPollerThingHandler) pollerBridge.getHandler();
+        if (pollerBridge.getHandler() == null) {
+            logger.warn(
+                    "Poller '{}' of ReadWrite bridge '{}' of ReadThing '{}' has no handler. Aborting config validation",
+                    pollerBridge.getLabel(), readwriteBridge.getLabel(), getThing().getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    String.format("Poller '%s' configuration incomplete or with errors", pollerBridge.getLabel()));
+            return;
+        }
+
+        @SuppressWarnings("null")
+        @NonNull
+        ModbusPollerThingHandler pollerHandler = (@NonNull ModbusPollerThingHandler) pollerBridge.getHandler();
+
         PollTask pollTask = pollerHandler.getPollTask();
         if (pollTask == null) {
             logger.warn("WriteThing '{}': No poll task available. Not processing command '{}'", getThing().getLabel(),
@@ -152,10 +159,8 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
 
     @Override
     public synchronized void initialize() {
-        // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
+        // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        linkedChannels = getThing().getChannels().stream().filter(channel -> isLinked(channel.getUID().getId()))
-                .collect(Collectors.toList());
         config = getConfigAs(ModbusWriteConfiguration.class);
         transformation = new Transformation(config.getTransform());
         validateConfiguration();
@@ -203,7 +208,9 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             return;
         }
         ModbusReadWriteThingHandler handler = (ModbusReadWriteThingHandler) readwrite.getHandler();
-        handler.onWriteError(now, request, error);
+        if (handler != null) {
+            handler.onWriteError(now, request, error);
+        }
     }
 
     private void updateBridgeWithSuccessfulWrite(DateTimeType now) {
@@ -212,7 +219,9 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
             return;
         }
         ModbusReadWriteThingHandler handler = (ModbusReadWriteThingHandler) readwrite.getHandler();
-        handler.onSuccessfulWrite(now);
+        if (handler != null) {
+            handler.onSuccessfulWrite(now);
+        }
     }
 
     @Override
@@ -240,18 +249,6 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         updateBridgeWithSuccessfulWrite(now);
     }
 
-    // private boolean containsOnOff(List<Class<? extends Command>> channelAcceptedDataTypes) {
-    // return channelAcceptedDataTypes.stream().anyMatch(clz -> {
-    // return clz.equals(OnOffType.class);
-    // });
-    // }
-    //
-    // private boolean containsOpenClosed(List<Class<? extends Command>> acceptedDataTypes) {
-    // return acceptedDataTypes.stream().anyMatch(clz -> {
-    // return clz.equals(OpenClosedType.class);
-    // });
-    // }
-
     private Bridge getBridgeOfThing(Thing thing) {
         ThingUID bridgeUID = thing.getBridgeUID();
         synchronized (this) {
@@ -263,16 +260,4 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
         }
     }
 
-    private List<Class<? extends Command>> getCommandTypesUnsynchronized(ChannelUID channelUID) {
-        if (!linkedChannels.contains(channelUID)) {
-            return Collections.emptyList();
-        }
-
-        Optional<Item> item = linkRegistry.getLinkedItems(channelUID).stream().findFirst();
-        if (!item.isPresent()) {
-        }
-
-        List<Class<? extends Command>> acceptedCommandTypes = item.get().getAcceptedCommandTypes();
-        return acceptedCommandTypes;
-    }
 }

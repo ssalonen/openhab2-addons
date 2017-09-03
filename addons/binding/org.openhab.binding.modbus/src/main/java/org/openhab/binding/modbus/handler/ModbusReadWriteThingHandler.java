@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
@@ -25,7 +26,6 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.openhab.binding.modbus.ModbusBindingConstants;
-import org.openhab.binding.modbus.internal.config.ModbusWriteConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -43,14 +43,14 @@ import org.slf4j.LoggerFactory;
 public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ModbusReadCallback {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
-    private volatile ModbusWriteConfiguration config;
     private volatile Set<ChannelUID> channelsToCopyFromRead;
     private volatile Set<ChannelUID> channelsToDelegateWriteCommands;
 
-    public ModbusReadWriteThingHandler(Bridge bridge) {
+    public ModbusReadWriteThingHandler(@NonNull Bridge bridge) {
         super(bridge);
     }
 
+    @SuppressWarnings("null")
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (getThing().getStatus() != ThingStatus.ONLINE) {
@@ -76,7 +76,6 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         updateStatus(ThingStatus.UNKNOWN);
-        config = getConfigAs(ModbusWriteConfiguration.class);
         channelsToCopyFromRead = Stream.of(ModbusBindingConstants.DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE)
                 .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
         channelsToDelegateWriteCommands = Stream

@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -131,7 +132,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
     private ModbusReadCallback callbackDelegator = new ReadCallbackDelegator();
 
-    public ModbusPollerThingHandlerImpl(Bridge bridge, Supplier<ModbusManager> managerRef) {
+    public ModbusPollerThingHandlerImpl(@NonNull Bridge bridge, @NonNull Supplier<ModbusManager> managerRef) {
         super(bridge);
         this.managerRef = managerRef;
     }
