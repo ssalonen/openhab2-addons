@@ -16,7 +16,8 @@ Import-Package: gnu.io,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.scheduler,
  org.eclipse.smarthome.core.types,
- org.slf4j
+ org.slf4j,
+ org.eclipse.jdt.annotation;resolution:=optional
 Bundle-DocURL: http://www.openhab.org
 Service-Component: OSGI-INF/*.xml
 Bundle-ClassPath: .,

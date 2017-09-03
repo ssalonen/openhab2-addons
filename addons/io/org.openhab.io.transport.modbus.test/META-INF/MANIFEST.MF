@@ -28,4 +28,5 @@ Import-Package: groovy.json,
  org.junit.runners;version="4.11.0",
  org.osgi.framework,
  org.osgi.service.component,
- org.slf4j
+ org.slf4j,
+ org.eclipse.jdt.annotation;resolution:=optional
