@@ -186,7 +186,10 @@ public class ModbusManagerImpl implements ModbusManager {
                 }
             });
         });
+        constructConnectionPool();
+    }
 
+    private static void constructConnectionPool() {
         GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> genericKeyedObjectPool = new GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection>(
                 connectionFactory, generalPoolConfig);
         genericKeyedObjectPool.setSwallowedExceptionListener(new SwallowedExceptionListener() {
@@ -527,7 +530,9 @@ public class ModbusManagerImpl implements ModbusManager {
 
         try {
             // Close all idle connections as well (they will be reconnected if necessary on borrow)
-            connectionPool.clear(task.getEndpoint());
+            if (connectionPool != null) {
+                connectionPool.clear(task.getEndpoint());
+            }
         } catch (Exception e) {
             logger.error("Could not clear poll task {} endpoint {}. Stack trace follows", task, task.getEndpoint(), e);
             return false;
@@ -606,9 +611,21 @@ public class ModbusManagerImpl implements ModbusManager {
 
     protected void activate(Map<String, Object> configProperties) {
         logger.info("Modbus manager activated");
+        if (connectionPool == null) {
+            constructConnectionPool();
+        }
     }
 
     protected void deactivate() {
+        if (connectionPool != null) {
+            Set<PollTask> polls = getRegisteredRegularPolls();
+            for (PollTask task : polls) {
+                unregisterRegularPoll(task);
+            }
+
+            connectionPool.close();
+            connectionPool = null;
+        }
         logger.info("Modbus manager deactivated");
     }
 
