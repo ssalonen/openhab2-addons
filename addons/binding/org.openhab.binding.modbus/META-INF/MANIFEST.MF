@@ -6,8 +6,8 @@ Bundle-Vendor: openHAB
 Bundle-Version: 2.2.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
-Import-Package: 
- org.apache.commons.lang,
+Import-Package: org.apache.commons.lang,
+ org.eclipse.jdt.annotation;resolution:=optional,
  org.apache.commons.lang.builder,
  org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.core.items,
@@ -23,8 +23,8 @@ Import-Package:
  org.openhab.io.transport.modbus,
  org.openhab.io.transport.modbus.endpoint,
  org.osgi.framework,
- org.slf4j,
- org.eclipse.jdt.annotation;resolution:=optional,
+ org.slf4j
 Service-Component: OSGI-INF/*.xml
 Export-Package: org.openhab.binding.modbus,
  org.openhab.binding.modbus.handler
+Bundle-ActivationPolicy: lazy
