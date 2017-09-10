@@ -20,7 +20,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import com.google.common.collect.ImmutableList;
 
 @RunWith(Parameterized.class)
-class BitUtilitiesCommandToRegistersTest {
+public class BitUtilitiesCommandToRegistersTest {
 
     private final Command command;
     private final ValueType type;
@@ -37,8 +37,8 @@ class BitUtilitiesCommandToRegistersTest {
 
     private static short[] shorts(int... ints) {
         short[] shorts = new short[ints.length];
-        for (int i : ints) {
-            short s = (short) i;
+        for (int i = 0; i < ints.length; i++) {
+            short s = (short) ints[i];
             shorts[i] = s;
         }
         return shorts;
