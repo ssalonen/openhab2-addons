@@ -7,12 +7,9 @@ Bundle-Vendor: openHAB
 Bundle-Version: 2.2.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
-Import-Package: groovy.json,
- groovy.lang,
- org.codehaus.groovy.reflection,
- org.codehaus.groovy.runtime,
- org.codehaus.groovy.runtime.callsite,
- org.codehaus.groovy.runtime.typehandling,
+Import-Package: com.google.common.collect,
+ org.openhab.io.transport.modbus,
+ org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.config.discovery,
  org.eclipse.smarthome.config.discovery.inbox,
  org.eclipse.smarthome.core.items,
@@ -28,5 +25,4 @@ Import-Package: groovy.json,
  org.junit.runners;version="4.11.0",
  org.osgi.framework,
  org.osgi.service.component,
- org.slf4j,
- org.eclipse.jdt.annotation;resolution:=optional
+ org.slf4j
