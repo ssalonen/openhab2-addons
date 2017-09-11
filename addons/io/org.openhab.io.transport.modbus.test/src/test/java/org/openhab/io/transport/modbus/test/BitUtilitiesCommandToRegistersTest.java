@@ -179,6 +179,8 @@ public class BitUtilitiesCommandToRegistersTest {
                         new Object[] {
                                 // out of bounds of unsigned 32bit (0 to 4,294,967,295)
                                 new DecimalType("5000000000"), ValueType.FLOAT32_SWAP, shorts(0x02F9, 0x4F95) });
+
+        // TODO: test OnOff OpenClosed and unknown commands
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
