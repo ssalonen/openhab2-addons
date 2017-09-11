@@ -130,7 +130,6 @@ public class ModbusBitUtilities {
     }
 
     public static ModbusRegisterArray commandToRegisters(Command command, ModbusConstants.ValueType type) {
-
         DecimalType numericCommand;
         if (command instanceof OnOffType || command instanceof OpenClosedType) {
             numericCommand = translateCommand2Boolean(command).get() ? new DecimalType(BigDecimal.ONE)
@@ -142,61 +141,71 @@ public class ModbusBitUtilities {
                     "Command '%s' of class '%s' cannot be converted to registers. Please use OnOffType, OpenClosedType, or DecimalType commands.",
                     command, command.getClass().getName()));
         }
+        if (type.getBits() != 16 && type.getBits() != 32) {
+            throw new IllegalArgumentException(String.format(
+                    "Illegal type=%s (bits=%d). Only 16bit and 32bit types are supported", type, type.getBits()));
+        }
+        switch (type) {
+            case INT16:
+            case UINT16: {
+                short shortValue = numericCommand.shortValue();
+                // big endian byte ordering
+                byte b1 = (byte) (shortValue >> 8);
+                byte b2 = (byte) shortValue;
 
-        if (type.equals(ModbusConstants.ValueType.INT16) || type.equals(ModbusConstants.ValueType.UINT16)) {
-            short shortValue = numericCommand.shortValue();
-            // big endian byte ordering
-            byte b1 = (byte) (shortValue >> 8);
-            byte b2 = (byte) shortValue;
-
-            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
-            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register });
-        } else if (type.equals(ModbusConstants.ValueType.INT32) || type.equals(ModbusConstants.ValueType.UINT32)) {
-            int intValue = numericCommand.intValue();
-            // big endian byte ordering
-            byte b1 = (byte) (intValue >> 24);
-            byte b2 = (byte) (intValue >> 16);
-            byte b3 = (byte) (intValue >> 8);
-            byte b4 = (byte) intValue;
-            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
-            ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
-            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.ValueType.INT32_SWAP)
-                || type.equals(ModbusConstants.ValueType.UINT32_SWAP)) {
-            int intValue = numericCommand.intValue();
-            // big endian byte ordering
-            byte b1 = (byte) (intValue >> 24);
-            byte b2 = (byte) (intValue >> 16);
-            byte b3 = (byte) (intValue >> 8);
-            byte b4 = (byte) intValue;
-            ModbusRegister register = new ModbusRegisterImpl(b3, b4);
-            ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
-            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.ValueType.FLOAT32)) {
-            float floatValue = numericCommand.floatValue();
-            int intBits = Float.floatToIntBits(floatValue);
-            // big endian byte ordering
-            byte b1 = (byte) (intBits >> 24);
-            byte b2 = (byte) (intBits >> 16);
-            byte b3 = (byte) (intBits >> 8);
-            byte b4 = (byte) intBits;
-            ModbusRegister register = new ModbusRegisterImpl(b1, b2);
-            ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
-            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else if (type.equals(ModbusConstants.ValueType.FLOAT32_SWAP)) {
-            float floatValue = numericCommand.floatValue();
-            int intBits = Float.floatToIntBits(floatValue);
-            // big endian byte ordering
-            byte b1 = (byte) (intBits >> 24);
-            byte b2 = (byte) (intBits >> 16);
-            byte b3 = (byte) (intBits >> 8);
-            byte b4 = (byte) intBits;
-            ModbusRegister register = new ModbusRegisterImpl(b3, b4);
-            ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
-            return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
-        } else {
-            throw new IllegalArgumentException(
-                    String.format("Illegal type=%s. Only 16bit and 32bit types are supported", type));
+                ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+                return new ModbusRegisterArrayImpl(new ModbusRegister[] { register });
+            }
+            case INT32:
+            case UINT32: {
+                int intValue = numericCommand.intValue();
+                // big endian byte ordering
+                byte b1 = (byte) (intValue >> 24);
+                byte b2 = (byte) (intValue >> 16);
+                byte b3 = (byte) (intValue >> 8);
+                byte b4 = (byte) intValue;
+                ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+                ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
+                return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+            }
+            case INT32_SWAP:
+            case UINT32_SWAP: {
+                int intValue = numericCommand.intValue();
+                // big endian byte ordering
+                byte b1 = (byte) (intValue >> 24);
+                byte b2 = (byte) (intValue >> 16);
+                byte b3 = (byte) (intValue >> 8);
+                byte b4 = (byte) intValue;
+                ModbusRegister register = new ModbusRegisterImpl(b3, b4);
+                ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
+                return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+            }
+            case FLOAT32: {
+                float floatValue = numericCommand.floatValue();
+                int intBits = Float.floatToIntBits(floatValue);
+                // big endian byte ordering
+                byte b1 = (byte) (intBits >> 24);
+                byte b2 = (byte) (intBits >> 16);
+                byte b3 = (byte) (intBits >> 8);
+                byte b4 = (byte) intBits;
+                ModbusRegister register = new ModbusRegisterImpl(b1, b2);
+                ModbusRegister register2 = new ModbusRegisterImpl(b3, b4);
+                return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+            }
+            case FLOAT32_SWAP: {
+                float floatValue = numericCommand.floatValue();
+                int intBits = Float.floatToIntBits(floatValue);
+                // big endian byte ordering
+                byte b1 = (byte) (intBits >> 24);
+                byte b2 = (byte) (intBits >> 16);
+                byte b3 = (byte) (intBits >> 8);
+                byte b4 = (byte) intBits;
+                ModbusRegister register = new ModbusRegisterImpl(b3, b4);
+                ModbusRegister register2 = new ModbusRegisterImpl(b1, b2);
+                return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
+            }
+            default:
+                throw new IllegalArgumentException(String.format("Illegal type=%s. Missing implementation", type));
         }
     }
 
