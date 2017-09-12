@@ -5,7 +5,11 @@ import static org.junit.Assert.assertThat;
 
 import java.util.Collection;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.library.types.DecimalType;
+import org.eclipse.smarthome.core.library.types.IncreaseDecreaseType;
+import org.eclipse.smarthome.core.library.types.OnOffType;
+import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.types.Command;
 import org.junit.Rule;
 import org.junit.Test;
@@ -178,7 +182,19 @@ public class BitUtilitiesCommandToRegistersTest {
                                 new DecimalType("70004.4"), ValueType.FLOAT32_SWAP, shorts(0xBA33, 0x4788), },
                         new Object[] {
                                 // out of bounds of unsigned 32bit (0 to 4,294,967,295)
-                                new DecimalType("5000000000"), ValueType.FLOAT32_SWAP, shorts(0x02F9, 0x4F95) });
+                                new DecimalType("5000000000"), ValueType.FLOAT32_SWAP, shorts(0x02F9, 0x4F95) },
+                        // ON/OFF
+                        new Object[] { OnOffType.ON, ValueType.FLOAT32_SWAP, shorts(0x0000, 0x3F80) },
+                        new Object[] { OnOffType.OFF, ValueType.FLOAT32_SWAP, shorts(0x0000, 0x0000) },
+                        // OPEN
+                        new Object[] { OpenClosedType.OPEN, ValueType.FLOAT32_SWAP, shorts(0x0000, 0x3F80) },
+                        new Object[] { OpenClosedType.OPEN, ValueType.INT16, shorts(1) },
+                        // CLOSED
+                        new Object[] { OpenClosedType.CLOSED, ValueType.FLOAT32_SWAP, shorts(0x0000, 0x0000) },
+                        new Object[] { OpenClosedType.CLOSED, ValueType.INT16, shorts(0x0000) },
+                        // Unsupported command
+                        new Object[] { IncreaseDecreaseType.INCREASE, ValueType.FLOAT32_SWAP,
+                                NotImplementedException.class });
 
         // TODO: test OnOff OpenClosed and unknown commands
     }
@@ -198,7 +214,7 @@ public class BitUtilitiesCommandToRegistersTest {
             int expectedRegisterDataUnsigned = expectedRegisters[i] & 0xffff;
             int actual = registers.getRegister(i).getValue();
 
-            assertThat("i=${i}, command=${this.command}, type=${this.type}", actual,
+            assertThat(String.format("register index i=%d, command=%s, type=%s", i, command, type), actual,
                     is(equalTo(expectedRegisterDataUnsigned)));
         }
     }
