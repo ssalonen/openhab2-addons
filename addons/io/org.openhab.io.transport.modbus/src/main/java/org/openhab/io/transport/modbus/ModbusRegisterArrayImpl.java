@@ -21,8 +21,20 @@ public class ModbusRegisterArrayImpl implements ModbusRegisterArray {
 
     private ModbusRegister[] registers;
 
+    public static ModbusRegister[] registersFromValues(int... registerValues) {
+        ModbusRegister[] registers = new ModbusRegister[registerValues.length];
+        for (int i = 0; i < registerValues.length; i++) {
+            registers[i] = new ModbusRegisterImpl(registerValues[i]);
+        }
+        return registers;
+    }
+
     public ModbusRegisterArrayImpl(ModbusRegister[] registers) {
         this.registers = registers;
+    }
+
+    public ModbusRegisterArrayImpl(int... registerValues) {
+        this(registersFromValues(registerValues));
     }
 
     @Override
