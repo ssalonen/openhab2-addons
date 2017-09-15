@@ -143,7 +143,7 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
                 return;
             }
             boolean data = commandAsBoolean.get();
-            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference, data);
+            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, reference, data, false);
         } else if (config.getType().equals(WRITE_TYPE_HOLDING)) {
             ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(), valueType);
             boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegister() || data.size() > 1;
