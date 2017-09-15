@@ -9,6 +9,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -28,7 +30,6 @@ import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprintVisitor;
@@ -59,6 +60,7 @@ import net.wimpi.modbus.msg.ReadInputRegistersResponse;
 import net.wimpi.modbus.msg.ReadMultipleRegistersRequest;
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse;
 import net.wimpi.modbus.msg.WriteCoilRequest;
+import net.wimpi.modbus.msg.WriteMultipleCoilsRequest;
 import net.wimpi.modbus.msg.WriteMultipleRegistersRequest;
 import net.wimpi.modbus.msg.WriteSingleRegisterRequest;
 import net.wimpi.modbus.net.ModbusSlaveConnection;
@@ -67,6 +69,7 @@ import net.wimpi.modbus.net.TCPMasterConnection;
 import net.wimpi.modbus.net.UDPMasterConnection;
 import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
+import net.wimpi.modbus.util.BitVector;
 
 /**
  * <p>
@@ -255,67 +258,95 @@ public class ModbusManagerImpl implements ModbusManager {
                 .collect(Collectors.toList()).toArray(new Register[0]);
     }
 
+    private static BitVector convertBits(BitArray bits) {
+        BitVector bitVector = new BitVector(bits.size());
+        IntStream.range(0, bits.size()).forEach(i -> bitVector.setBit(i, bits.getBit(i)));
+        return bitVector;
+    }
+
+    /**
+     * Convert the general request to MODBUS library request object
+     *
+     * @param message
+     * @throws IllegalArgumentException
+     *             1) in case function code implies coil data but we have registers
+     *             2) in case function code implies register data but we have coils
+     *             3) in case there is no data
+     *             4) in case there is too much data in case of WRITE_COIL or WRITE_SINGLE_REGISTER
+     * @throws IllegalStateException unexpected function code. Implementation is lacking and this can be considered a
+     *             bug
+     * @return MODBUS library request matching the write request
+     */
     private ModbusRequest createRequest(ModbusWriteRequestBlueprint message) {
-        ModbusRequest[] request = new ModbusRequest[1];
-        if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_COIL) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
+        // ModbusRequest[] request = new ModbusRequest[1];
+        AtomicReference<ModbusRequest> request = new AtomicReference<>();
+        AtomicBoolean writeSingle = new AtomicBoolean(false);
+        switch (message.getFunctionCode()) {
+            case WRITE_COIL:
+                writeSingle.set(true);
+                // fall-through on purpose
+            case WRITE_MULTIPLE_COILS:
+                message.accept(new ModbusWriteRequestBlueprintVisitor() {
 
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    BitArray coils = blueprint.getCoils();
-                    if (coils.size() != 1) {
-                        throw new IllegalArgumentException("Must provide single coil with WRITE_COIL");
+                    @Override
+                    public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
+                        throw new IllegalArgumentException();
                     }
-                    request[0] = new WriteCoilRequest(message.getReference(), coils.getBit(0));
-                }
-            });
 
-        } else if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
-
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    request[0] = new WriteMultipleRegistersRequest(message.getReference(),
-                            convertRegisters(blueprint.getRegisters()));
-                }
-
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-            });
-
-        } else if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
-
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    if (blueprint.getRegisters().size() != 1) {
-                        throw new IllegalArgumentException("Must provide single register with WRITE_SINGLE_REGISTER");
+                    @Override
+                    public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
+                        BitArray coils = blueprint.getCoils();
+                        if (coils.size() == 0) {
+                            throw new IllegalArgumentException("Must provide at least one coil");
+                        }
+                        if (writeSingle.get()) {
+                            if (coils.size() != 1) {
+                                throw new IllegalArgumentException("Must provide single coil with WRITE_COIL");
+                            }
+                            request.set(new WriteCoilRequest(message.getReference(), coils.getBit(0)));
+                        } else {
+                            request.set(new WriteMultipleCoilsRequest(message.getReference(), convertBits(coils)));
+                        }
                     }
-                    Register[] registers = convertRegisters(blueprint.getRegisters());
-                    request[0] = new WriteSingleRegisterRequest(message.getReference(), registers[0]);
-                }
+                });
+                break;
+            case WRITE_SINGLE_REGISTER:
+                writeSingle.set(true);
+                // fall-through on purpose
+            case WRITE_MULTIPLE_REGISTERS:
+                message.accept(new ModbusWriteRequestBlueprintVisitor() {
 
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-            });
-        } else
+                    @Override
+                    public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
+                        Register[] registers = convertRegisters(blueprint.getRegisters());
+                        if (registers.length == 0) {
+                            throw new IllegalArgumentException("Must provide at least one register");
+                        }
+                        if (writeSingle.get()) {
+                            if (blueprint.getRegisters().size() != 1) {
+                                throw new IllegalArgumentException(
+                                        "Must provide single register with WRITE_SINGLE_REGISTER");
+                            }
+                            request.set(new WriteSingleRegisterRequest(message.getReference(), registers[0]));
+                        } else {
+                            request.set(new WriteMultipleRegistersRequest(message.getReference(), registers));
+                        }
+                    }
 
-        {
-            throw new IllegalArgumentException(String.format("Unexpected function code %s", message.getFunctionCode()));
+                    @Override
+                    public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
+                        throw new IllegalArgumentException();
+                    }
+                });
+
+            default:
+                throw new IllegalStateException(
+                        String.format("Unexpected function code %s", message.getFunctionCode()));
         }
-        request[0].setUnitID(message.getUnitID());
-        request[0].setProtocolID(message.getProtocolID());
-
-        return request[0];
+        ModbusRequest modbusRequest = request.get();
+        modbusRequest.setUnitID(message.getUnitID());
+        modbusRequest.setProtocolID(message.getProtocolID());
+        return modbusRequest;
     }
 
     private ModbusTransaction createTransactionForEndpoint(ModbusSlaveEndpoint endpoint,

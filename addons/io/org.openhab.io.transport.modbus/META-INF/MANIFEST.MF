@@ -8,16 +8,17 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: 
  org.openhab.io.transport.modbus,
  org.openhab.io.transport.modbus.endpoint
-Import-Package: gnu.io,
+Import-Package: com.google.gson;version="2.7.0",
+ gnu.io,
  org.apache.commons.io,
  org.apache.commons.lang,
  org.apache.commons.lang.builder,
+ org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.core.common,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.scheduler,
  org.eclipse.smarthome.core.types,
- org.slf4j,
- org.eclipse.jdt.annotation;resolution:=optional
+ org.slf4j
 Bundle-DocURL: http://www.openhab.org
 Service-Component: OSGI-INF/*.xml
 Bundle-ClassPath: .,
