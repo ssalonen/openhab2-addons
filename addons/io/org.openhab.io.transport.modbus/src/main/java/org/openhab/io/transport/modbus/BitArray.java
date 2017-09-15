@@ -8,13 +8,16 @@
  */
 package org.openhab.io.transport.modbus;
 
+import java.util.Iterator;
+import java.util.stream.IntStream;
+
 /**
  * Class that implements a collection for
  * bits
  *
  * @author Sami Salonen
  */
-public interface BitArray {
+public interface BitArray extends Iterable<Boolean> {
     /**
      * Returns the state of the bit at the given index
      *
@@ -36,4 +39,10 @@ public interface BitArray {
      * @return
      */
     int size();
+
+    @Override
+    default Iterator<Boolean> iterator() {
+        return IntStream.range(0, size()).mapToObj(i -> getBit(i)).iterator();
+    }
+
 }
