@@ -7,7 +7,9 @@ import org.openhab.io.transport.modbus.BitArray;
 import net.wimpi.modbus.util.BitVector;
 
 /**
- * <p>BitArrayWrappingBitVector class.</p>
+ * <p>
+ * BitArrayWrappingBitVector class.
+ * </p>
  *
  * @author Sami Salonen
  */
@@ -35,7 +37,7 @@ public class BitArrayWrappingBitVector implements BitArray {
     @Override
     public String toString() {
         return new StringBuilder("BitArrayWrappingBitVector(bytes=").append(Arrays.toString(this.wrapped.getBytes()))
-                .append(")").toString();
+                .append(",bitsSize=").append(this.wrapped.size()).append(")").toString();
     }
 
 }
