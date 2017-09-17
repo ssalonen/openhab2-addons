@@ -1,5 +1,6 @@
 package org.openhab.io.transport.modbus.internal;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -448,7 +449,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private void executeOneTimePoll(PollTask task, boolean oneOffTask) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusReadRequestBlueprint request = task.getRequest();
-        ModbusReadCallback callback = task.getCallback();
+        WeakReference<ModbusReadCallback> callback = task.getCallback();
 
         logger.trace("Executing task {} (oneOff={})! Waiting for connection", task, oneOffTask);
         long connectionBorrowStart = System.currentTimeMillis();
@@ -464,7 +465,8 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, new ModbusConnectionException(endpoint));
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> cb.onError(request, new ModbusConnectionException(endpoint)));
                 });
                 return;
             }
@@ -492,7 +494,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, e);
+                    Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
                 });
             }
             ModbusResponse response = transaction.getResponse();
@@ -509,11 +511,13 @@ public class ModbusManagerImpl implements ModbusManager {
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
                 });
             } else {
                 callbackThreadPool.execute(() -> {
-                    invokeCallbackWithResponse(request, callback, response);
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> invokeCallbackWithResponse(request, cb, response));
                 });
             }
         } catch (PollTaskUnregistered e) {
@@ -588,7 +592,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private void executeOneTimeWrite(WriteTask task) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusWriteRequestBlueprint request = task.getRequest();
-        ModbusWriteCallback callback = task.getCallback();
+        WeakReference<ModbusWriteCallback> callback = task.getCallback();
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint);
 
         try {
@@ -605,7 +609,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                callback.onError(request, e);
+                Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
@@ -613,9 +617,11 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                Optional.ofNullable(callback.get())
+                        .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
             } else {
-                callback.onWriteResponse(request, new ModbusResponseImpl(response));
+                Optional.ofNullable(callback.get())
+                        .ifPresent(cb -> cb.onWriteResponse(request, new ModbusResponseImpl(response)));
             }
         } finally {
             returnConnection(endpoint, connection);

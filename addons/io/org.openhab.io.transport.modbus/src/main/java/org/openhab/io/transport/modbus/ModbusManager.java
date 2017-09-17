@@ -8,6 +8,7 @@
  */
 package org.openhab.io.transport.modbus;
 
+import java.lang.ref.WeakReference;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 
@@ -53,7 +54,7 @@ public interface ModbusManager {
          *
          * @return
          */
-        ModbusReadCallback getCallback();
+        WeakReference<ModbusReadCallback> getCallback();
     }
 
     /**
@@ -84,7 +85,7 @@ public interface ModbusManager {
          *
          * @return
          */
-        ModbusWriteCallback getCallback();
+        WeakReference<ModbusWriteCallback> getCallback();
     }
 
     /**

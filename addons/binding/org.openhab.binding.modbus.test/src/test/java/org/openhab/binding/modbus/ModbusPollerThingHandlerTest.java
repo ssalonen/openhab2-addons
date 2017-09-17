@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -302,7 +303,7 @@ public class ModbusPollerThingHandlerTest {
 
         thingHandler.initialize();
 
-        final AtomicReference<ModbusReadCallback> callbackRef = new AtomicReference<>();
+        final AtomicReference<WeakReference<ModbusReadCallback>> callbackRef = new AtomicReference<>();
         verify(modbusManager).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
 
             @Override
@@ -321,7 +322,7 @@ public class ModbusPollerThingHandlerTest {
         verifyNoMoreInteractions(readwrite1Handler);
         verifyNoMoreInteractions(readwrite2Handler);
 
-        ModbusReadCallback callback = callbackRef.get();
+        ModbusReadCallback callback = callbackRef.get().get();
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         BitArray bits = Mockito.mock(BitArray.class);
         ModbusRegisterArray registers = Mockito.mock(ModbusRegisterArray.class);
@@ -405,8 +406,8 @@ public class ModbusPollerThingHandlerTest {
         poller2Handler.initialize();
 
         // Capture reference callback
-        final AtomicReference<ModbusReadCallback> callbackPoller1Ref = new AtomicReference<>();
-        final AtomicReference<ModbusReadCallback> callbackPoller2Ref = new AtomicReference<>();
+        final AtomicReference<WeakReference<ModbusReadCallback>> callbackPoller1Ref = new AtomicReference<>();
+        final AtomicReference<WeakReference<ModbusReadCallback>> callbackPoller2Ref = new AtomicReference<>();
         verify(modbusManager, times(2)).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
 
             @Override
@@ -425,8 +426,8 @@ public class ModbusPollerThingHandlerTest {
             }
         }), eq(150l), eq(0L));
 
-        ModbusReadCallback callback1 = callbackPoller1Ref.get();
-        ModbusReadCallback callback2 = callbackPoller2Ref.get();
+        ModbusReadCallback callback1 = callbackPoller1Ref.get().get();
+        ModbusReadCallback callback2 = callbackPoller2Ref.get().get();
 
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         BitArray bits = Mockito.mock(BitArray.class);
@@ -506,7 +507,7 @@ public class ModbusPollerThingHandlerTest {
         thingHandler.initialize();
 
         // verify registration
-        final AtomicReference<ModbusReadCallback> callbackRef = new AtomicReference<>();
+        final AtomicReference<WeakReference<ModbusReadCallback>> callbackRef = new AtomicReference<>();
         Consumer<InOrder> verifyRegistration = (InOrder order) -> {
             ModbusManager verifier;
             if (order == null) {
@@ -582,7 +583,7 @@ public class ModbusPollerThingHandlerTest {
         thingHandler.initialize();
 
         // verify registration
-        final AtomicReference<ModbusReadCallback> callbackRef = new AtomicReference<>();
+        final AtomicReference<WeakReference<ModbusReadCallback>> callbackRef = new AtomicReference<>();
         verify(modbusManager).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
 
             @Override
