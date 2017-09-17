@@ -7,7 +7,8 @@ Bundle-Vendor: openHAB
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: 
  org.openhab.io.transport.modbus,
- org.openhab.io.transport.modbus.endpoint
+ org.openhab.io.transport.modbus.endpoint,
+ org.openhab.io.transport.modbus.json
 Import-Package: com.google.gson;version="2.7.0",
  gnu.io,
  org.apache.commons.io,
