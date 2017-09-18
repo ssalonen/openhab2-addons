@@ -114,7 +114,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         // Note, poller status does not matter for writes. This is on purpose: read errors should have no implication to
         // write attempts
         // For the same reason we do not check the status of this thing
-        if (readValueType == null) {
+        if (writeValueType == null) {
             // not initialized yet
             return;
         }
