@@ -177,11 +177,17 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                     return;
                 }
 
-                requests.stream().map(request -> new WriteTaskImpl(slaveEndpoint, request, this))
-                        .forEach(writeTask -> manager.submitOneTimeWrite(writeTask));
+                requests.stream().map(request -> new WriteTaskImpl(slaveEndpoint, request, this)).forEach(writeTask -> {
+                    logger.trace("Submitting write task: {} (based from transformation {})", writeTask,
+                            transformOutput);
+                    manager.submitOneTimeWrite(writeTask);
+                });
                 return;
             } else {
                 transformedCommand = Transformation.tryConvertToCommand(transformOutput);
+                logger.trace("Converted transform output '{}' to command '{}' (type {})", transformOutput,
+                        transformedCommand.map(c -> c.toString()).orElse("<conversion failed>"),
+                        transformedCommand.map(c -> c.getClass().getName()).orElse("<conversion failed>"));
             }
         }
 
@@ -213,6 +219,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
 
         WriteTaskImpl writeTask = new WriteTaskImpl(slaveEndpoint, request, this);
+        logger.trace("Submitting write task: {}", writeTask);
         manager.submitOneTimeWrite(writeTask);
 
     }
