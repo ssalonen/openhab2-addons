@@ -140,7 +140,7 @@ public class Transformation {
         this.transformationServiceParam = transformationServiceParam;
     }
 
-    private String transform(BundleContext context, String value) {
+    public String transform(BundleContext context, String value) {
         String transformedResponse;
 
         if (hasTransformationService()) {
@@ -188,6 +188,7 @@ public class Transformation {
      * @param context
      * @return Transformed command, or empty if no transformation was possible
      */
+    @Deprecated
     public Optional<Command> transformCommand(BundleContext context, Command command) {
         if (isIdentityTransform()) {
             // optimization, do not convert command->string->command if the transformation is identity transform
@@ -207,10 +208,15 @@ public class Transformation {
                     command, transformedCommand, commandAsString, transformed, transformation);
         } else {
             logger.debug(
-                    "Could not transform item  command '{}' to a Command. Command as string '{}', "
+                    "Could not transform item command '{}' to a Command. Command as string '{}', "
                             + "transformed string '{}', transformation '{}'",
                     command, commandAsString, transformed, transformation);
         }
+        return transformedCommand;
+    }
+
+    public static Optional<Command> tryConvertToCommand(String transformed) {
+        Optional<Command> transformedCommand = Optional.ofNullable(TypeParser.parseCommand(DEFAULT_TYPES, transformed));
         return transformedCommand;
     }
 
