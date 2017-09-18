@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ScheduledFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -68,6 +69,7 @@ import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegister;
@@ -75,7 +77,9 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusRegisterArrayImpl;
 import org.openhab.io.transport.modbus.ModbusRegisterImpl;
 import org.openhab.io.transport.modbus.ModbusResponse;
+import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
+import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
@@ -152,6 +156,7 @@ public class ModbusDataHandlerTest {
     private List<Thing> things = new ArrayList<>();
     private List<Item> items = new ArrayList<>();
     private List<ItemChannelLink> links = new ArrayList<>();
+    private List<WriteTask> writeTasks = new ArrayList<>();
 
     @Mock
     private BundleContext bundleContext;
@@ -336,6 +341,11 @@ public class ModbusDataHandlerTest {
             throw new IllegalArgumentException("UID is unknown: " + uid.getAsString());
         });
 
+        Mockito.when(manager.submitOneTimeWrite(any())).then(invocation -> {
+            WriteTask task = invocation.getArgumentAt(0, WriteTask.class);
+            writeTasks.add(task);
+            return Mockito.mock(ScheduledFuture.class);
+        });
     }
 
     private void testOutOfBoundsGeneric(int pollStart, int pollLength, String start,
@@ -542,11 +552,9 @@ public class ModbusDataHandlerTest {
 
     @SuppressWarnings({ "null" })
     private ModbusDataThingHandler testWriteHandlingGeneric(Integer start, String transform, ValueType valueType,
-            String writeType, ModbusWriteFunctionCode expectedWriteFc, String channel, Command command, Exception error,
+            String writeType, ModbusWriteFunctionCode successFC, String channel, Command command, Exception error,
             BundleContext context) {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
-
-        int pollLength = 3;
 
         // Minimally mocked request
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
@@ -580,7 +588,7 @@ public class ModbusDataHandlerTest {
 
                 @Override
                 public int getFunctionCode() {
-                    return expectedWriteFc.getFunctionCode();
+                    return successFC.getFunctionCode();
                 }
             };
             dataHandler.onWriteResponse(Mockito.mock(ModbusWriteRequestBlueprint.class), resp);
@@ -704,7 +712,128 @@ public class ModbusDataHandlerTest {
                 is(notNullValue(State.class)));
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
                 is(nullValue(State.class)));
+        assertThat(writeTasks.size(), is(equalTo(1)));
+        WriteTask writeTask = writeTasks.get(0);
+        assertThat(writeTask.getRequest().getFunctionCode(), is(equalTo(ModbusWriteFunctionCode.WRITE_COIL)));
+        assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
+        assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().size(), is(equalTo(1)));
+        // Since transform output is non-zero, it is mapped as "true"
+        assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().getBit(0), is(equalTo(true)));
+    }
 
+    @Test
+    public void testWriteRealTransformation2() throws InvalidSyntaxException {
+        mockTransformation("ZERO", new TransformationService() {
+
+            @Override
+            public String transform(String function, String source) throws TransformationException {
+                return "0";
+            }
+        });
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "ZERO(foobar)",
+                ModbusConstants.ValueType.INT16, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
+                new DecimalType("2"), null, bundleContext);
+
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS,
+                is(notNullValue(State.class)));
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
+                is(nullValue(State.class)));
+        assertThat(writeTasks.size(), is(equalTo(1)));
+        WriteTask writeTask = writeTasks.get(0);
+        assertThat(writeTask.getRequest().getFunctionCode(), is(equalTo(ModbusWriteFunctionCode.WRITE_COIL)));
+        assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
+        assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().size(), is(equalTo(1)));
+        // Since transform output is zero, it is mapped as "false"
+        assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().getBit(0), is(equalTo(false)));
+    }
+
+    @Test
+    public void testWriteRealTransformation3() throws InvalidSyntaxException {
+        mockTransformation("RANDOM", new TransformationService() {
+
+            @Override
+            public String transform(String function, String source) throws TransformationException {
+                return "5";
+            }
+        });
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "RANDOM(foobar)",
+                ModbusConstants.ValueType.INT16, "holding", ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER, "number",
+                new DecimalType("2"), null, bundleContext);
+
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS,
+                is(notNullValue(State.class)));
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
+                is(nullValue(State.class)));
+        assertThat(writeTasks.size(), is(equalTo(1)));
+        WriteTask writeTask = writeTasks.get(0);
+        assertThat(writeTask.getRequest().getFunctionCode(),
+                is(equalTo(ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER)));
+        assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
+        assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().size(),
+                is(equalTo(1)));
+        assertThat(
+                ((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().getRegister(0).getValue(),
+                is(equalTo(5)));
+    }
+
+    @Test
+    public void testWriteRealTransformation4() throws InvalidSyntaxException {
+        // assertThat(WriteRequestJsonUtilities.fromJson(55, "[{"//
+        // + "\"functionCode\": 15,"//
+        // + "\"address\": 5412,"//
+        // + "\"value\": [1, 0, 5]"//
+        // + "}]").toArray(),
+        // arrayContaining((Matcher) new CoilMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS, true,
+        // false, true)));
+        mockTransformation("JSON", new TransformationService() {
+
+            @Override
+            public String transform(String function, String source) throws TransformationException {
+                return "[{"//
+                        + "\"functionCode\": 16,"//
+                        + "\"address\": 5412,"//
+                        + "\"value\": [1, 0, 5]"//
+                        + "},"//
+                        + "{"//
+                        + "\"functionCode\": 6,"//
+                        + "\"address\": 555,"//
+                        + "\"value\": [3]"//
+                        + "}]";
+            }
+        });
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "JSON(foobar)",
+                ModbusConstants.ValueType.INT16, "holding", ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS, "number",
+                new DecimalType("2"), null, bundleContext);
+
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS,
+                is(notNullValue(State.class)));
+        assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
+                is(nullValue(State.class)));
+        assertThat(writeTasks.size(), is(equalTo(2)));
+        {
+            WriteTask writeTask = writeTasks.get(0);
+            assertThat(writeTask.getRequest().getFunctionCode(),
+                    is(equalTo(ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS)));
+            assertThat(writeTask.getRequest().getReference(), is(equalTo(5412)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().size(),
+                    is(equalTo(3)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().getRegister(0)
+                    .getValue(), is(equalTo(1)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().getRegister(1)
+                    .getValue(), is(equalTo(0)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().getRegister(2)
+                    .getValue(), is(equalTo(5)));
+        }
+        {
+            WriteTask writeTask = writeTasks.get(1);
+            assertThat(writeTask.getRequest().getFunctionCode(),
+                    is(equalTo(ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER)));
+            assertThat(writeTask.getRequest().getReference(), is(equalTo(555)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().size(),
+                    is(equalTo(1)));
+            assertThat(((ModbusWriteRegisterRequestBlueprint) writeTask.getRequest()).getRegisters().getRegister(0)
+                    .getValue(), is(equalTo(3)));
+        }
     }
 
     private void testValueTypeGeneric(ModbusReadFunctionCode functionCode, ValueType valueType,
