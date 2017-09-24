@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2010-2017 by the respective copyright holders.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ */
 package org.openhab.io.transport.modbus.json;
 
 import java.util.Collection;
@@ -22,9 +31,28 @@ import com.google.gson.JsonParser;
 
 import net.wimpi.modbus.util.BitVector;
 
+/**
+ * <p>
+ * Utilities for converting JSON to {@link ModbusWriteRequestBlueprint}
+ * </p>
+ *
+ *
+ *
+ *
+ * @author Sami Salonen
+ */
 public final class WriteRequestJsonUtilities {
+    /**
+     * Constant for the function code key in the JSON
+     */
     public final static String JSON_FUNCTION_CODE = "functionCode";
+    /**
+     * Constant for the write address key in the JSON
+     */
     public final static String JSON_ADDRESS = "address";
+    /**
+     * Constant for the value key in the JSON
+     */
     public final static String JSON_VALUE = "value";
 
     private final static JsonParser parser = new JsonParser();
@@ -33,6 +61,28 @@ public final class WriteRequestJsonUtilities {
         throw new NotImplementedException();
     }
 
+    /**
+     * Parse JSON string to collection of {@link ModbusWriteRequestBlueprint}
+     *
+     * JSON string should represent a JSON array, with JSON objects. Each JSON object represents a write request. The
+     * JSON object must have the following keys
+     * - functionCode: numeric function code
+     * - address: reference or start address of the write
+     * - value: array of data to be written. Use zero and one when writing coils. With registers, each number
+     * corresponds to register's 16 bit data.
+     *
+     *
+     *
+     * @param unitId unit id for the constructed {@link ModbusWriteRequestBlueprint}
+     * @param jsonString json to be parsed in string format
+     * @return collection of {@link ModbusWriteRequestBlueprint} representing the json
+     * @throws IllegalArgumentException in case of unexpected function codes
+     * @throws IllegalStateException in case of parsing errors and unexpected json structure
+     *
+     * @see WriteRequestJsonUtilities.JSON_FUNCTION_CODE
+     * @see WriteRequestJsonUtilities.JSON_ADDRESS
+     * @see WriteRequestJsonUtilities.JSON_VALUE
+     */
     public static Collection<ModbusWriteRequestBlueprint> fromJson(int unitId, String jsonString) {
         JsonArray jsonArray = parser.parse(jsonString).getAsJsonArray();
         if (jsonArray.size() == 0) {
@@ -98,7 +148,7 @@ public final class WriteRequestJsonUtilities {
                         new ModbusRegisterArrayImpl(registers), !writeSingle.get());
             }
             default:
-                throw new IllegalStateException("Unknown function code");
+                throw new IllegalArgumentException("Unknown function code");
         }
     }
 
