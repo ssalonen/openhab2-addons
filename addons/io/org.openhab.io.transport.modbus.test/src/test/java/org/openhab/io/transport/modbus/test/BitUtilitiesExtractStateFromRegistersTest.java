@@ -56,6 +56,55 @@ public class BitUtilitiesExtractStateFromRegistersTest {
     public static Collection<Object[]> data() {
         return ImmutableList.of(
                 //
+                // BIT
+                //
+                new Object[] { new DecimalType("1.0"), ValueType.BIT,
+                        shortArrayToRegisterArray(1 << 5 | 1 << 4 | 1 << 15), 4 },
+                new Object[] { new DecimalType("1.0"), ValueType.BIT,
+                        shortArrayToRegisterArray(1 << 5 | 1 << 4 | 1 << 15), 15 },
+                new Object[] { new DecimalType("0.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5), 7 },
+                new Object[] { new DecimalType("1.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5), 5 },
+                new Object[] { new DecimalType("0.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5), 4 },
+                new Object[] { new DecimalType("0.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5), 0 },
+                new Object[] { new DecimalType("0.0"), ValueType.BIT, shortArrayToRegisterArray(0, 0), 15 },
+                new Object[] { new DecimalType("1.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5, 1 << 4), 5 },
+                new Object[] { new DecimalType("1.0"), ValueType.BIT, shortArrayToRegisterArray(1 << 5, 1 << 4), 20 },
+                new Object[] { IllegalArgumentException.class, ValueType.BIT, shortArrayToRegisterArray(1 << 5), 16 },
+                new Object[] { IllegalArgumentException.class, ValueType.BIT, shortArrayToRegisterArray(1 << 5), 200 },
+                new Object[] { IllegalArgumentException.class, ValueType.BIT, shortArrayToRegisterArray(), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.BIT, shortArrayToRegisterArray(0, 0), 32 },
+                //
+                // INT8
+                //
+                new Object[] { new DecimalType("5.0"), ValueType.INT8, shortArrayToRegisterArray(5), 0 },
+                new Object[] { new DecimalType("-5.0"), ValueType.INT8, shortArrayToRegisterArray(-5), 0 },
+                new Object[] { new DecimalType("3.0"), ValueType.INT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3), 0 },
+                new Object[] { new DecimalType("6.0"), ValueType.INT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3), 1 },
+                new Object[] { new DecimalType("4.0"), ValueType.INT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3, 4), 2 },
+                new Object[] { new DecimalType("6.0"), ValueType.INT8,
+                        shortArrayToRegisterArray(55, ((byte) 6 << 8) | (byte) 3), 3 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT8, shortArrayToRegisterArray(1), 2 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT8, shortArrayToRegisterArray(1, 2), 4 },
+                //
+                // UINT8
+                //
+                new Object[] { new DecimalType("5.0"), ValueType.UINT8, shortArrayToRegisterArray(5), 0 },
+                new Object[] { new DecimalType("251.0"), ValueType.UINT8, shortArrayToRegisterArray(-5), 0 },
+                new Object[] { new DecimalType("3.0"), ValueType.UINT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3), 0 },
+                new Object[] { new DecimalType("6.0"), ValueType.UINT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3), 1 },
+                new Object[] { new DecimalType("4.0"), ValueType.UINT8,
+                        shortArrayToRegisterArray(((byte) 6 << 8) | (byte) 3, 4), 2 },
+                new Object[] { new DecimalType("6.0"), ValueType.UINT8,
+                        shortArrayToRegisterArray(55, ((byte) 6 << 8) | (byte) 3), 3 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT8, shortArrayToRegisterArray(1), 2 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT8, shortArrayToRegisterArray(1, 2), 4 },
+
+                //
                 // INT16
                 //
                 new Object[] { new DecimalType("1.0"), ValueType.INT16, shortArrayToRegisterArray(1), 0 },
@@ -64,6 +113,8 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("-1536"), ValueType.INT16, shortArrayToRegisterArray(64000), 0 },
                 new Object[] { new DecimalType("-1004"), ValueType.INT16, shortArrayToRegisterArray(4, -1004), 1 },
                 new Object[] { new DecimalType("-1004"), ValueType.INT16, shortArrayToRegisterArray(-1004, 4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT16, shortArrayToRegisterArray(4, -1004),
+                        2 },
                 //
                 // UINT16
                 //
@@ -73,6 +124,8 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("64000"), ValueType.UINT16, shortArrayToRegisterArray(64000), 0 },
                 new Object[] { new DecimalType("64532"), ValueType.UINT16, shortArrayToRegisterArray(4, -1004), 1 },
                 new Object[] { new DecimalType("64532"), ValueType.UINT16, shortArrayToRegisterArray(-1004, 4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT16, shortArrayToRegisterArray(4, -1004),
+                        2 },
                 //
                 // INT32
                 //
@@ -88,6 +141,11 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("-1004"), ValueType.INT32,
                         // -1004 = 0xFFFFFC14 (32bit) =
                         shortArrayToRegisterArray(0xFFFF, 0xFC14, 0x4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32, shortArrayToRegisterArray(4, -1004),
+                        1 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32, shortArrayToRegisterArray(4, -1004),
+                        2 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32, shortArrayToRegisterArray(0, 0, 0), 2 },
                 //
                 // UINT32
                 //
@@ -108,6 +166,12 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("4294966292"), ValueType.UINT32,
                         // 4294966292 = 0xFFFFFC14 (32bit) =
                         shortArrayToRegisterArray(0x5, 0xFFFF, 0xFC14), 1 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32, shortArrayToRegisterArray(4, -1004),
+                        1 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32, shortArrayToRegisterArray(4, -1004),
+                        2 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32, shortArrayToRegisterArray(0, 0, 0),
+                        2 },
                 //
                 // INT32_SWAP
                 //
@@ -123,6 +187,12 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("-1004"), ValueType.INT32_SWAP,
                         // -1004 = 0xFFFFFC14 (32bit) =
                         shortArrayToRegisterArray(0xFC14, 0xFFFF, 0x4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 1 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 2 },
+                new Object[] { IllegalArgumentException.class, ValueType.INT32_SWAP, shortArrayToRegisterArray(0, 0, 0),
+                        2 },
                 //
                 // UINT32_SWAP
                 //
@@ -144,6 +214,12 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("4294966292"), ValueType.UINT32_SWAP,
                         // 4294966292 = 0xFFFFFC14 (32bit) =
                         shortArrayToRegisterArray(0x5, 0xFC14, 0xFFFF), 1 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 1 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 2 },
+                new Object[] { IllegalArgumentException.class, ValueType.UINT32_SWAP,
+                        shortArrayToRegisterArray(0, 0, 0), 2 },
                 //
                 // FLOAT32
                 //
@@ -166,6 +242,12 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                         shortArrayToRegisterArray(0x4, 0xC47B, 0x199A), 1 },
                 new Object[] { new DecimalType(-1004.4f), ValueType.FLOAT32,
                         shortArrayToRegisterArray(0xC47B, 0x199A, 0x4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32, shortArrayToRegisterArray(4, -1004),
+                        1 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32, shortArrayToRegisterArray(4, -1004),
+                        2 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32, shortArrayToRegisterArray(0, 0, 0),
+                        2 },
                 //
                 // FLOAT32_SWAP
                 //
@@ -190,7 +272,13 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType(-1004.4f), ValueType.FLOAT32_SWAP,
                         shortArrayToRegisterArray(0x4, 0x199A, 0xC47B), 1 },
                 new Object[] { new DecimalType(-1004.4f), ValueType.FLOAT32_SWAP,
-                        shortArrayToRegisterArray(0x199A, 0xC47B, 0x4), 0 });
+                        shortArrayToRegisterArray(0x199A, 0xC47B, 0x4), 0 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 1 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32_SWAP,
+                        shortArrayToRegisterArray(4, -1004), 2 },
+                new Object[] { IllegalArgumentException.class, ValueType.FLOAT32_SWAP,
+                        shortArrayToRegisterArray(0, 0, 0), 2 });
 
     }
 
@@ -202,8 +290,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
         }
 
         DecimalType actualState = ModbusBitUtilities.extractStateFromRegisters(this.registers, this.index, this.type);
-        DecimalType expectedState = (DecimalType) this.expectedResult;
-        assertThat("registers=${this.registers}, index=${this.index}, type=${this.type}", actualState,
-                is(equalTo(expectedState)));
+        assertThat(String.format("registers=%s, index=%d, type=%s", registers, index, type), actualState,
+                is(equalTo(expectedResult)));
     }
 }

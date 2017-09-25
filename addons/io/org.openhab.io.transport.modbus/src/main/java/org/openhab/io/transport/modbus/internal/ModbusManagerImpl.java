@@ -1,5 +1,6 @@
 package org.openhab.io.transport.modbus.internal;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -9,6 +10,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -20,15 +23,16 @@ import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
 import org.openhab.io.transport.modbus.BitArray;
+import org.openhab.io.transport.modbus.ModbusConnectionException;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
+import org.openhab.io.transport.modbus.ModbusUnexpectedTransactionIdException;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprintVisitor;
@@ -59,6 +63,7 @@ import net.wimpi.modbus.msg.ReadInputRegistersResponse;
 import net.wimpi.modbus.msg.ReadMultipleRegistersRequest;
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse;
 import net.wimpi.modbus.msg.WriteCoilRequest;
+import net.wimpi.modbus.msg.WriteMultipleCoilsRequest;
 import net.wimpi.modbus.msg.WriteMultipleRegistersRequest;
 import net.wimpi.modbus.msg.WriteSingleRegisterRequest;
 import net.wimpi.modbus.net.ModbusSlaveConnection;
@@ -67,6 +72,7 @@ import net.wimpi.modbus.net.TCPMasterConnection;
 import net.wimpi.modbus.net.UDPMasterConnection;
 import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
+import net.wimpi.modbus.util.BitVector;
 
 /**
  * <p>
@@ -210,11 +216,19 @@ public class ModbusManagerImpl implements ModbusManager {
     private static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
+            // jamod library seems to be a bit buggy when it comes number of coils in the response, so we use
+            // minimum(request, response). The underlying reason is that BitVector.createBitVector initializes the
+            // vector
+            // with too many bits as size
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
-                callback.onBits(message, new BitArrayWrappingBitVector(((ReadCoilsResponse) response).getCoils()));
-            } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
+                BitVector bits = ((ReadCoilsResponse) response).getCoils();
                 callback.onBits(message,
-                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes()));
+                        new BitArrayWrappingBitVector(bits, Math.min(bits.size(), message.getDataLength())));
+            } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
+                BitVector bits = ((ReadCoilsResponse) response).getCoils();
+                callback.onBits(message,
+                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes(),
+                                Math.min(bits.size(), message.getDataLength())));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
                 callback.onRegisters(message, new RegisterArrayWrappingInputRegister(
                         ((ReadMultipleRegistersResponse) response).getRegisters()));
@@ -255,67 +269,95 @@ public class ModbusManagerImpl implements ModbusManager {
                 .collect(Collectors.toList()).toArray(new Register[0]);
     }
 
+    private static BitVector convertBits(BitArray bits) {
+        BitVector bitVector = new BitVector(bits.size());
+        IntStream.range(0, bits.size()).forEach(i -> bitVector.setBit(i, bits.getBit(i)));
+        return bitVector;
+    }
+
+    /**
+     * Convert the general request to MODBUS library request object
+     *
+     * @param message
+     * @throws IllegalArgumentException
+     *             1) in case function code implies coil data but we have registers
+     *             2) in case function code implies register data but we have coils
+     *             3) in case there is no data
+     *             4) in case there is too much data in case of WRITE_COIL or WRITE_SINGLE_REGISTER
+     * @throws IllegalStateException unexpected function code. Implementation is lacking and this can be considered a
+     *             bug
+     * @return MODBUS library request matching the write request
+     */
     private ModbusRequest createRequest(ModbusWriteRequestBlueprint message) {
-        ModbusRequest[] request = new ModbusRequest[1];
-        if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_COIL) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
+        // ModbusRequest[] request = new ModbusRequest[1];
+        AtomicReference<ModbusRequest> request = new AtomicReference<>();
+        AtomicBoolean writeSingle = new AtomicBoolean(false);
+        switch (message.getFunctionCode()) {
+            case WRITE_COIL:
+                writeSingle.set(true);
+                // fall-through on purpose
+            case WRITE_MULTIPLE_COILS:
+                message.accept(new ModbusWriteRequestBlueprintVisitor() {
 
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    BitArray coils = blueprint.getCoils();
-                    if (coils.size() != 1) {
-                        throw new IllegalArgumentException("Must provide single coil with WRITE_COIL");
+                    @Override
+                    public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
+                        throw new IllegalArgumentException();
                     }
-                    request[0] = new WriteCoilRequest(message.getReference(), coils.getBit(0));
-                }
-            });
 
-        } else if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
-
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    request[0] = new WriteMultipleRegistersRequest(message.getReference(),
-                            convertRegisters(blueprint.getRegisters()));
-                }
-
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-            });
-
-        } else if (message.getFunctionCode() == ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER) {
-            message.accept(new ModbusWriteRequestBlueprintVisitor() {
-
-                @Override
-                public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
-                    if (blueprint.getRegisters().size() != 1) {
-                        throw new IllegalArgumentException("Must provide single register with WRITE_SINGLE_REGISTER");
+                    @Override
+                    public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
+                        BitArray coils = blueprint.getCoils();
+                        if (coils.size() == 0) {
+                            throw new IllegalArgumentException("Must provide at least one coil");
+                        }
+                        if (writeSingle.get()) {
+                            if (coils.size() != 1) {
+                                throw new IllegalArgumentException("Must provide single coil with WRITE_COIL");
+                            }
+                            request.set(new WriteCoilRequest(message.getReference(), coils.getBit(0)));
+                        } else {
+                            request.set(new WriteMultipleCoilsRequest(message.getReference(), convertBits(coils)));
+                        }
                     }
-                    Register[] registers = convertRegisters(blueprint.getRegisters());
-                    request[0] = new WriteSingleRegisterRequest(message.getReference(), registers[0]);
-                }
+                });
+                break;
+            case WRITE_SINGLE_REGISTER:
+                writeSingle.set(true);
+                // fall-through on purpose
+            case WRITE_MULTIPLE_REGISTERS:
+                message.accept(new ModbusWriteRequestBlueprintVisitor() {
 
-                @Override
-                public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
-                    throw new IllegalStateException();
-                }
-            });
-        } else
+                    @Override
+                    public void visit(ModbusWriteRegisterRequestBlueprint blueprint) {
+                        Register[] registers = convertRegisters(blueprint.getRegisters());
+                        if (registers.length == 0) {
+                            throw new IllegalArgumentException("Must provide at least one register");
+                        }
+                        if (writeSingle.get()) {
+                            if (blueprint.getRegisters().size() != 1) {
+                                throw new IllegalArgumentException(
+                                        "Must provide single register with WRITE_SINGLE_REGISTER");
+                            }
+                            request.set(new WriteSingleRegisterRequest(message.getReference(), registers[0]));
+                        } else {
+                            request.set(new WriteMultipleRegistersRequest(message.getReference(), registers));
+                        }
+                    }
 
-        {
-            throw new IllegalArgumentException(String.format("Unexpected function code %s", message.getFunctionCode()));
+                    @Override
+                    public void visit(ModbusWriteCoilRequestBlueprint blueprint) {
+                        throw new IllegalArgumentException();
+                    }
+                });
+
+            default:
+                throw new IllegalStateException(
+                        String.format("Unexpected function code %s", message.getFunctionCode()));
         }
-        request[0].setUnitID(message.getUnitID());
-        request[0].setProtocolID(message.getProtocolID());
-
-        return request[0];
+        ModbusRequest modbusRequest = request.get();
+        modbusRequest.setUnitID(message.getUnitID());
+        modbusRequest.setProtocolID(message.getProtocolID());
+        return modbusRequest;
     }
 
     private ModbusTransaction createTransactionForEndpoint(ModbusSlaveEndpoint endpoint,
@@ -417,7 +459,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private void executeOneTimePoll(PollTask task, boolean oneOffTask) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusReadRequestBlueprint request = task.getRequest();
-        ModbusReadCallback callback = task.getCallback();
+        WeakReference<ModbusReadCallback> callback = task.getCallback();
 
         logger.trace("Executing task {} (oneOff={})! Waiting for connection", task, oneOffTask);
         long connectionBorrowStart = System.currentTimeMillis();
@@ -433,7 +475,8 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, new ModbusConnectionException(endpoint));
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> cb.onError(request, new ModbusConnectionException(endpoint)));
                 });
                 return;
             }
@@ -461,7 +504,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, e);
+                    Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
                 });
             }
             ModbusResponse response = transaction.getResponse();
@@ -478,11 +521,13 @@ public class ModbusManagerImpl implements ModbusManager {
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
                 callbackThreadPool.execute(() -> {
-                    callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
                 });
             } else {
                 callbackThreadPool.execute(() -> {
-                    invokeCallbackWithResponse(request, callback, response);
+                    Optional.ofNullable(callback.get())
+                            .ifPresent(cb -> invokeCallbackWithResponse(request, cb, response));
                 });
             }
         } catch (PollTaskUnregistered e) {
@@ -557,7 +602,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private void executeOneTimeWrite(WriteTask task) {
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         ModbusWriteRequestBlueprint request = task.getRequest();
-        ModbusWriteCallback callback = task.getCallback();
+        WeakReference<ModbusWriteCallback> callback = task.getCallback();
         Optional<ModbusSlaveConnection> connection = borrowConnection(endpoint);
 
         try {
@@ -574,7 +619,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                callback.onError(request, e);
+                Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
@@ -582,9 +627,11 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                callback.onError(request, new ModbusUnexpectedTransactionIdException());
+                Optional.ofNullable(callback.get())
+                        .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
             } else {
-                callback.onWriteResponse(request, new ModbusResponseImpl(response));
+                Optional.ofNullable(callback.get())
+                        .ifPresent(cb -> cb.onWriteResponse(request, new ModbusResponseImpl(response)));
             }
         } finally {
             returnConnection(endpoint, connection);

@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2010-2017 by the respective copyright holders.
  *
@@ -8,7 +7,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  */
-package org.openhab.io.transport.modbus.internal;
+package org.openhab.io.transport.modbus;
 
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 

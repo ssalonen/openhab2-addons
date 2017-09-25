@@ -56,7 +56,7 @@ public class ModbusConstants {
         @SuppressWarnings("null")
         public static @NonNull ValueType fromConfigValue(String configValueType) throws IllegalArgumentException {
             return Stream.of(ValueType.values()).filter(v -> v.getConfigValue().equals(configValueType)).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid valueType"));
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid valueType " + configValueType));
         }
     }
 

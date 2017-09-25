@@ -33,6 +33,10 @@ public class ModbusRegisterImpl implements ModbusRegister {
         wrapped = new SimpleInputRegister(b1, b2);
     }
 
+    public ModbusRegisterImpl(int val) {
+        wrapped = new SimpleInputRegister(val);
+    }
+
     @Override
     public byte[] getBytes() {
         return wrapped.toBytes();

@@ -30,6 +30,7 @@ public class ModbusBindingConstants {
     public static final ThingTypeUID THING_TYPE_MODBUS_WRITE = new ThingTypeUID(BINDING_ID, "write");
     public static final ThingTypeUID THING_TYPE_MODBUS_READ = new ThingTypeUID(BINDING_ID, "read");
     public static final ThingTypeUID THING_TYPE_MODBUS_READ_WRITE = new ThingTypeUID(BINDING_ID, "readwrite");
+    public static final ThingTypeUID THING_TYPE_MODBUS_DATA = new ThingTypeUID(BINDING_ID, "data");
 
     // List of all Channel ids
     public static final String CHANNEL_SWITCH = "switch";

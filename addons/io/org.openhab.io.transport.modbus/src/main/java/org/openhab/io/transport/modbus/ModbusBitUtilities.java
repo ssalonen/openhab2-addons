@@ -74,61 +74,88 @@ public class ModbusBitUtilities {
      * @param type
      *            item type, e.g. unsigned 16bit integer (<tt>ModbusBindingProvider.ValueType.UINT16</tt>)
      * @return number representation queried value
-     * @throws IllegalArgumentException when <tt>type</tt> does not match a known type
-     * @throws IndexOutOfBoundsException when <tt>index</tt> is out of bounds of registers
+     * @throws NotImplementedException in cases where implementation is lacking for the type. This can be considered a
+     *             bug
+     * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
      *
      */
     public static DecimalType extractStateFromRegisters(ModbusRegisterArray registers, int index,
             ModbusConstants.ValueType type) {
-        if (type.equals(ModbusConstants.ValueType.BIT)) {
-            return new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1);
-        } else if (type.equals(ModbusConstants.ValueType.INT8)) {
-            return new DecimalType(registers.getRegister(index / 2).getBytes()[1 - (index % 2)]);
-        } else if (type.equals(ModbusConstants.ValueType.UINT8)) {
-            return new DecimalType((registers.getRegister(index / 2).toUnsignedShort() >> (8 * (index % 2))) & 0xff);
-        } else if (type.equals(ModbusConstants.ValueType.INT16)) {
-            ByteBuffer buff = ByteBuffer.allocate(2);
-            buff.put(registers.getRegister(index).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getShort(0));
-        } else if (type.equals(ModbusConstants.ValueType.UINT16)) {
-            return new DecimalType(registers.getRegister(index).toUnsignedShort());
-        } else if (type.equals(ModbusConstants.ValueType.INT32)) {
-            ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers.getRegister(index).getBytes());
-            buff.put(registers.getRegister(index + 1).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
-        } else if (type.equals(ModbusConstants.ValueType.UINT32)) {
-            ByteBuffer buff = ByteBuffer.allocate(8);
-            buff.position(4);
-            buff.put(registers.getRegister(index).getBytes());
-            buff.put(registers.getRegister(index + 1).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
-        } else if (type.equals(ModbusConstants.ValueType.FLOAT32)) {
-            ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers.getRegister(index).getBytes());
-            buff.put(registers.getRegister(index + 1).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
-        } else if (type.equals(ModbusConstants.ValueType.INT32_SWAP)) {
-            ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers.getRegister(index + 1).getBytes());
-            buff.put(registers.getRegister(index).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
-        } else if (type.equals(ModbusConstants.ValueType.UINT32_SWAP)) {
-            ByteBuffer buff = ByteBuffer.allocate(8);
-            buff.position(4);
-            buff.put(registers.getRegister(index + 1).getBytes());
-            buff.put(registers.getRegister(index).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
-        } else if (type.equals(ModbusConstants.ValueType.FLOAT32_SWAP)) {
-            ByteBuffer buff = ByteBuffer.allocate(4);
-            buff.put(registers.getRegister(index + 1).getBytes());
-            buff.put(registers.getRegister(index).getBytes());
-            return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
-        } else {
-            throw new IllegalArgumentException(type.getConfigValue());
+        int startBitIndex = type.getBits() * index;
+        // each register has 16 bits
+        int lastValidIndex = registers.size() * 16 - 1;
+        if (startBitIndex > lastValidIndex || startBitIndex < 0) {
+            throw new IllegalArgumentException(
+                    String.format("Index=%d with type=%s is out-of-bounds given registers of size %d", index, type,
+                            registers.size()));
+        }
+        switch (type) {
+            case BIT:
+                return new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1);
+            case INT8:
+                return new DecimalType(registers.getRegister(index / 2).getBytes()[1 - (index % 2)]);
+            case UINT8:
+                return new DecimalType(
+                        (registers.getRegister(index / 2).toUnsignedShort() >> (8 * (index % 2))) & 0xff);
+            case INT16: {
+                ByteBuffer buff = ByteBuffer.allocate(2);
+                buff.put(registers.getRegister(index).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getShort(0));
+            }
+            case UINT16:
+                return new DecimalType(registers.getRegister(index).toUnsignedShort());
+
+            case INT32: {
+                ByteBuffer buff = ByteBuffer.allocate(4);
+                buff.put(registers.getRegister(index).getBytes());
+                buff.put(registers.getRegister(index + 1).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
+            }
+            case UINT32: {
+                ByteBuffer buff = ByteBuffer.allocate(8);
+                buff.position(4);
+                buff.put(registers.getRegister(index).getBytes());
+                buff.put(registers.getRegister(index + 1).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
+            }
+            case FLOAT32: {
+                ByteBuffer buff = ByteBuffer.allocate(4);
+                buff.put(registers.getRegister(index).getBytes());
+                buff.put(registers.getRegister(index + 1).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
+            }
+            case INT32_SWAP: {
+                ByteBuffer buff = ByteBuffer.allocate(4);
+                buff.put(registers.getRegister(index + 1).getBytes());
+                buff.put(registers.getRegister(index).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0));
+            }
+            case UINT32_SWAP: {
+                ByteBuffer buff = ByteBuffer.allocate(8);
+                buff.position(4);
+                buff.put(registers.getRegister(index + 1).getBytes());
+                buff.put(registers.getRegister(index).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0));
+            }
+            case FLOAT32_SWAP: {
+                ByteBuffer buff = ByteBuffer.allocate(4);
+                buff.put(registers.getRegister(index + 1).getBytes());
+                buff.put(registers.getRegister(index).getBytes());
+                return new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0));
+            }
+            default:
+                throw new IllegalArgumentException(type.getConfigValue());
         }
     }
 
+    /**
+     *
+     * @param command
+     * @param type
+     * @return
+     * @throws NotImplementedException in cases where implementation is lacking for the type. This can be considered a
+     *             bug
+     */
     public static ModbusRegisterArray commandToRegisters(Command command, ModbusConstants.ValueType type) {
         DecimalType numericCommand;
         if (command instanceof OnOffType || command instanceof OpenClosedType) {
@@ -205,7 +232,8 @@ public class ModbusBitUtilities {
                 return new ModbusRegisterArrayImpl(new ModbusRegister[] { register, register2 });
             }
             default:
-                throw new IllegalArgumentException(String.format("Illegal type=%s. Missing implementation", type));
+                throw new NotImplementedException(
+                        String.format("Illegal type=%s. Missing implementation for this type", type));
         }
     }
 

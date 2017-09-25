@@ -8,12 +8,21 @@
  */
 package org.openhab.io.transport.modbus;
 
+import org.apache.commons.lang.builder.StandardToStringStyle;
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 /**
  *
  * @author Sami Salonen
  *
  */
 public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilRequestBlueprint {
+
+    private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
+
+    static {
+        toStringStyle.setUseShortClassName(true);
+    }
 
     private static class SingleBitArray implements BitArray {
 
@@ -41,12 +50,25 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
     private int slaveId;
     private int reference;
     private BitArray bits;
+    private boolean writeMultiple;
 
-    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data) {
+    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data, boolean writeMultiple) {
+        this(slaveId, reference, new SingleBitArray(data), writeMultiple);
+    }
+
+    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, BitArray data, boolean writeMultiple) {
         super();
         this.slaveId = slaveId;
         this.reference = reference;
-        this.bits = new SingleBitArray(data);
+        this.bits = data;
+        this.writeMultiple = writeMultiple;
+
+        if (!writeMultiple && bits.size() > 1) {
+            throw new IllegalArgumentException("With multiple coils, writeMultiple must be true");
+        }
+        if (bits.size() == 0) {
+            throw new IllegalArgumentException("Must have at least one bit");
+        }
     }
 
     @Override
@@ -61,11 +83,17 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
 
     @Override
     public ModbusWriteFunctionCode getFunctionCode() {
-        return ModbusWriteFunctionCode.WRITE_COIL;
+        return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS : ModbusWriteFunctionCode.WRITE_COIL;
     }
 
     @Override
     public BitArray getCoils() {
         return bits;
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId).append("reference", reference)
+                .append("functionCode", getFunctionCode()).append("bits", bits).toString();
     }
 }

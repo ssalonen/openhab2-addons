@@ -17,6 +17,7 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
+import org.openhab.binding.modbus.handler.ModbusDataThingHandler;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusReadThingHandler;
 import org.openhab.binding.modbus.handler.ModbusReadWriteThingHandler;
@@ -47,6 +48,7 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_READ_WRITE);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_WRITE);
         SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_READ);
+        SUPPORTED_THING_TYPES_UIDS.add(THING_TYPE_MODBUS_DATA);
     }
 
     @Override
@@ -58,7 +60,6 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
     protected ThingHandler createHandler(Thing thing) {
 
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
-
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
             return new ModbusTcpThingHandler((Bridge) thing, () -> manager);
@@ -77,6 +78,9 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_WRITE)) {
             logger.debug("createHandler write");
             return new ModbusWriteThingHandler(thing);
+        } else if (thingTypeUID.equals(THING_TYPE_MODBUS_DATA)) {
+            logger.debug("createHandler data");
+            return new ModbusDataThingHandler(thing);
         }
         logger.error("createHandler for unknown thing type uid {}. Thing label was: {}", thing.getThingTypeUID(),
                 thing.getLabel());

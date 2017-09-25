@@ -219,6 +219,7 @@ public class ModbusReadHandlerTest {
         }
     }
 
+    @SuppressWarnings("null")
     private void hookStatusUpdates(Thing thing) {
         Mockito.doAnswer(invocation -> {
             thing.setStatusInfo(invocation.getArgumentAt(1, ThingStatusInfo.class));
@@ -226,6 +227,7 @@ public class ModbusReadHandlerTest {
         }).when(thingCallback).statusUpdated(Matchers.same(thing), Matchers.any());
     }
 
+    @SuppressWarnings("null")
     private void hookStateUpdates(Thing thing) {
         Mockito.doAnswer(invocation -> {
             ChannelUID channelUID = invocation.getArgumentAt(0, ChannelUID.class);
@@ -236,6 +238,7 @@ public class ModbusReadHandlerTest {
         }).when(thingCallback).stateUpdated(any(), any());
     }
 
+    @SuppressWarnings("null")
     private Tuple<Bridge, Bridge> createReadWriteAndPoller(String readwriteId, String pollerId, PollTask task) {
 
         final Bridge poller;
@@ -325,6 +328,7 @@ public class ModbusReadHandlerTest {
 
     }
 
+    @SuppressWarnings({ "null", "unused" })
     private void testOutOfBoundsGeneric(int pollLength, int smallestStartThatIsInvalid,
             ModbusReadFunctionCode functionCode, ValueType valueType) {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
@@ -485,6 +489,7 @@ public class ModbusReadHandlerTest {
 
     }
 
+    @SuppressWarnings("unused")
     private ModbusReadThingHandler testReadHandlingGeneric(ModbusReadFunctionCode functionCode, int start,
             String trigger, String transform, ValueType valueType, BitArray bits, ModbusRegisterArray registers,
             Exception error) {

@@ -8,12 +8,22 @@
  */
 package org.openhab.io.transport.modbus;
 
+import org.apache.commons.lang.builder.StandardToStringStyle;
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 /**
  *
  * @author Sami Salonen
  *
  */
 public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegisterRequestBlueprint {
+
+    private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
+
+    static {
+        toStringStyle.setUseShortClassName(true);
+    }
+
     private int slaveId;
     private int reference;
     private ModbusRegisterArray registers;
@@ -29,6 +39,9 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
 
         if (!writeMultiple && registers.size() > 1) {
             throw new IllegalArgumentException("With multiple registers, writeMultiple must be true");
+        }
+        if (registers.size() == 0) {
+            throw new IllegalArgumentException("Must have at least one register");
         }
     }
 
@@ -46,11 +59,17 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
     public ModbusWriteFunctionCode getFunctionCode() {
         return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS
                 : ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER;
-
     }
 
     @Override
     public ModbusRegisterArray getRegisters() {
         return registers;
     }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId).append("reference", reference)
+                .append("functionCode", getFunctionCode()).append("registers", registers).toString();
+    }
+
 }
