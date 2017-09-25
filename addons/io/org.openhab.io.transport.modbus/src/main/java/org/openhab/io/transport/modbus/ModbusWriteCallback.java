@@ -8,8 +8,6 @@
  */
 package org.openhab.io.transport.modbus;
 
-import org.openhab.io.transport.modbus.internal.ModbusUnexpectedTransactionIdException;
-
 import net.wimpi.modbus.ModbusException;
 
 /**
