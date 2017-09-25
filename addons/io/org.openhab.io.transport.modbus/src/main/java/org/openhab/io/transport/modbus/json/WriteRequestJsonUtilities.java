@@ -119,16 +119,16 @@ public final class WriteRequestJsonUtilities {
                 }
                 // fall-through to WRITE_MULTIPLE_COILS
             case WRITE_MULTIPLE_COILS:
-                BitVector bits = new BitVector(valuesElem.size());
-                if (bits.size() == 0) {
+                if (valuesElem.size() == 0) {
                     throw new IllegalArgumentException("Must provide at least one coil");
                 }
+                BitVector bits = new BitVector(valuesElem.size());
                 // TODO: how does true/false work?
                 for (int i = 0; i < valuesElem.size(); i++) {
                     bits.setBit(i, valuesElem.get(i).getAsInt() != 0);
                 }
-                return new ModbusWriteCoilRequestBlueprintImpl(unitId, address, new BitArrayWrappingBitVector(bits),
-                        !writeSingle.get());
+                return new ModbusWriteCoilRequestBlueprintImpl(unitId, address,
+                        new BitArrayWrappingBitVector(bits, valuesElem.size()), !writeSingle.get());
             case WRITE_SINGLE_REGISTER:
                 writeSingle.set(true);
                 if (valuesElem.size() != 1) {
