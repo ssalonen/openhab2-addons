@@ -488,7 +488,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             ChannelUID channelUID = entry.getKey();
             List<Class<? extends State>> acceptedDataTypes = entry.getValue();
             if (acceptedDataTypes.isEmpty()) {
-                // Channel is not linked -- skip
                 return;
             }
 
