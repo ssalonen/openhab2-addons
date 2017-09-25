@@ -45,6 +45,7 @@ import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusDataConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ModbusConnectionException;
 import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager;
@@ -458,8 +459,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void onError(ModbusReadRequestBlueprint request, Exception error) {
-        logger.error("Thing {} '{}' received read error: {} {}. Stack trace follows for unexpected errors.",
-                getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
+        if (error instanceof ModbusConnectionException) {
+            logger.error("Thing {} '{}' had connection error on read: {} {}", getThing().getUID(),
+                    getThing().getLabel(), error.getClass().getName(), error);
+        } else {
+            logger.error("Thing {} '{}' had error on read: {} {}. Stack trace follows for unexpected errors.",
+                    getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
+        }
         Map<ChannelUID, State> states = new HashMap<>();
         states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR),
                 new DateTimeType());
@@ -533,6 +539,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+        if (error instanceof ModbusConnectionException) {
+            logger.error("Thing {} '{}' had connection error on write: {} {}", getThing().getUID(),
+                    getThing().getLabel(), error.getClass().getName(), error);
+        } else {
+            logger.error("Thing {} '{}' had error on write: {} {}. Stack trace follows for unexpected errors.",
+                    getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
+        }
         DateTimeType now = new DateTimeType();
         logger.error("Unsuccessful write: {} {}", error.getClass().getName(), error.getMessage());
         updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR, now);
