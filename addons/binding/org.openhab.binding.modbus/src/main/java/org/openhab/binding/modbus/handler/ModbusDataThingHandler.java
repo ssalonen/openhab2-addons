@@ -95,7 +95,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 new RollershutterItem("").getAcceptedDataTypes());
     }
 
-    private static Map<ChannelUID, List<Class<? extends State>>> channelUIDToAcceptedDataTypes;
+    private volatile Map<ChannelUID, List<Class<? extends State>>> channelUIDToAcceptedDataTypes;
     private volatile ValueType readValueType;
     private volatile ValueType writeValueType;
     private volatile Transformation readTransformation;
