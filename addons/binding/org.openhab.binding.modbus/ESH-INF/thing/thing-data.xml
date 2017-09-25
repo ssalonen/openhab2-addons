@@ -5,7 +5,7 @@
 		<supported-bridge-type-refs>
 			<bridge-type-ref id="poller" />
 		</supported-bridge-type-refs>
-		<label>Modbus read-write definition</label>
+		<label>Modbus data definition</label>
 		<channels>
             <channel id="switch" typeId="switch-type" />
             <channel id="contact" typeId="contact-type" />
@@ -22,18 +22,17 @@
 		<config-description>
             <!-- what to read -->
             <parameter name="readStart" type="text" pattern="^(0|[1-9][0-9]*(\.[0-9]{1,2})?)$" required="false">
-                <label>Address</label>
+                <label>Read address</label>
                 <description><![CDATA[Start address to start reading the value. 
-                
-                <br />Input as zero-based index number. Must be between (poller start) and (poller start + poller length - 1) (inclusive).
+                <br />Input as zero-based index number, e.g. in place of 400001 (first holding register), use the address 0.  Must be between (poller start) and (poller start + poller length - 1) (inclusive).
                 <br />With registers and value type less than 16 bits, you can also use X.Y format where Y specifies the sub-element to read from the 16 bit register. For example, 3.1 would mean pick second bit from register index 3 with bit value type. 
-                With int8 valuetype, it would pick the high byte.
+                With int8 valuetype, it would pick the high byte of register index 3.
                 ]]> 
                 </description>
                 <default>0</default>
             </parameter>
             <parameter name="readTransform" type="text">
-                <label>transform</label>
+                <label>Read transform</label>
                 <description>Transformation to apply to received commands and polled state.
     Use "default" to communicate that no transformation is done and value should be passed as is.
     Use SERVICENAME(ARG) to use transformation service.
@@ -42,7 +41,7 @@
                 <default>default</default>
             </parameter>
             <parameter name="readValueType" type="text" required="true">
-                <label>Value type</label>
+                <label>Read value type</label>
                 <description>How data is read from modbus. Only applicable to registers</description>
                 <options>
                     <option value="float32">32bit floating point</option>
@@ -66,13 +65,14 @@
             
             
             <parameter name="writeStart" type="integer" required="false">
-                <label>Address</label>
-                <description>Address of the first holding register or coils in the write. Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is.</description>
+                <label>Write address</label>
+                <description><![CDATA[Start address of the first holding register or coils in the write. 
+                <br />Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is.]]></description>
                 <default>0</default>
             </parameter>
             <parameter name="writeType" type="text" required="false">
-                <label>Type</label>
-                <description>Type of data to write. Coil uses function code 5. Holding register uses function code 4 or 16, depending on "Use FC16" parameter.</description>
+                <label>Write type</label>
+                <description>Type of data to write. Coil uses function code 5 or 15. Holding register uses function code 6 or 16. See "Use FC15/FC16" parameter.</description>
                 <options>
                     <option value="coil">coil, or digital out (DO)</option>
                     <option value="holding">holding register</option>
@@ -80,7 +80,7 @@
             </parameter>
 
             <parameter name="writeTransform" type="text">
-                <label>transform</label>
+                <label>Write transform</label>
                 <description>Transformation to apply to received commands.
     Use "default" to communicate that no transformation is done and value should be passed as is.
     Use SERVICENAME(ARG) to use transformation service.
@@ -89,7 +89,7 @@
                 <default>default</default>
             </parameter>
             <parameter name="writeValueType" type="text" required="false">
-                <label>Value type</label>
+                <label>Write value type</label>
                 <description>How data is written to modbus. Only applicable to registers.</description>
                 <options>
                     <option value="float32">32bit floating point</option>
