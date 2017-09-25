@@ -216,11 +216,19 @@ public class ModbusManagerImpl implements ModbusManager {
     private static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
+            // jamod library seems to be a bit buggy when it comes number of coils in the response, so we use
+            // minimum(request, response). The underlying reason is that BitVector.createBitVector initializes the
+            // vector
+            // with too many bits as size
             if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
-                callback.onBits(message, new BitArrayWrappingBitVector(((ReadCoilsResponse) response).getCoils()));
-            } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
+                BitVector bits = ((ReadCoilsResponse) response).getCoils();
                 callback.onBits(message,
-                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes()));
+                        new BitArrayWrappingBitVector(bits, Math.min(bits.size(), message.getDataLength())));
+            } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
+                BitVector bits = ((ReadCoilsResponse) response).getCoils();
+                callback.onBits(message,
+                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes(),
+                                Math.min(bits.size(), message.getDataLength())));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
                 callback.onRegisters(message, new RegisterArrayWrappingInputRegister(
                         ((ReadMultipleRegistersResponse) response).getRegisters()));
