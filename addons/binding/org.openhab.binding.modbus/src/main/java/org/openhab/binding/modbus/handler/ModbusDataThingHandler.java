@@ -515,11 +515,15 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 transformedState = readTransformation.transformState(bundleContext, acceptedDataTypes, numericState);
             }
 
-            if (transformedState == null) {
+            if (transformedState != null) {
+                logger.trace(
+                        "Thing {} '{}', channel {} will be updated to '{}' (type {}). Numeric state '{}' and bool value '{}'",
+                        getThing().getUID(), getThing().getLabel(), channelUID, transformedState,
+                        transformedState.getClass().getSimpleName(), numericState, boolValue);
+                states.put(channelUID, transformedState);
+            } else {
                 logger.debug("Thing {} '{}', channel {} will not be updated since transformation was unsuccesful",
                         getThing().getUID(), getThing().getLabel(), channelUID);
-            } else {
-                states.put(channelUID, transformedState);
             }
         });
 
