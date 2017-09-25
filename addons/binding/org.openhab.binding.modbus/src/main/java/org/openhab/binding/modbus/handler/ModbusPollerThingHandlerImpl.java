@@ -148,8 +148,8 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             logger.debug("Bridge is null");
             return null;
         }
-        if (bridge.getStatus() == ThingStatus.OFFLINE) {
-            logger.debug("Bridge is offline");
+        if (bridge.getStatus() != ThingStatus.ONLINE) {
+            logger.debug("Bridge is not online");
             return null;
         }
 
@@ -182,8 +182,10 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
     }
 
     public void initPolling() {
-        unregisterPollTask();
-        registerPollTask();
+        synchronized (this) {
+            unregisterPollTask();
+            registerPollTask();
+        }
     }
 
     @Override
@@ -213,7 +215,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         if (slaveEndpointThingHandler == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
                     String.format("Bridge '%s' is offline", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
-            logger.debug("No bridge handler -- aborting init for {}", this);
+            logger.debug("No bridge handler available -- aborting init for {}", this);
             return;
         }
         ModbusSlaveEndpoint endpoint = slaveEndpointThingHandler.asSlaveEndpoint();
