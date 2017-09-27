@@ -177,19 +177,21 @@ public class ModbusSlaveConnectionFactoryImpl
         long connected = ((PooledConnection) obj).getLastConnected();
         long reconnectAfterMillis = configuration == null ? 0 : configuration.getReconnectAfterMillis();
         long connectionAgeMillis = System.currentTimeMillis() - ((PooledConnection) obj).getLastConnected();
-        long disconnectBeforeConnectedMillis = disconnectIfConnectedBefore.getOrDefault(endpoint, Long.MAX_VALUE);
+        long disconnectIfConnectedBeforeMillis = disconnectIfConnectedBefore.getOrDefault(endpoint, -1L);
+        boolean disconnectSinceTooOldConnection = disconnectIfConnectedBeforeMillis < 0L ? false
+                : connected <= disconnectIfConnectedBeforeMillis;
         if (reconnectAfterMillis == 0 || (reconnectAfterMillis > 0 && connectionAgeMillis > reconnectAfterMillis)
-                || connected <= disconnectBeforeConnectedMillis) {
+                || disconnectSinceTooOldConnection) {
             logger.trace(
-                    "(passivate) Connection {} (endpoint {}) age {}ms is over the reconnectAfterMillis={}ms limit or has been connection time ({}) is after the \"disconnectBeforeConnectedMillis\" -> disconnecting.",
+                    "(passivate) Connection {} (endpoint {}) age {}ms is over the reconnectAfterMillis={}ms limit or has been connection time ({}) is after the \"disconnectBeforeConnectedMillis\"={} -> disconnecting.",
                     connection, endpoint, connectionAgeMillis, reconnectAfterMillis, connected,
-                    disconnectBeforeConnectedMillis);
+                    disconnectIfConnectedBeforeMillis);
             connection.resetConnection();
         } else {
             logger.trace(
-                    "(passivate) Connection {} (endpoint {}) age ({}ms) is below the reconnectAfterMillis ({}ms) limit and connection time ({}) is after the \"disconnectBeforeConnectedMillis\". Keep the connection open.",
+                    "(passivate) Connection {} (endpoint {}) age ({}ms) is below the reconnectAfterMillis ({}ms) limit and connection time ({}) is after the \"disconnectBeforeConnectedMillis\"={}. Keep the connection open.",
                     connection, endpoint, connectionAgeMillis, reconnectAfterMillis, connected,
-                    disconnectBeforeConnectedMillis);
+                    disconnectIfConnectedBeforeMillis);
         }
         logger.trace("...Passivated connection {} for endpoint {}", obj.getObject(), endpoint);
     }
