@@ -230,6 +230,8 @@ public class ModbusReadWriteThingHandlerTest {
         tcpThingHandler.setCallback(thingCallback);
         endpoint.setHandler(tcpThingHandler);
         registerThingToMockRegistry(endpoint);
+        hookStatusUpdates(endpoint);
+        hookStateUpdates(endpoint);
         tcpThingHandler.initialize();
 
         Configuration pollerConfig = new Configuration();
@@ -316,13 +318,12 @@ public class ModbusReadWriteThingHandlerTest {
 
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         BitArray bits = Mockito.mock(BitArray.class);
-        doReturn(
-                Optional.of(ImmutableMap.<ChannelUID, State> builder()
-                        .put(new ChannelUID(readHandler.getThing().getUID(),
-                                ModbusBindingConstants.CHANNEL_ROLLERSHUTTER), UpDownType.DOWN)
-                        .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
-                                new StringType("foobar"))
-                        .build())).when(readHandler).getLastState();
+        doReturn(Optional.of(ImmutableMap.<ChannelUID, State> builder()
+                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_ROLLERSHUTTER),
+                        UpDownType.DOWN)
+                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
+                        new StringType("foobar"))
+                .build())).when(readHandler).getLastState();
 
         readwriteThingHandler.onBits(request, bits);
 
@@ -383,13 +384,12 @@ public class ModbusReadWriteThingHandlerTest {
 
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
         ModbusRegisterArray registers = Mockito.mock(ModbusRegisterArray.class);
-        doReturn(
-                Optional.of(ImmutableMap.<ChannelUID, State> builder()
-                        .put(new ChannelUID(readHandler.getThing().getUID(),
-                                ModbusBindingConstants.CHANNEL_ROLLERSHUTTER), UpDownType.DOWN)
-                        .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
-                                new StringType("foobar"))
-                        .build())).when(readHandler).getLastState();
+        doReturn(Optional.of(ImmutableMap.<ChannelUID, State> builder()
+                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_ROLLERSHUTTER),
+                        UpDownType.DOWN)
+                .put(new ChannelUID(readHandler.getThing().getUID(), ModbusBindingConstants.CHANNEL_STRING),
+                        new StringType("foobar"))
+                .build())).when(readHandler).getLastState();
 
         readwriteThingHandler.onRegisters(request, registers);
 
