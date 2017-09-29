@@ -70,6 +70,11 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     protected abstract String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig);
 
     @Override
+    public Supplier<ModbusManager> getManagerRef() {
+        return managerRef;
+    }
+
+    @Override
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
             EndpointPoolConfiguration otherPoolConfiguration) {
         synchronized (this) {

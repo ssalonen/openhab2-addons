@@ -4,6 +4,8 @@
 	<thing-type id="data">
 		<supported-bridge-type-refs>
 			<bridge-type-ref id="poller" />
+			<bridge-type-ref id="tcp"/>
+			<bridge-type-ref id="serial"/>
 		</supported-bridge-type-refs>
 		<label>Modbus data definition</label>
 		<channels>
@@ -21,7 +23,7 @@
 		</channels>
 		<config-description>
             <!-- what to read -->
-            <parameter name="readStart" type="text" pattern="^(0|[1-9][0-9]*(\.[0-9]{1,2})?)$" required="false">
+            <parameter name="readStart" type="text" pattern="^(0|[1-9][0-9]*(\.[0-9]{1,2})?)?$">
                 <label>Read address</label>
                 <description><![CDATA[Start address to start reading the value. 
                 <br />Input as zero-based index number, e.g. in place of 400001 (first holding register), use the address 0.  Must be between (poller start) and (poller start + poller length - 1) (inclusive).
@@ -29,7 +31,6 @@
                 With int8 valuetype, it would pick the high byte of register index 3.
                 ]]> 
                 </description>
-                <default>0</default>
             </parameter>
             <parameter name="readTransform" type="text">
                 <label>Read transform</label>
@@ -40,7 +41,7 @@
          value is ignored.</description>
                 <default>default</default>
             </parameter>
-            <parameter name="readValueType" type="text" required="true">
+            <parameter name="readValueType" type="text">
                 <label>Read value type</label>
                 <description>How data is read from modbus. Only applicable to registers</description>
                 <options>
@@ -64,13 +65,13 @@
             
             
             
-            <parameter name="writeStart" type="integer" required="false">
+            <parameter name="writeStart" type="integer">
                 <label>Write address</label>
                 <description><![CDATA[Start address of the first holding register or coils in the write. 
                 <br />Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is.]]></description>
                 <default>0</default>
             </parameter>
-            <parameter name="writeType" type="text" required="false">
+            <parameter name="writeType" type="text">
                 <label>Write type</label>
                 <description>Type of data to write. Coil uses function code 5 or 15. Holding register uses function code 6 or 16. See "Use FC15/FC16" parameter.</description>
                 <options>
@@ -88,7 +89,7 @@
          value is ignored.</description>
                 <default>default</default>
             </parameter>
-            <parameter name="writeValueType" type="text" required="false">
+            <parameter name="writeValueType" type="text">
                 <label>Write value type</label>
                 <description>How data is written to modbus. Only applicable to registers.</description>
                 <options>
