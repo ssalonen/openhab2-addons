@@ -531,7 +531,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 });
             }
         } catch (PollTaskUnregistered e) {
-            logger.warn("Poll task was unregistered -- not executing/proceeding with the poll", e);
+            logger.warn("Poll task was unregistered -- not executing/proceeding with the poll: {}", e.getMessage());
         } finally {
             returnConnection(endpoint, connection);
         }

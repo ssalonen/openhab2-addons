@@ -18,7 +18,9 @@
 			</parameter>
 			<parameter name="start" type="integer">
 				<label>Start</label>
-				<description>Address of the first register, coil, or discrete input to poll. Input as zero-based index number.</description>
+				<description><![CDATA[Address of the first register, coil, or discrete input to poll. 
+				<br />
+				<br />Input as zero-based index number, e.g. in place of `400001` (first holding register), use the address `0`.]]></description>
 				<default>0</default>
 			</parameter>
 			<parameter name="length" type="integer" required="true">

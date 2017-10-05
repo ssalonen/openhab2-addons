@@ -22,7 +22,6 @@ import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
-import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.openhab.binding.modbus.ModbusBindingConstants;
@@ -40,7 +39,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing implements ModbusReadCallback {
+public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing
+        implements ModbusReadCallback, BridgeChangedListener {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadWriteThingHandler.class);
     private volatile Set<ChannelUID> channelsToCopyFromRead;
@@ -48,6 +48,19 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
 
     public ModbusReadWriteThingHandler(@NonNull Bridge bridge) {
         super(bridge);
+    }
+
+    private void updateStatusAndMaybeNotifyIfChanged(ThingStatus newStatus, ThingStatusDetail statusDetail,
+            String description) {
+        ThingStatus oldStatus = getThing().getStatus();
+        updateStatus(newStatus, statusDetail, description);
+        if (oldStatus != newStatus) {
+            notifyChildrenBridgeChanged(newStatus);
+        }
+    }
+
+    private void updateStatusAndMaybeNotifyIfChanged(ThingStatus newStatus) {
+        updateStatusAndMaybeNotifyIfChanged(newStatus, ThingStatusDetail.NONE, null);
     }
 
     @SuppressWarnings("null")
@@ -75,25 +88,18 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        updateStatus(ThingStatus.UNKNOWN);
         channelsToCopyFromRead = Stream.of(ModbusBindingConstants.DATA_CHANNELS_TO_COPY_FROM_READ_TO_READWRITE)
                 .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
         channelsToDelegateWriteCommands = Stream
                 .of(ModbusBindingConstants.DATA_CHANNELS_TO_DELEGATE_COMMAND_FROM_READWRITE_TO_WRITE)
                 .map(channel -> new ChannelUID(getThing().getUID(), channel)).collect(Collectors.toSet());
-        if (getBridge() == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Bridge is not set");
-        } else if (getBridge().getStatus() == ThingStatus.OFFLINE) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Bridge is offline");
-        } else {
-            updateStatus(ThingStatus.ONLINE);
-        }
+        updateStatus(ThingStatus.ONLINE);
     }
 
     @Override
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
         logger.debug("Read write thing handler got registers: {}", registers);
-        updateStatus(ThingStatus.ONLINE);
+        updateStatusAndMaybeNotifyIfChanged(ThingStatus.ONLINE);
         forEachChildReader(reader -> {
             reader.onRegisters(request, registers);
             maybeUpdateStateFromReadHandler(reader);
@@ -103,7 +109,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     @Override
     public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
         logger.debug("Read write thing handler got bits: {}", bits);
-        updateStatus(ThingStatus.ONLINE);
+        updateStatusAndMaybeNotifyIfChanged(ThingStatus.ONLINE);
         forEachChildReader(reader -> {
             reader.onBits(request, bits);
             maybeUpdateStateFromReadHandler(reader);
@@ -113,7 +119,7 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     @Override
     public void onError(ModbusReadRequestBlueprint request, Exception error) {
         logger.warn("Read write thing handler got read error: {} {}", error.getClass().getName(), error.getMessage());
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+        updateStatusAndMaybeNotifyIfChanged(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                 String.format("Read write thing handler got read error: %s %s. See logs above for more information",
                         error.getClass().getName(), error.getMessage()));
         forEachChildReader(reader -> {
@@ -187,21 +193,20 @@ public class ModbusReadWriteThingHandler extends AbstractModbusBridgeThing imple
     }
 
     @Override
-    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
-        // Re-trigger child thing handlers
-        updateStatus(ThingStatus.OFFLINE);
-        updateStatus(ThingStatus.ONLINE);
+    public void bridgeChanged(ThingStatus bridgeStatus) {
+        // Bridge status or data has no implications to readwrite
+        notifyChildrenBridgeChanged(bridgeStatus);
     }
 
     public void onWriteError(DateTimeType now, ModbusWriteRequestBlueprint request, Exception error) {
         updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR, now);
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
+        updateStatusAndMaybeNotifyIfChanged(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
                 "Error with writing request %s: %s: %s", request, error.getClass().getName(), error.getMessage()));
     }
 
     public void onSuccessfulWrite(DateTimeType now) {
-        updateStatus(ThingStatus.ONLINE);
         updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS, now);
+        updateStatusAndMaybeNotifyIfChanged(ThingStatus.ONLINE);
     }
 
 }

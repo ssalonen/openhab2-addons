@@ -2,7 +2,7 @@ package org.openhab.binding.modbus.handler;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.ThingStatusInfo;
+import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 
 /**
@@ -17,11 +17,12 @@ public abstract class AbstractModbusBridgeThing extends BaseBridgeHandler {
     }
 
     @SuppressWarnings("null")
-    @Override
-    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
-        super.bridgeStatusChanged(bridgeStatusInfo);
-        getThing().getThings().stream().filter(thing -> thing.getHandler() != null)
-                .forEach(thing -> (thing.getHandler()).bridgeStatusChanged(bridgeStatusInfo));
+    public void notifyChildrenBridgeChanged(ThingStatus bridgeStatus) {
+        getThing().getThings().stream().filter(thing -> thing.getHandler() != null).forEach(thing -> {
+            if (thing.getHandler() instanceof BridgeChangedListener) {
+                ((BridgeChangedListener) thing.getHandler()).bridgeChanged(bridgeStatus);
+            }
+        });
     }
 
 }

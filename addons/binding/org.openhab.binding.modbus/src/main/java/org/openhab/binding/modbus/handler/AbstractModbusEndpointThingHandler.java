@@ -42,8 +42,6 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Override
     public void initialize() {
         synchronized (this) {
-            updateStatus(ThingStatus.UNKNOWN);
-            config = null;
             configure();
 
             managerRef.get().addListener(this);

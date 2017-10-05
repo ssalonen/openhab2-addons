@@ -5,7 +5,7 @@ public class ModbusDataConfiguration {
     private String readStart;
     private String readTransform;
     private String readValueType;
-    private Integer writeStart;
+    private String writeStart;
     private String writeType;
     private String writeTransform;
     private String writeValueType;
@@ -35,11 +35,11 @@ public class ModbusDataConfiguration {
         this.readValueType = readValueType;
     }
 
-    public Integer getWriteStart() {
+    public String getWriteStart() {
         return writeStart;
     }
 
-    public void setWriteStart(Integer writeStart) {
+    public void setWriteStart(String writeStart) {
         this.writeStart = writeStart;
     }
 

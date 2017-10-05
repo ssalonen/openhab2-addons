@@ -551,7 +551,7 @@ public class ModbusDataHandlerTest {
     }
 
     @SuppressWarnings({ "null" })
-    private ModbusDataThingHandler testWriteHandlingGeneric(Integer start, String transform, ValueType valueType,
+    private ModbusDataThingHandler testWriteHandlingGeneric(String start, String transform, ValueType valueType,
             String writeType, ModbusWriteFunctionCode successFC, String channel, Command command, Exception error,
             BundleContext context) {
         ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
@@ -704,8 +704,8 @@ public class ModbusDataHandlerTest {
                 return String.valueOf(Integer.parseInt(function) * Integer.parseInt(source));
             }
         });
-        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "MULTIPLY(10)",
-                ModbusConstants.ValueType.INT16, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric("50", "MULTIPLY(10)",
+                ModbusConstants.ValueType.BIT, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
                 new DecimalType("2"), null, bundleContext);
 
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS,
@@ -730,7 +730,7 @@ public class ModbusDataHandlerTest {
                 return "0";
             }
         });
-        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "ZERO(foobar)",
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric("50", "ZERO(foobar)",
                 ModbusConstants.ValueType.INT16, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
                 new DecimalType("2"), null, bundleContext);
 
@@ -756,7 +756,7 @@ public class ModbusDataHandlerTest {
                 return "5";
             }
         });
-        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "RANDOM(foobar)",
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric("50", "RANDOM(foobar)",
                 ModbusConstants.ValueType.INT16, "holding", ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER, "number",
                 new DecimalType("2"), null, bundleContext);
 
@@ -801,7 +801,7 @@ public class ModbusDataHandlerTest {
                         + "}]";
             }
         });
-        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric(50, "JSON(foobar)",
+        ModbusDataThingHandler dataHandler = testWriteHandlingGeneric("50", "JSON(foobar)",
                 ModbusConstants.ValueType.INT16, "holding", ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS, "number",
                 new DecimalType("2"), null, bundleContext);
 
