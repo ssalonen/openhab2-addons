@@ -98,12 +98,24 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private volatile ValueType writeValueType;
     private volatile Transformation readTransformation;
     private volatile Transformation writeTransformation;
-    private volatile Optional<Integer> readIndex;
-    private volatile Optional<Integer> readSubIndex;
+    private volatile Optional<Integer> readIndex = Optional.empty();
+    private volatile Optional<Integer> readSubIndex = Optional.empty();
     private Integer writeStart;
+    private int pollStart;
+    private int slaveId;
+    private ModbusSlaveEndpoint slaveEndpoint;
+    private ModbusManager manager;
 
     public ModbusDataThingHandler(@NonNull Thing thing) {
         super(thing);
+    }
+
+    private boolean isReadOnly() {
+        return writeStart == null || StringUtils.isBlank(config.getWriteType());
+    }
+
+    private boolean isWriteOnly() {
+        return !readIndex.isPresent();
     }
 
     @Override
@@ -117,51 +129,11 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                     getThing().getLabel(), command, channelUID);
             return;
         }
-        if (writeStart == null || StringUtils.isBlank(config.getWriteType())) {
-            // read-only data thing. Abort processing command
+        if (isReadOnly()) {
             logger.trace(
                     "Thing '{}' command '{}' to channel '{}': no writeStart or writeType configured -> aborting processing command",
                     getThing().getLabel(), command, channelUID);
             return;
-        }
-
-        Bridge bridge = getBridge();
-        if (bridge == null) {
-            logger.debug("Thing '{}' has no bridge. Aborting writing of command '{}' to channel '{}' of thing {}",
-                    getThing().getLabel(), command, channelUID, getThing().getUID());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
-            return;
-        }
-        if (bridge.getHandler() == null) {
-            logger.warn("Bridge {} '{}' has no handler. Aborting writing of command '{}' to channel '{}' of thing {}.",
-                    bridge.getUID(), bridge.getLabel(), command, channelUID, getThing().getUID());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
-                    "Bridge {} '%s' configuration incomplete or with errors", bridge.getUID(), bridge.getLabel()));
-            return;
-        }
-        final int slaveId;
-        final ModbusSlaveEndpoint slaveEndpoint;
-        final ModbusManager manager;
-        if (bridge.getHandler() instanceof ModbusEndpointThingHandler) {
-            @SuppressWarnings("null")
-            @NonNull
-            ModbusEndpointThingHandler bridgeHandler = (@NonNull ModbusEndpointThingHandler) bridge.getHandler();
-            slaveId = bridgeHandler.getSlaveId();
-            slaveEndpoint = bridgeHandler.asSlaveEndpoint();
-            manager = bridgeHandler.getManagerRef().get();
-        } else {
-            @SuppressWarnings("null")
-            @NonNull
-            ModbusPollerThingHandler bridgeHandler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
-            PollTask pollTask = bridgeHandler.getPollTask();
-            if (pollTask == null) {
-                logger.warn("Thing {} '{}': No poll task available via poller bridge. Not processing command '{}'",
-                        getThing().getUID(), getThing().getLabel(), command);
-                return;
-            }
-            slaveId = pollTask.getRequest().getUnitID();
-            slaveEndpoint = pollTask.getEndpoint();
-            manager = bridgeHandler.getManagerRef().get();
         }
 
         String transformOutput;
@@ -171,21 +143,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         } else {
             transformOutput = writeTransformation.transform(bundleContext, command.toString());
             if (transformOutput.trim().contains("[")) {
-                final Collection<ModbusWriteRequestBlueprint> requests;
-                try {
-                    requests = WriteRequestJsonUtilities.fromJson(slaveId, transformOutput);
-                } catch (Throwable e) {
-                    logger.warn(
-                            "Thing {} '{}' could handle transformation result '{}'. Original command {}. Error details follow",
-                            getThing().getUID(), getThing().getLabel(), transformOutput, command, e);
-                    return;
-                }
-
-                requests.stream().map(request -> new WriteTaskImpl(slaveEndpoint, request, this)).forEach(writeTask -> {
-                    logger.trace("Submitting write task: {} (based from transformation {})", writeTask,
-                            transformOutput);
-                    manager.submitOneTimeWrite(writeTask);
-                });
+                processJsonTransform(command, transformOutput);
                 return;
             } else {
                 transformedCommand = Transformation.tryConvertToCommand(transformOutput);
@@ -207,8 +165,8 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             Optional<Boolean> commandAsBoolean = ModbusBitUtilities.translateCommand2Boolean(transformedCommand.get());
             if (!commandAsBoolean.isPresent()) {
                 logger.warn(
-                        "Cannot process command {} with channel {} since command is not OnOffType, OpenClosedType or Decimal trying to write to coil. Do not know how to convert to 0/1",
-                        command, channelUID);
+                        "Cannot process command {} with channel {} since command is not OnOffType, OpenClosedType or Decimal trying to write to coil. Do not know how to convert to 0/1. Transformed command was '{}'",
+                        command, channelUID, transformedCommand);
                 return;
             }
             boolean data = commandAsBoolean.get();
@@ -228,99 +186,115 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     }
 
+    private void processJsonTransform(Command command, String transformOutput) {
+        final Collection<ModbusWriteRequestBlueprint> requests;
+        try {
+            requests = WriteRequestJsonUtilities.fromJson(slaveId, transformOutput);
+        } catch (Throwable e) {
+            logger.warn(
+                    "Thing {} '{}' could handle transformation result '{}'. Original command {}. Error details follow",
+                    getThing().getUID(), getThing().getLabel(), transformOutput, command, e);
+            return;
+        }
+
+        requests.stream().map(request -> new WriteTaskImpl(slaveEndpoint, request, this)).forEach(writeTask -> {
+            logger.trace("Submitting write task: {} (based from transformation {})", writeTask, transformOutput);
+            manager.submitOneTimeWrite(writeTask);
+        });
+    }
+
     @Override
     public synchronized void initialize() {
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
-        logger.trace("initialize() of thing {} '{}' starting", thing.getUID(), thing.getLabel());
         try {
-            config = getConfigAs(ModbusDataConfiguration.class);
-            if (StringUtils.isBlank(config.getReadStart())) {
-                readIndex = Optional.empty();
-                readSubIndex = Optional.empty();
-                readValueType = null;
-            } else {
-                String[] readParts = config.getReadStart().split("\\.", 2);
-                readIndex = Optional.of(Integer.parseInt(readParts[0]));
-                readSubIndex = Optional.ofNullable(readParts.length == 2 ? Integer.parseInt(readParts[1]) : null);
-                readValueType = StringUtils.isBlank(config.getReadValueType()) ? null
-                        : ValueType.fromConfigValue(config.getReadValueType());
-            }
-            if (StringUtils.isBlank(config.getWriteStart())
-                    || (WRITE_TYPE_COIL.equals(config.getWriteType()) && config.getWriteValueType() == null)) {
-                writeValueType = null;
-            } else {
-                writeValueType = ValueType.fromConfigValue(config.getWriteValueType());
-            }
-            readTransformation = new Transformation(config.getReadTransform());
-            writeTransformation = new Transformation(config.getWriteTransform());
-            if (!StringUtils.isBlank(config.getWriteStart())) {
-                writeStart = Integer.parseInt(config.getWriteStart().trim());
-            }
+            logger.trace("initialize() of thing {} '{}' starting", thing.getUID(), thing.getLabel());
+            try {
+                config = getConfigAs(ModbusDataConfiguration.class);
+                if (StringUtils.isBlank(config.getReadStart())) {
+                    readIndex = Optional.empty();
+                    readSubIndex = Optional.empty();
+                    readValueType = null;
+                } else {
+                    String[] readParts = config.getReadStart().split("\\.", 2);
+                    readIndex = Optional.of(Integer.parseInt(readParts[0]));
+                    readSubIndex = Optional.ofNullable(readParts.length == 2 ? Integer.parseInt(readParts[1]) : null);
+                    readValueType = StringUtils.isBlank(config.getReadValueType()) ? null
+                            : ValueType.fromConfigValue(config.getReadValueType());
+                }
+                if (StringUtils.isBlank(config.getWriteStart())
+                        || (WRITE_TYPE_COIL.equals(config.getWriteType()) && config.getWriteValueType() == null)) {
+                    writeValueType = null;
+                } else {
+                    writeValueType = ValueType.fromConfigValue(config.getWriteValueType());
+                }
+                readTransformation = new Transformation(config.getReadTransform());
+                writeTransformation = new Transformation(config.getWriteTransform());
+                if (!StringUtils.isBlank(config.getWriteStart())) {
+                    writeStart = Integer.parseInt(config.getWriteStart().trim());
+                }
 
-        } catch (IllegalArgumentException e) {
-            logger.error("Initialize failed for thing {} '{}'", getThing().getUID(), getThing().getLabel(), e);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, e.toString());
-            return;
-        }
-
-        validateConfiguration();
-        logger.trace("initialize() of thing {} '{}' finished", thing.getUID(), thing.getLabel());
-    }
-
-    public synchronized void validateConfiguration() {
-        Bridge bridge = getBridge();
-        if (bridge == null) {
-            logger.debug("Thing {} '{}' has no bridge. Aborting config validation", getThing().getUID(),
-                    getThing().getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, String.format("No bridge set"));
-            return;
-        }
-        if (bridge.getStatus() != ThingStatus.ONLINE) {
-            logger.debug("Bridge {} '{}' of thing {} '{}' is offline. Aborting config validation", bridge.getUID(),
-                    bridge.getLabel(), getThing().getUID(), getThing().getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, String
-                    .format("Bridge %s '%s' of the read-write bridge is offline", bridge.getUID(), bridge.getLabel()));
-            return;
-        }
-
-        if (bridge.getHandler() == null) {
-            logger.warn("Bridge {} '{}' has no handler. Aborting config validation for thing {} '{}'", bridge.getUID(),
-                    bridge.getLabel(), getThing().getUID(), getThing().getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
-                    .format("Bridge '%s' configuration incomplete or with errors (no handler)", bridge.getLabel()));
-            return;
-        }
-        if (!(bridge.getHandler() instanceof ModbusEndpointThingHandler)) {
-            // Bridge is poller -- proceed with read index, and read value type validation
-
-            @SuppressWarnings("null")
-            @NonNull
-            ModbusPollerThingHandler handler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
-            PollTask pollTask = handler.getPollTask();
-            if (pollTask == null) {
-                logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
-                        bridge.getLabel(), getThing().getUID(), getThing().getLabel());
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                        String.format("Poller '%s' has no poll task", bridge.getLabel()));
+            } catch (IllegalArgumentException e) {
+                logger.error("Initialize failed for thing {} '{}'", getThing().getUID(), getThing().getLabel(), e);
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, e.toString());
                 return;
             }
 
-            if (!validateReadValueType(pollTask)) {
+            Bridge bridge = getBridge();
+            if (bridge == null) {
+                logger.debug("Thing {} '{}' has no bridge", getThing().getUID(), getThing().getLabel());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
+                return;
+            }
+            if (bridge.getHandler() == null) {
+                logger.warn("Bridge {} '{}' has no handler.", bridge.getUID(), bridge.getLabel());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                        "Bridge {} '%s' configuration incomplete or with errors", bridge.getUID(), bridge.getLabel()));
+                return;
+            }
+            if (bridge.getHandler() instanceof ModbusEndpointThingHandler) {
+                // Write-only thing, parent is endpoint
+                @SuppressWarnings("null")
+                @NonNull
+                ModbusEndpointThingHandler bridgeHandler = (@NonNull ModbusEndpointThingHandler) bridge.getHandler();
+                slaveId = bridgeHandler.getSlaveId();
+                slaveEndpoint = bridgeHandler.asSlaveEndpoint();
+                manager = bridgeHandler.getManagerRef().get();
+            } else {
+                @SuppressWarnings("null")
+                @NonNull
+                ModbusPollerThingHandler bridgeHandler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
+                PollTask pollTask = bridgeHandler.getPollTask();
+                if (pollTask == null) {
+                    logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
+                            bridge.getLabel(), getThing().getUID(), getThing().getLabel());
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                            String.format("Poller '%s' has no poll task", bridge.getLabel()));
+                    return;
+                }
+                slaveId = pollTask.getRequest().getUnitID();
+                slaveEndpoint = pollTask.getEndpoint();
+                manager = bridgeHandler.getManagerRef().get();
+                pollStart = pollTask.getRequest().getReference();
+
+                if (!validateReadValueType(pollTask)) {
+                    // status already updated to OFFLINE
+                    return;
+                }
+                if (!validateReadIndex(pollTask)) {
+                    // status already updated to OFFLINE
+                    return;
+                }
+            }
+
+            if (!validateWriteValueType()) {
                 // status already updated to OFFLINE
                 return;
             }
-            if (!validateReadIndex(pollTask)) {
-                // status already updated to OFFLINE
-                return;
-            }
+            updateStatus(ThingStatus.ONLINE);
+        } finally {
+            logger.trace("initialize() of thing {} '{}' finished", thing.getUID(), thing.getLabel());
         }
-        if (!validateWriteValueType()) {
-            // status already updated to OFFLINE
-            return;
-        }
-
-        updateStatus(ThingStatus.ONLINE);
     }
 
     private boolean validateWriteValueType() {
@@ -457,10 +431,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
-        if (getThing().getStatus() != ThingStatus.ONLINE) {
-            return;
-        }
-        if (!readIndex.isPresent()) {
+        if (isWriteOnly()) {
             logger.debug("Thing {} '{}': no readStart configured -> aborting processing read registers",
                     getThing().getUID(), getThing().getLabel());
             return;
@@ -470,7 +441,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         // index of the bit or 8bit integer
         // e.g. with bit, index=4 means 4th bit (from right)
         // e.g. with 8bit integer, index=3 means high byte of second register
-        int dataIndex = readIndex.get() * readValueType.getBits() + subIndex;
+        int dataIndex = (readIndex.get() - pollStart) * readValueType.getBits() + subIndex;
         numericState = ModbusBitUtilities.extractStateFromRegisters(registers, dataIndex, readValueType);
         boolean boolValue = !numericState.equals(DecimalType.ZERO);
         processUpdatedValue(numericState, boolValue);
@@ -478,15 +449,12 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
-        if (getThing().getStatus() != ThingStatus.ONLINE) {
-            return;
-        }
-        if (!readIndex.isPresent()) {
+        if (isWriteOnly()) {
             logger.debug("Thing {} '{}': no readStart configured -> aborting processing read bits", getThing().getUID(),
                     getThing().getLabel());
             return;
         }
-        boolean boolValue = bits.getBit(readIndex.get());
+        boolean boolValue = bits.getBit(readIndex.get() - pollStart);
         DecimalType numericState = boolValue ? new DecimalType(BigDecimal.ONE) : DecimalType.ZERO;
 
         processUpdatedValue(numericState, boolValue);
