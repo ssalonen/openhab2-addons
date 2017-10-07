@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusWriteCallback {
+public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusWriteCallback, BridgeChangedListener {
 
     private Logger logger = LoggerFactory.getLogger(ModbusWriteThingHandler.class);
     private volatile ModbusWriteConfiguration config;
@@ -235,6 +235,11 @@ public class ModbusWriteThingHandler extends BaseThingHandler implements ModbusW
     @Override
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
         super.bridgeStatusChanged(bridgeStatusInfo);
+        validateConfiguration();
+    }
+
+    @Override
+    public void bridgeChanged(ThingStatus bridgeStatus) {
         validateConfiguration();
     }
 

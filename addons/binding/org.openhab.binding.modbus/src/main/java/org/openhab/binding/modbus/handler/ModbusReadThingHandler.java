@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusReadThingHandler extends BaseThingHandler implements ModbusReadCallback {
+public class ModbusReadThingHandler extends BaseThingHandler implements ModbusReadCallback, BridgeChangedListener {
 
     private Logger logger = LoggerFactory.getLogger(ModbusReadThingHandler.class);
     private volatile ModbusReadConfiguration config;
@@ -284,6 +284,11 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
         validateConfiguration();
     }
 
+    @Override
+    public void bridgeChanged(ThingStatus bridgeStatus) {
+        validateConfiguration();
+    }
+
     private boolean containsOnOff(List<Class<? extends State>> channelAcceptedDataTypes) {
         return channelAcceptedDataTypes.stream().anyMatch(clz -> {
             return clz.equals(OnOffType.class);
@@ -351,6 +356,12 @@ public class ModbusReadThingHandler extends BaseThingHandler implements ModbusRe
 
     }
 
+    /**
+     * Deprecated, used in read-write
+     *
+     * @return
+     */
+    @Deprecated
     public Optional<Map<ChannelUID, State>> getLastState() {
         return Optional.ofNullable(lastState);
     }

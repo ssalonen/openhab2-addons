@@ -16,7 +16,6 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
-import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
@@ -41,7 +40,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing implements ModbusPollerThingHandler {
+public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
+        implements ModbusPollerThingHandler, BridgeChangedListener {
 
     /**
      * {@link ModbusReadCallback} that delegates all tasks forward.
@@ -170,44 +170,48 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
 
     @Override
     public void initialize() {
-        // TODO: Initialize the thing. If done set status to ONLINE to indicate proper working.
-        // Long running initialization should be done asynchronously in background.
+        logger.debug("initialize()");
         config = getConfigAs(ModbusPollerConfiguration.class);
-        initPolling();
+        registerPollTask(true);
     }
 
     @Override
-    public void dispose() {
-        unregisterPollTask();
+    public synchronized void dispose() {
+        logger.debug("dispose()");
+        unregisterPollTask(true);
     }
 
-    public void initPolling() {
-        synchronized (this) {
-            unregisterPollTask();
-            registerPollTask();
+    @Override
+    public void bridgeChanged(ThingStatus bridgeStatus) {
+        if (bridgeStatus == ThingStatus.OFFLINE) {
+            unregisterPollTask(true);
+        } else if (bridgeStatus == ThingStatus.ONLINE) {
+            unregisterPollTask(false);
+            registerPollTask(true);
         }
     }
 
-    @Override
-    public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
-        super.bridgeStatusChanged(bridgeStatusInfo);
-        initPolling();
-    }
-
-    public synchronized void unregisterPollTask() {
-        if (pollTask == null) {
+    public synchronized void unregisterPollTask(boolean notifyChildren) {
+        logger.trace("unregisterPollTask()");
+        if (pollTask == null || config == null) {
             return;
         }
-        if (config.getRefresh() > 0L) {
-            managerRef.get().unregisterRegularPoll(pollTask);
-        }
+        logger.debug("Unregistering polling from ModbusManager");
+        managerRef.get().unregisterRegularPoll(pollTask);
         pollTask = null;
         updateStatus(ThingStatus.OFFLINE);
+        if (notifyChildren) {
+            notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
+        }
     }
 
-    private synchronized void registerPollTask() {
+    private synchronized void registerPollTask(boolean notifyChildren) {
+        logger.trace("registerPollTask()");
         if (pollTask != null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR);
+            if (notifyChildren) {
+                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
+            }
             throw new IllegalStateException("pollTask should be unregistered before registering a new one!");
         }
 
@@ -216,6 +220,9 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
                     String.format("Bridge '%s' is offline", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
             logger.debug("No bridge handler available -- aborting init for {}", this);
+            if (notifyChildren) {
+                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
+            }
             return;
         }
         ModbusSlaveEndpoint endpoint = slaveEndpointThingHandler.asSlaveEndpoint();
@@ -223,6 +230,9 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, String.format(
                     "Bridge '%s' not completely initialized", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
             logger.debug("Bridge not initialized fully (no endpoint) -- aborting init for {}", this);
+            if (notifyChildren) {
+                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
+            }
             return;
         }
 
@@ -230,10 +240,18 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing impl
         pollTask = new PollTaskImpl(endpoint, request, callbackDelegator);
 
         if (config.getRefresh() <= 0L) {
+            logger.debug("Not registering polling with ModbusManager since refresh disabled");
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
+            if (notifyChildren) {
+                notifyChildrenBridgeChanged(ThingStatus.ONLINE);
+            }
         } else {
+            logger.debug("Registering polling with ModbusManager");
             managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
             updateStatus(ThingStatus.ONLINE);
+            if (notifyChildren) {
+                notifyChildrenBridgeChanged(ThingStatus.ONLINE);
+            }
         }
     }
 

@@ -45,6 +45,11 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
             return 1;
         }
 
+        @Override
+        public String toString() {
+            return "SingleBitArray(" + String.valueOf(bit) + ")";
+        }
+
     }
 
     private int slaveId;
