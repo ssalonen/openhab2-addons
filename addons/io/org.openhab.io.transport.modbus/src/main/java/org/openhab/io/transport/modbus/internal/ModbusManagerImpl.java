@@ -213,6 +213,25 @@ public class ModbusManagerImpl implements ModbusManager {
         scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
     }
 
+    private static void invokeCallbackWithError(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
+            Exception error) {
+        try {
+            callback.onError(request, error);
+        } catch (Exception e) {
+
+            logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+        }
+    }
+
+    private static void invokeCallbackWithError(ModbusReadRequestBlueprint request, ModbusReadCallback callback,
+            Exception error) {
+        try {
+            callback.onError(request, error);
+        } catch (Exception e) {
+            logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+        }
+    }
+
     private static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
@@ -241,7 +260,16 @@ public class ModbusManagerImpl implements ModbusManager {
             }
 
         } catch (Exception e) {
-            logger.error("Unhandled exception {} {}", e.getClass().getName(), e.getMessage(), e);
+            logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+        }
+    }
+
+    private static void invokeCallbackWithResponse(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
+            org.openhab.io.transport.modbus.ModbusResponse response) {
+        try {
+            callback.onWriteResponse(request, response);
+        } catch (Exception e) {
+            logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
         }
     }
 
@@ -349,8 +377,9 @@ public class ModbusManagerImpl implements ModbusManager {
                         throw new IllegalArgumentException();
                     }
                 });
-
+                break;
             default:
+                logger.error("Unexpected function code {}", message.getFunctionCode());
                 throw new IllegalStateException(
                         String.format("Unexpected function code %s", message.getFunctionCode()));
         }
@@ -475,8 +504,8 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    Optional.ofNullable(callback.get())
-                            .ifPresent(cb -> cb.onError(request, new ModbusConnectionException(endpoint)));
+                    Optional.ofNullable(callback.get()).ifPresent(
+                            cb -> invokeCallbackWithError(request, cb, new ModbusConnectionException(endpoint)));
                 });
                 return;
             }
@@ -504,7 +533,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     verifyTaskIsRegistered(task);
                 }
                 callbackThreadPool.execute(() -> {
-                    Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
+                    Optional.ofNullable(callback.get()).ifPresent(cb -> invokeCallbackWithError(request, cb, e));
                 });
             }
             ModbusResponse response = transaction.getResponse();
@@ -521,8 +550,8 @@ public class ModbusManagerImpl implements ModbusManager {
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
                 callbackThreadPool.execute(() -> {
-                    Optional.ofNullable(callback.get())
-                            .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
+                    Optional.ofNullable(callback.get()).ifPresent(
+                            cb -> invokeCallbackWithError(request, cb, new ModbusUnexpectedTransactionIdException()));
                 });
             } else {
                 callbackThreadPool.execute(() -> {
@@ -619,7 +648,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 invalidate(endpoint, connection);
                 // set connection to null such that it is not returned to pool
                 connection = Optional.empty();
-                Optional.ofNullable(callback.get()).ifPresent(cb -> cb.onError(request, e));
+                Optional.ofNullable(callback.get()).ifPresent(cb -> invokeCallbackWithError(request, cb, e));
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
@@ -627,11 +656,11 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.warn(
                         "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
                         request, endpoint, connection);
-                Optional.ofNullable(callback.get())
-                        .ifPresent(cb -> cb.onError(request, new ModbusUnexpectedTransactionIdException()));
+                Optional.ofNullable(callback.get()).ifPresent(
+                        cb -> invokeCallbackWithError(request, cb, new ModbusUnexpectedTransactionIdException()));
             } else {
                 Optional.ofNullable(callback.get())
-                        .ifPresent(cb -> cb.onWriteResponse(request, new ModbusResponseImpl(response)));
+                        .ifPresent(cb -> invokeCallbackWithResponse(request, cb, new ModbusResponseImpl(response)));
             }
         } finally {
             returnConnection(endpoint, connection);
