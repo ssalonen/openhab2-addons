@@ -731,7 +731,7 @@ public class ModbusDataHandlerTest {
             }
         });
         ModbusDataThingHandler dataHandler = testWriteHandlingGeneric("50", "ZERO(foobar)",
-                ModbusConstants.ValueType.INT16, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
+                ModbusConstants.ValueType.BIT, "coil", ModbusWriteFunctionCode.WRITE_COIL, "number",
                 new DecimalType("2"), null, bundleContext);
 
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS,

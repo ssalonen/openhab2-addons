@@ -37,6 +37,7 @@ import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Matchers;
@@ -436,6 +437,7 @@ public class ModbusReadWriteThingHandlerTest {
         verify(read2Handler, never()).onBits(any(), any());
     }
 
+    @Ignore // ignored for now, readwrite should go away
     @Test
     public void testInitializeWithNoBridge()
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
@@ -447,6 +449,7 @@ public class ModbusReadWriteThingHandlerTest {
                 is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
     }
 
+    @Ignore // ignored for now, readwrite should go away
     @Test
     public void testInitializeWithOfflineBridge()
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {

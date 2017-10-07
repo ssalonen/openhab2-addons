@@ -3,6 +3,7 @@ package org.openhab.binding.modbus;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import java.lang.ref.WeakReference;
@@ -330,6 +331,8 @@ public class ModbusPollerThingHandlerTest {
         }), eq(150l), eq(0L));
 
         verifyNoMoreInteractions(modbusManager);
+        verify(readwrite1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(readwrite2Handler, atLeastOnce()).bridgeChanged(any());
         verifyNoMoreInteractions(readwrite1Handler);
         verifyNoMoreInteractions(readwrite2Handler);
 
@@ -410,6 +413,8 @@ public class ModbusPollerThingHandlerTest {
         }), eq(150l), eq(0L));
 
         verifyNoMoreInteractions(modbusManager);
+        verify(data1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(data2Handler, atLeastOnce()).bridgeChanged(any());
         verifyNoMoreInteractions(data1Handler);
         verifyNoMoreInteractions(data2Handler);
 
@@ -531,6 +536,10 @@ public class ModbusPollerThingHandlerTest {
         callback1.onBits(request, bits);
         verify(poller1readwrite1Handler).onBits(request, bits);
         verify(poller1readwrite2Handler).onBits(request, bits);
+        verify(poller1readwrite1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(poller1readwrite2Handler, atLeastOnce()).bridgeChanged(any());
+        verify(poller2readwrite1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(poller2readwrite2Handler, atLeastOnce()).bridgeChanged(any());
         verifyNoMoreInteractions(poller1readwrite1Handler);
         verifyNoMoreInteractions(poller1readwrite2Handler);
         verifyNoMoreInteractions(poller2readwrite1Handler);
@@ -669,8 +678,12 @@ public class ModbusPollerThingHandlerTest {
         callback1.onBits(request, bits);
         verify(poller1readwrite1Handler).onBits(request, bits);
         verify(poller1readwrite2Handler).onBits(request, bits);
+        verify(poller1readwrite1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(poller1readwrite2Handler, atLeastOnce()).bridgeChanged(any());
         verifyNoMoreInteractions(poller1readwrite1Handler);
         verifyNoMoreInteractions(poller1readwrite2Handler);
+        verify(poller2data1Handler, atLeastOnce()).bridgeChanged(any());
+        verify(poller2data2Handler, atLeastOnce()).bridgeChanged(any());
         verifyNoMoreInteractions(poller2data1Handler);
         verifyNoMoreInteractions(poller2data2Handler);
 
@@ -767,8 +780,8 @@ public class ModbusPollerThingHandlerTest {
         // reset call counts for easy assertions
         reset(modbusManager);
 
-        // bridge status changed
-        thingHandler.bridgeStatusChanged(Mockito.mock(ThingStatusInfo.class));
+        // bridge changed (is this theoretical test? actually dispose would be called?)
+        thingHandler.bridgeChanged(ThingStatus.ONLINE);
 
         InOrder orderedVerify = Mockito.inOrder(modbusManager);
 
