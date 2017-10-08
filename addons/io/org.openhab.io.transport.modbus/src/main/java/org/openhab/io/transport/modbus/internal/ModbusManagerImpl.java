@@ -710,10 +710,10 @@ public class ModbusManagerImpl implements ModbusManager {
             connectionPool = null;
         }
         logger.debug("Shutting down scheduledThreadPoolExecutor");
-        scheduledThreadPoolExecutor.shutdown();
+        scheduledThreadPoolExecutor.shutdownNow();
         scheduledThreadPoolExecutor = null;
         logger.debug("Shutting down callbackThreadPool");
-        callbackThreadPool.shutdown();
+        callbackThreadPool.shutdownNow();
         callbackThreadPool = null;
         logger.info("Modbus manager deactivated");
     }
