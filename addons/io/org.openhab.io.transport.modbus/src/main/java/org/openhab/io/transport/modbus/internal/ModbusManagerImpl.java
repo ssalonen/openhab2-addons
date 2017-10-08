@@ -545,10 +545,10 @@ public class ModbusManagerImpl implements ModbusManager {
                 verifyTaskIsRegistered(task);
             }
 
-            if ((response.getTransactionID() != transaction.getTransactionID()) && !response.isHeadless()) {
+            if ((response.getTransactionID() != libRequest.getTransactionID()) && !response.isHeadless()) {
                 logger.warn(
-                        "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
-                        request, endpoint, connection);
+                        "Transaction id of the response ({}) does not match request ({}) {}.  Endpoint {}. Connection: {}. Ignoring response.",
+                        response.getTransactionID(), libRequest.getTransactionID(), request, endpoint, connection);
                 callbackThreadPool.execute(() -> {
                     Optional.ofNullable(callback.get()).ifPresent(
                             cb -> invokeCallbackWithError(request, cb, new ModbusUnexpectedTransactionIdException()));
@@ -652,10 +652,10 @@ public class ModbusManagerImpl implements ModbusManager {
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
-            if ((response.getTransactionID() != transaction.getTransactionID()) && !response.isHeadless()) {
+            if ((response.getTransactionID() != libRequest.getTransactionID()) && !response.isHeadless()) {
                 logger.warn(
-                        "Transaction id of the response does not match request {}.  Endpoint {}. Connection: {}. Ignoring response.",
-                        request, endpoint, connection);
+                        "Transaction id of the response ({}) does not match request ({}) {}.  Endpoint {}. Connection: {}. Ignoring response.",
+                        response.getTransactionID(), libRequest.getTransactionID(), request, endpoint, connection);
                 Optional.ofNullable(callback.get()).ifPresent(
                         cb -> invokeCallbackWithError(request, cb, new ModbusUnexpectedTransactionIdException()));
             } else {
