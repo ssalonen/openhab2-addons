@@ -3,7 +3,7 @@ package org.openhab.binding.modbus;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -53,6 +53,7 @@ import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.hamcrest.Matcher;
 import org.junit.Before;
@@ -882,4 +883,40 @@ public class ModbusDataHandlerTest {
         testValueTypeGeneric(ModbusReadFunctionCode.READ_INPUT_DISCRETES, ModbusConstants.ValueType.BIT,
                 ThingStatus.ONLINE);
     }
+
+    @Test
+    public void testRefreshOnData() {
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Bridge poller = createPoller("readwrite1", "poller1", task);
+
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0");
+        dataConfig.put("readTransform", "default");
+        dataConfig.put("readValueType", "bit");
+
+        String thingId = "read1";
+
+        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
+                builder -> builder.withConfiguration(dataConfig), bundleContext);
+        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        verify(manager, never()).submitOneTimePoll(task);
+        dataHandler.handleCommand(Mockito.mock(ChannelUID.class), RefreshType.REFRESH);
+        verify(manager).submitOneTimePoll(task);
+    }
+
 }

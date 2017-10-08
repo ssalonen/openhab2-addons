@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -28,6 +29,7 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -921,6 +923,32 @@ public class ModbusPollerThingHandlerTest {
         assertThat(poller.getStatusInfo().getStatusDetail(), is(equalTo(ThingStatusDetail.BRIDGE_OFFLINE)));
 
         verifyNoMoreInteractions(modbusManager);
+    }
+
+    @Test
+    public void testRefreshOnPoller()
+            throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+        Configuration pollerConfig = new Configuration();
+        pollerConfig.put("refresh", 0L);
+        pollerConfig.put("start", 5);
+        pollerConfig.put("length", 13);
+        pollerConfig.put("type", "coil");
+
+        poller = createPollerThingBuilder("poller").withConfiguration(pollerConfig).withBridge(endpoint.getUID())
+                .build();
+        registerThingToMockRegistry(poller);
+        hookStatusUpdates(poller);
+
+        ModbusPollerThingHandlerImpl thingHandler = new ModbusPollerThingHandlerImpl(poller, () -> modbusManager);
+        thingHandler.setCallback(thingCallback);
+        poller.setHandler(thingHandler);
+        hookItemRegistry(thingHandler);
+        thingHandler.initialize();
+        assertThat(poller.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        verify(modbusManager, never()).submitOneTimePoll(thingHandler.getPollTask());
+        thingHandler.handleCommand(Mockito.mock(ChannelUID.class), RefreshType.REFRESH);
+        verify(modbusManager).submitOneTimePoll(thingHandler.getPollTask());
     }
 
 }
