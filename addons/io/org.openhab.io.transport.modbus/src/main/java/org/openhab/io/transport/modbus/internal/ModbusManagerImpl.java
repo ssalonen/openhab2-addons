@@ -20,6 +20,7 @@ import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.SwallowedExceptionListener;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
+import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
 import org.openhab.io.transport.modbus.BitArray;
@@ -153,10 +154,8 @@ public class ModbusManagerImpl implements ModbusManager {
 
     private volatile Map<PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
 
-    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor = ExpressionThreadPoolManager
-            .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
-    private static ExecutorService callbackThreadPool = ExpressionThreadPoolManager
-            .getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
+    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
+    private static ExecutorService callbackThreadPool;
 
     private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<ModbusManagerListener>();
 
@@ -207,10 +206,6 @@ public class ModbusManagerImpl implements ModbusManager {
             }
         });
         connectionPool = genericKeyedObjectPool;
-    }
-
-    public ModbusManagerImpl() {
-        scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
     }
 
     private static void invokeCallbackWithError(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
@@ -694,6 +689,14 @@ public class ModbusManagerImpl implements ModbusManager {
         if (connectionPool == null) {
             constructConnectionPool();
         }
+        if (scheduledThreadPoolExecutor == null) {
+            scheduledThreadPoolExecutor = ExpressionThreadPoolManager
+                    .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
+            scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
+        }
+        if (callbackThreadPool == null) {
+            callbackThreadPool = ThreadPoolManager.getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
+        }
     }
 
     protected void deactivate() {
@@ -706,6 +709,12 @@ public class ModbusManagerImpl implements ModbusManager {
             connectionPool.close();
             connectionPool = null;
         }
+        logger.debug("Shutting down scheduledThreadPoolExecutor");
+        scheduledThreadPoolExecutor.shutdown();
+        scheduledThreadPoolExecutor = null;
+        logger.debug("Shutting down callbackThreadPool");
+        callbackThreadPool.shutdown();
+        callbackThreadPool = null;
         logger.info("Modbus manager deactivated");
     }
 
