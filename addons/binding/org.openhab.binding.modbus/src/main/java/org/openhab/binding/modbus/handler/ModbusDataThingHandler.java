@@ -105,6 +105,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private int slaveId;
     private ModbusSlaveEndpoint slaveEndpoint;
     private ModbusManager manager;
+    private PollTask pollTask;
 
     public ModbusDataThingHandler(@NonNull Thing thing) {
         super(thing);
@@ -124,12 +125,18 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 command, channelUID);
 
         if (RefreshType.REFRESH.equals(command)) {
-            logger.trace(
-                    "Thing '{}' received REFRESH which not implemented yet. Aborting processing of command '{}' to channel '{}'",
-                    getThing().getLabel(), command, channelUID);
+            // manager.submitOneTimePoll(poll)
+            if (pollTask == null || manager == null) {
+                logger.debug(
+                        "Thing {} '{}' received REFRESH but no poll task and/or modbus manager is available. Aborting processing of command '{}' to channel '{}'. Not properly initialized or child of endpoint? ",
+                        getThing().getUID(), getThing().getLabel(), command, channelUID);
+                return;
+            }
+            logger.debug("Thing {} '{}' received REFRESH. Submitting the poll task {}", getThing().getUID(),
+                    getThing().getLabel(), pollTask);
+            manager.submitOneTimePoll(pollTask);
             return;
-        }
-        if (isReadOnly()) {
+        } else if (isReadOnly()) {
             logger.trace(
                     "Thing '{}' command '{}' to channel '{}': no writeStart or writeType configured -> aborting processing command",
                     getThing().getLabel(), command, channelUID);
@@ -264,7 +271,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 @SuppressWarnings("null")
                 @NonNull
                 ModbusPollerThingHandler bridgeHandler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
-                PollTask pollTask = bridgeHandler.getPollTask();
+                pollTask = bridgeHandler.getPollTask();
                 if (pollTask == null) {
                     logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
                             bridge.getLabel(), getThing().getUID(), getThing().getLabel());
