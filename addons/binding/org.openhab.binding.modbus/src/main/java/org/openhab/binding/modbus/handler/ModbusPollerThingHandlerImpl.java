@@ -19,6 +19,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.config.ModbusPollerConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
@@ -139,6 +140,21 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        if (!RefreshType.REFRESH.equals(command)) {
+            return;
+        }
+        ModbusManager modbusManager = managerRef.get();
+        if (pollTask == null || modbusManager == null) {
+            logger.debug(
+                    "Thing {} '{}' received REFRESH but no poll task and/or modbus manager is available. Aborting processing of command '{}' to channel '{}'. Not properly initialized? ",
+                    getThing().getUID(), getThing().getLabel(), command, channelUID);
+            return;
+        }
+        logger.debug("Thing {} '{}' received REFRESH. Submitting the poll task {}", getThing().getUID(),
+                getThing().getLabel(), pollTask);
+        modbusManager.submitOneTimePoll(pollTask);
+        return;
+
     }
 
     @Override
