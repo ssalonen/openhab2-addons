@@ -473,6 +473,12 @@ public class ModbusDataHandlerTest {
                 ModbusConstants.ValueType.INT32, ThingStatus.OFFLINE);
     }
 
+    @Test
+    public void testInitRegistersWithInt32AtTheEdge() {
+        testOutOfBoundsGeneric(4, 3, "5", ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
+                ModbusConstants.ValueType.INT32, ThingStatus.ONLINE);
+    }
+
     private ModbusDataThingHandler testReadHandlingGeneric(ModbusReadFunctionCode functionCode, String start,
             String transform, ValueType valueType, BitArray bits, ModbusRegisterArray registers, Exception error) {
         return testReadHandlingGeneric(functionCode, start, transform, valueType, bits, registers, error, null);
@@ -601,7 +607,7 @@ public class ModbusDataHandlerTest {
     @Test
     public void testOnError() {
         ModbusDataThingHandler dataHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                "0", "default", ModbusConstants.ValueType.FLOAT32, null, null, new Exception("fooerror"));
+                "0.0", "default", ModbusConstants.ValueType.BIT, null, null, new Exception("fooerror"));
 
         assertThat(stateUpdates.size(), is(equalTo(1)));
         assertThat(

@@ -70,7 +70,10 @@ public class ModbusBitUtilities {
      * @param registers
      *            list of registers, each register represent 16bit of data
      * @param index
-     *            zero based item index. Interpretation of this depends on type
+     *            zero based item index. Interpretation of this depends on type, see examples above.
+     *            With type larger or equal to 16 bits, the index tells the register index to start reading from.
+     *            With type less than 16 bits, the index tells the N'th item to read from the registers.
+     * 
      * @param type
      *            item type, e.g. unsigned 16bit integer (<tt>ModbusBindingProvider.ValueType.UINT16</tt>)
      * @return number representation queried value
@@ -81,10 +84,10 @@ public class ModbusBitUtilities {
      */
     public static DecimalType extractStateFromRegisters(ModbusRegisterArray registers, int index,
             ModbusConstants.ValueType type) {
-        int startBitIndex = type.getBits() * index;
+        int endBitIndex = (type.getBits() >= 16 ? 16 * index : type.getBits() * index) + type.getBits() - 1;
         // each register has 16 bits
         int lastValidIndex = registers.size() * 16 - 1;
-        if (startBitIndex > lastValidIndex || startBitIndex < 0) {
+        if (endBitIndex > lastValidIndex || index < 0) {
             throw new IllegalArgumentException(
                     String.format("Index=%d with type=%s is out-of-bounds given registers of size %d", index, type,
                             registers.size()));

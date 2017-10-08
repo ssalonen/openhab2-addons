@@ -242,6 +242,8 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                         shortArrayToRegisterArray(0x4, 0xC47B, 0x199A), 1 },
                 new Object[] { new DecimalType(-1004.4f), ValueType.FLOAT32,
                         shortArrayToRegisterArray(0xC47B, 0x199A, 0x4), 0 },
+                new Object[] { new DecimalType(-1004.4f), ValueType.FLOAT32,
+                        shortArrayToRegisterArray(0x4, 0x0, 0x0, 0x0, 0xC47B, 0x199A), 4 },
                 new Object[] { IllegalArgumentException.class, ValueType.FLOAT32, shortArrayToRegisterArray(4, -1004),
                         1 },
                 new Object[] { IllegalArgumentException.class, ValueType.FLOAT32, shortArrayToRegisterArray(4, -1004),

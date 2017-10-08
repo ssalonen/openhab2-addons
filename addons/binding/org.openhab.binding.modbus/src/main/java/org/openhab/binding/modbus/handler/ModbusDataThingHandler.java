@@ -361,8 +361,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
         // bits represented by the value type, e.g. int32 -> 32
         int valueTypeBitCount = readValueType.getBits();
-        // textual name for the data element, e.g. register
-        // (for logging)
         int dataElementBits;
         switch (pollTask.getRequest().getFunctionCode()) {
             case READ_INPUT_REGISTERS:
@@ -404,18 +402,20 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return false;
         }
 
+        // Determine bit positions polled, both start and end inclusive
         int pollStartBitIndex = pollTask.getRequest().getReference() * dataElementBits;
-        int pollEndBitIndex = pollStartBitIndex + (pollTask.getRequest().getDataLength() - 1) * dataElementBits;
+        int pollEndBitIndex = pollStartBitIndex + pollTask.getRequest().getDataLength() * dataElementBits;
 
-        int readStartBitIndex = readIndex.get() * dataElementBits;
-        int readEndBitIndex = readStartBitIndex + valueTypeBitCount - dataElementBits;
+        // Determine bit positions read, both start and end inclusive
+        int readStartBitIndex = readIndex.get() * dataElementBits + readSubIndex.orElse(0) * valueTypeBitCount;
+        int readEndBitIndex = readStartBitIndex + valueTypeBitCount - 1;
 
         if (readStartBitIndex < pollStartBitIndex || readEndBitIndex > pollEndBitIndex) {
             String errmsg = String.format(
-                    "Out-of-bounds: Poller is reading from index %d to %d but configuration tries to parse %s starting from register %d. Exceeds polled data by %d bits",
+                    "Out-of-bounds: Poller is reading from index %d to %d (inclusive) but tring tries to read '%s' starting from element %d. Exceeds polled data by %d bits (={} 16 bit words)",
                     pollStartBitIndex / dataElementBits, pollEndBitIndex / dataElementBits, readValueType,
-                    readIndex.get(), readEndBitIndex - pollEndBitIndex);
-            logger.error("ReadThing {} '{}' readIndex is out of bounds: {}", getThing().getUID(), getThing().getLabel(),
+                    readIndex.get(), readEndBitIndex - pollEndBitIndex, (readEndBitIndex - pollEndBitIndex) / 16);
+            logger.error("Thing {} '{}' readIndex is out of bounds: {}", getThing().getUID(), getThing().getLabel(),
                     errmsg);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, errmsg);
             return false;
