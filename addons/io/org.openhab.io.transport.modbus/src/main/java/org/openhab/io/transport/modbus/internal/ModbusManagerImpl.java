@@ -545,6 +545,8 @@ public class ModbusManagerImpl implements ModbusManager {
                 verifyTaskIsRegistered(task);
             }
 
+            // Compare request and response transaction ID. NOTE: ModbusTransaction.getTransactionID() is static and
+            // not safe to use
             if ((response.getTransactionID() != libRequest.getTransactionID()) && !response.isHeadless()) {
                 logger.warn(
                         "Transaction id of the response ({}) does not match request ({}) {}.  Endpoint {}. Connection: {}. Ignoring response.",
@@ -652,6 +654,8 @@ public class ModbusManagerImpl implements ModbusManager {
             }
             ModbusResponse response = transaction.getResponse();
             logger.trace("Response for write (FC={}) {}", response.getFunctionCode(), response.getHexMessage());
+            // Compare request and response transaction ID. NOTE: ModbusTransaction.getTransactionID() is static and
+            // not safe to use
             if ((response.getTransactionID() != libRequest.getTransactionID()) && !response.isHeadless()) {
                 logger.warn(
                         "Transaction id of the response ({}) does not match request ({}) {}.  Endpoint {}. Connection: {}. Ignoring response.",
