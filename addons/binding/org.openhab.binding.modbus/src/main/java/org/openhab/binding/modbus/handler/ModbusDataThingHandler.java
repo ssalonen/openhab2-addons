@@ -256,7 +256,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             if (bridge.getHandler() == null) {
                 logger.warn("Bridge {} '{}' has no handler.", bridge.getUID(), bridge.getLabel());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
-                        "Bridge {} '%s' configuration incomplete or with errors", bridge.getUID(), bridge.getLabel()));
+                        "Bridge %s '%s' configuration incomplete or with errors", bridge.getUID(), bridge.getLabel()));
                 return;
             }
             if (bridge.getHandler() instanceof ModbusEndpointThingHandler) {
@@ -276,7 +276,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                     logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
                             bridge.getLabel(), getThing().getUID(), getThing().getLabel());
                     updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                            String.format("Poller '%s' has no poll task", bridge.getLabel()));
+                            String.format("Poller %s '%s' has no poll task", bridge.getUID(), bridge.getLabel()));
                     return;
                 }
                 slaveId = pollTask.getRequest().getUnitID();
@@ -414,7 +414,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
         if (readStartBitIndex < pollStartBitIndex || readEndBitIndex > pollEndBitIndex) {
             String errmsg = String.format(
-                    "Out-of-bounds: Poller is reading from index %d to %d (inclusive) but tring tries to read '%s' starting from element %d. Exceeds polled data by %d bits (={} 16 bit words)",
+                    "Out-of-bounds: Poller is reading from index %d to %d (inclusive) but tring tries to read '%s' starting from element %d. Exceeds polled data by %d bits (=%d 16 bit words)",
                     pollStartBitIndex / dataElementBits, pollEndBitIndex / dataElementBits, readValueType,
                     readIndex.get(), readEndBitIndex - pollEndBitIndex, (readEndBitIndex - pollEndBitIndex) / 16);
             logger.error("Thing {} '{}' readIndex is out of bounds: {}", getThing().getUID(), getThing().getLabel(),
