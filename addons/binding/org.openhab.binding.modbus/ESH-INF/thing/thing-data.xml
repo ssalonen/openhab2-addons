@@ -39,7 +39,7 @@
             </parameter>
             <parameter name="readTransform" type="text">
                 <label>Read transform</label>
-                <description><![CDATA[Transformation to apply to received commands and polled state.
+                <description><![CDATA[Transformation to apply to polled data, after it has been converted to number using readValueType
     <br /><br />Use "default" to communicate that no transformation is done and value should be passed as is.
     <br />Use SERVICENAME(ARG) to use transformation service.
     <br />Any other value than the above types will be interpreted as static text, in which case the actual content of the polled 
