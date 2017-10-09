@@ -321,7 +321,7 @@ modbus_ex1.things:
 
 ```xtend
 Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
-    Bridge poller coils_4_to_10 [ start=4, length=10, refresh=1002, type="coil" ] {
+    Bridge poller coils [ start=4, length=2, refresh=1002, type="coil" ] {
         // Note the zero based indexing: first coil is index 0.
         Thing data do4 [ readStart="4", readValueType="bit", writeStart="4", writeValueType="bit", writeType="coil" ]
         Thing data do5 [ readStart="5", readValueType="bit", writeStart="5", writeValueType="bit", writeType="coil" ]
@@ -334,8 +334,8 @@ Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
 modbus_ex1.items:
 
 ```xtend
-Switch DO4            "Digital I/O 4 []"    { channel="modbus:data:localhostTCP:coils_4_to_10:do4:switch" }
-Switch DO5            "Digital I/O 5 []"    { channel="modbus:data:localhostTCP:coils_4_to_10:do5:switch" }
+Switch DO4            "Digital I/O 4 []"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
+Switch DO5            "Digital I/O 5 []"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
 Number Holding6writeonly            "Holding index 5 [%d]"    { channel="modbus:data:localhostTCP:holding6write:number" }
 ```
 
