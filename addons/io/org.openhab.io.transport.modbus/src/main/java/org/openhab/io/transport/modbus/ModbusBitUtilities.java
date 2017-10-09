@@ -73,7 +73,7 @@ public class ModbusBitUtilities {
      *            zero based item index. Interpretation of this depends on type, see examples above.
      *            With type larger or equal to 16 bits, the index tells the register index to start reading from.
      *            With type less than 16 bits, the index tells the N'th item to read from the registers.
-     * 
+     *
      * @param type
      *            item type, e.g. unsigned 16bit integer (<tt>ModbusBindingProvider.ValueType.UINT16</tt>)
      * @return number representation queried value
