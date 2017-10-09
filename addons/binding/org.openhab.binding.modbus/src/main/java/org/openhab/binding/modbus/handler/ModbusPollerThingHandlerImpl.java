@@ -7,10 +7,12 @@
  */
 package org.openhab.binding.modbus.handler;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -112,7 +114,11 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         private static ModbusReadFunctionCode getFunctionCode(String type) {
             ModbusReadFunctionCode functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(type);
             if (functionCode == null) {
-                throw new IllegalArgumentException("No function code found for " + type);
+                Object[] acceptedTypes = ModbusBindingConstants.READ_FUNCTION_CODES.keySet().toArray();
+                Arrays.sort(acceptedTypes);
+                throw new IllegalArgumentException(
+                        String.format("No function code found for type='%s'. Was expecting one of: %s", type,
+                                StringUtils.join(acceptedTypes, ", ")));
             }
             return functionCode;
         }
@@ -172,8 +178,13 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
     @Override
     public void initialize() {
         logger.debug("initialize()");
-        config = getConfigAs(ModbusPollerConfiguration.class);
-        registerPollTask(true);
+        try {
+            config = getConfigAs(ModbusPollerConfiguration.class);
+            registerPollTask(true);
+        } catch (Exception e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                    String.format("%s (%s)", e.getMessage(), e.getClass().getSimpleName()));
+        }
     }
 
     @Override
