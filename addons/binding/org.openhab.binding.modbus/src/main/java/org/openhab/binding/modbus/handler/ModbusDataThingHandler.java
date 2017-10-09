@@ -448,12 +448,27 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
         DecimalType numericState;
-        int subIndex = readSubIndex.orElse(0);
-        // index of the bit or 8bit integer
-        // e.g. with bit, index=4 means 4th bit (from right)
-        // e.g. with 8bit integer, index=3 means high byte of second register
-        int dataIndex = (readIndex.get() - pollStart) * readValueType.getBits() + subIndex;
-        numericState = ModbusBitUtilities.extractStateFromRegisters(registers, dataIndex, readValueType);
+
+        // extractIndex:
+        // e.g. with bit, extractIndex=4 means 5th bit (from right) ("10.4" -> 5th bit of register 10, "10.4" -> 5th bit
+        // of register 10)
+        // bit of second register)
+        // e.g. with 8bit integer, extractIndex=3 means high byte of second register
+        //
+        // with <16 bit types, this is the index of the N'th 1-bit/8-bit item. Each register has 16/2 items,
+        // respectively.
+        // with >=16 bit types, this is index of first register
+        int extractIndex;
+        if (readValueType.getBits() >= 16) {
+            // Invariant, checked in initialize
+            assert readSubIndex.orElse(0) == 0;
+            extractIndex = readIndex.get() - pollStart;
+        } else {
+            int subIndex = readSubIndex.orElse(0);
+            int itemsPerRegister = 16 / readValueType.getBits();
+            extractIndex = (readIndex.get() - pollStart) * itemsPerRegister + subIndex;
+        }
+        numericState = ModbusBitUtilities.extractStateFromRegisters(registers, extractIndex, readValueType);
         boolean boolValue = !numericState.equals(DecimalType.ZERO);
         processUpdatedValue(numericState, boolValue);
     }
