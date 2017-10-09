@@ -100,12 +100,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private volatile Transformation writeTransformation;
     private volatile Optional<Integer> readIndex = Optional.empty();
     private volatile Optional<Integer> readSubIndex = Optional.empty();
-    private Integer writeStart;
-    private int pollStart;
-    private int slaveId;
-    private ModbusSlaveEndpoint slaveEndpoint;
-    private ModbusManager manager;
-    private PollTask pollTask;
+    private volatile Integer writeStart;
+    private volatile int pollStart;
+    private volatile int slaveId;
+    private volatile ModbusSlaveEndpoint slaveEndpoint;
+    private volatile ModbusManager manager;
+    private volatile PollTask pollTask;
+    private volatile boolean initSuccessful;
 
     public ModbusDataThingHandler(@NonNull Thing thing) {
         super(thing);
@@ -297,6 +298,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 // status already updated to OFFLINE
                 return;
             }
+            initSuccessful = true;
             updateStatus(ThingStatus.ONLINE);
         } finally {
             logger.trace("initialize() of thing {} '{}' finished", thing.getUID(), thing.getLabel());
@@ -437,6 +439,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+        if (!initSuccessful) {
+            return;
+        }
         if (isWriteOnly()) {
             logger.debug("Thing {} '{}': no readStart configured -> aborting processing read registers",
                     getThing().getUID(), getThing().getLabel());
@@ -455,6 +460,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
+        if (!initSuccessful) {
+            return;
+        }
         if (isWriteOnly()) {
             logger.debug("Thing {} '{}': no readStart configured -> aborting processing read bits", getThing().getUID(),
                     getThing().getLabel());
@@ -468,7 +476,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     @Override
     public synchronized void onError(ModbusReadRequestBlueprint request, Exception error) {
-        // Read errors
+        if (!initSuccessful) {
+            return;
+        }
         if (error instanceof ModbusConnectionException) {
             logger.error("Thing {} '{}' had connection error on read: {} {}", getThing().getUID(),
                     getThing().getLabel(), error.getClass().getName(), error);
@@ -490,6 +500,36 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                     String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
         }
 
+    }
+
+    @Override
+    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+        if (!initSuccessful) {
+            return;
+        }
+        if (error instanceof ModbusConnectionException) {
+            logger.error("Thing {} '{}' had connection error on write: {} {}", getThing().getUID(),
+                    getThing().getLabel(), error.getClass().getName(), error);
+        } else {
+            logger.error("Thing {} '{}' had error on write: {} {}. Stack trace follows for unexpected errors.",
+                    getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
+        }
+        DateTimeType now = new DateTimeType();
+        logger.error("Unsuccessful write: {} {}", error.getClass().getName(), error.getMessage());
+        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR, now);
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
+                "Error with writing request %s: %s: %s", request, error.getClass().getName(), error.getMessage()));
+    }
+
+    @Override
+    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
+        if (!initSuccessful) {
+            return;
+        }
+        logger.debug("Successful write, matching request {}", request);
+        DateTimeType now = new DateTimeType();
+        updateStatus(ThingStatus.ONLINE);
+        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS, now);
     }
 
     private Map<ChannelUID, State> processUpdatedValue(DecimalType numericState, boolean boolValue) {
@@ -551,30 +591,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         return states;
     }
 
-    @Override
-    public void onError(ModbusWriteRequestBlueprint request, Exception error) {
-        if (error instanceof ModbusConnectionException) {
-            logger.error("Thing {} '{}' had connection error on write: {} {}", getThing().getUID(),
-                    getThing().getLabel(), error.getClass().getName(), error);
-        } else {
-            logger.error("Thing {} '{}' had error on write: {} {}. Stack trace follows for unexpected errors.",
-                    getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
-        }
-        DateTimeType now = new DateTimeType();
-        logger.error("Unsuccessful write: {} {}", error.getClass().getName(), error.getMessage());
-        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR, now);
-        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, String.format(
-                "Error with writing request %s: %s: %s", request, error.getClass().getName(), error.getMessage()));
-    }
-
-    @Override
-    public void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response) {
-        logger.debug("Successful write, matching request {}", request);
-        DateTimeType now = new DateTimeType();
-        updateStatus(ThingStatus.ONLINE);
-        updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS, now);
-    }
-
     private void tryUpdateState(ChannelUID uid, State state) {
         try {
             updateState(uid, state);
@@ -585,4 +601,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
     }
 
+    @Override
+    public void dispose() {
+        initSuccessful = false;
+        super.dispose();
+    }
 }
