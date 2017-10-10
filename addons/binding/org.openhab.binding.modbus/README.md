@@ -274,11 +274,11 @@ Typical use case for transformations is scaling of data. The data in Modbus slav
 ```javascript
 // Wrap everything in a function (no global variable pollution)
 // input variable contains data passed by openhab
-(function(i) {
+(function(inputData) {
     // on read: the polled number as string
     // on write: i openHAB command as string
     var DIVIDE_BY = 10;
-    return parseFloat(i) / DIVIDE_BY;
+    return parseFloat(inputData) / DIVIDE_BY;
 })(input)
 ```
 
@@ -293,9 +293,9 @@ See [Scaling example](#scaling-example) for full example with things, items and 
 // input variable i contains data passed by OpenHAB binding
 (function(inputData) {
     var out = inputData ;      // allow Undefined to pass through
-    if (i == '1' || inputData == 'ON' || inputData == 'OPEN') {
+    if (inputData == '1' || inputData == 'ON' || inputData == 'OPEN') {
     	out = '0' ;
-    } else if (i == '0' || inputData == 'OFF' || inputData == 'CLOSED') {
+    } else if (inputData == '0' || inputData == 'OFF' || inputData == 'CLOSED') {
     	out = '1' ;
     }
     return out ;      // return a string 
