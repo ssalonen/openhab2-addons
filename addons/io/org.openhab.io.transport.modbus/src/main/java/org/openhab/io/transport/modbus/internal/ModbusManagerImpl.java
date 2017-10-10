@@ -239,10 +239,9 @@ public class ModbusManagerImpl implements ModbusManager {
                 callback.onBits(message,
                         new BitArrayWrappingBitVector(bits, Math.min(bits.size(), message.getDataLength())));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_INPUT_DISCRETES) {
-                BitVector bits = ((ReadCoilsResponse) response).getCoils();
+                BitVector bits = ((ReadInputDiscretesResponse) response).getDiscretes();
                 callback.onBits(message,
-                        new BitArrayWrappingBitVector(((ReadInputDiscretesResponse) response).getDiscretes(),
-                                Math.min(bits.size(), message.getDataLength())));
+                        new BitArrayWrappingBitVector(bits, Math.min(bits.size(), message.getDataLength())));
             } else if (message.getFunctionCode() == ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS) {
                 callback.onRegisters(message, new RegisterArrayWrappingInputRegister(
                         ((ReadMultipleRegistersResponse) response).getRegisters()));
@@ -596,6 +595,7 @@ public class ModbusManagerImpl implements ModbusManager {
         ModbusManagerImpl.connectionFactory.disconnectOnReturn(task.getEndpoint(), System.currentTimeMillis());
 
         future.cancel(true);
+        scheduledThreadPoolExecutor.purge();
 
         logger.info("Poll task {} canceled", task);
 
@@ -685,37 +685,46 @@ public class ModbusManagerImpl implements ModbusManager {
     }
 
     protected void activate(Map<String, Object> configProperties) {
-        logger.info("Modbus manager activated");
-        if (connectionPool == null) {
-            constructConnectionPool();
-        }
-        if (scheduledThreadPoolExecutor == null) {
-            scheduledThreadPoolExecutor = ExpressionThreadPoolManager
-                    .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
-            scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
-        }
-        if (callbackThreadPool == null) {
-            callbackThreadPool = ThreadPoolManager.getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
+        synchronized (this) {
+            logger.info("Modbus manager activated");
+            if (connectionPool == null) {
+                constructConnectionPool();
+            }
+            if (scheduledThreadPoolExecutor == null) {
+                scheduledThreadPoolExecutor = ExpressionThreadPoolManager
+                        .getExpressionScheduledPool(MODBUS_POLLER_THREAD_POOL_NAME);
+                scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
+            }
+            if (callbackThreadPool == null) {
+                callbackThreadPool = ThreadPoolManager.getPool(MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME);
+            }
+            if (scheduledThreadPoolExecutor.isShutdown() || callbackThreadPool.isShutdown()) {
+                logger.error("Thread pool(s) shut down! Aborting activation of ModbusMangerImpl");
+                throw new IllegalStateException("Thread pool(s) shut down! Aborting activation of ModbusMangerImpl");
+            }
         }
     }
 
     protected void deactivate() {
-        if (connectionPool != null) {
-            Set<PollTask> polls = getRegisteredRegularPolls();
-            for (PollTask task : polls) {
-                unregisterRegularPoll(task);
-            }
+        synchronized (this) {
+            if (connectionPool != null) {
+                Set<PollTask> polls = getRegisteredRegularPolls();
+                for (PollTask task : polls) {
+                    unregisterRegularPoll(task);
+                }
 
-            connectionPool.close();
-            connectionPool = null;
+                connectionPool.close();
+                connectionPool = null;
+            }
+            logger.debug("Purging scheduledThreadPoolExecutor");
+            scheduledThreadPoolExecutor.purge();
+            // Note that it is not allowed to shutdown the executor, since they will be reused when
+            // ExpressionThreadPoolManager.getExpressionScheduledPool is called
+
+            scheduledThreadPoolExecutor = null;
+            callbackThreadPool = null;
+            logger.info("Modbus manager deactivated");
         }
-        logger.debug("Shutting down scheduledThreadPoolExecutor");
-        scheduledThreadPoolExecutor.shutdownNow();
-        scheduledThreadPoolExecutor = null;
-        logger.debug("Shutting down callbackThreadPool");
-        callbackThreadPool.shutdownNow();
-        callbackThreadPool = null;
-        logger.info("Modbus manager deactivated");
     }
 
     @Override
