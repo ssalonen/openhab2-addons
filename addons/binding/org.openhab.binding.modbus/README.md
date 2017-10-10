@@ -313,33 +313,76 @@ Things can be configured via the Paper UI, or using a `things` file like here.
 
 ### Basic example
 
-This example reads coils with index 4 (coil number **0**0005) and 5 (coil number **0**0006). Commands received by the Switch items are also written back to the modbus slave, using FC5 (write single coil).
+This example reads different kind of Modbus items from the slave.
 
 In addition, there is write-only entry for holding register index 5 (register number **4**0006). Holding registers are not polled and thus `Holding6writeonly` state might differ from the slave.
 
-modbus_ex1.things:
+`things/modbus_ex1.things`:
 
 ```xtend
 Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
-    Bridge poller coils [ start=4, length=2, refresh=1002, type="coil" ] {
+
+    // read-write for coils. Reading 4 coils, with index 4, and 5. 
+    // These correspond to input register numbers 000005, and 000005
+    Bridge poller coils [ start=4, length=2, refresh=1000, type="coil" ] {
         // Note the zero based indexing: first coil is index 0.
         Thing data do4 [ readStart="4", readValueType="bit", writeStart="4", writeValueType="bit", writeType="coil" ]
         Thing data do5 [ readStart="5", readValueType="bit", writeStart="5", writeValueType="bit", writeType="coil" ]
-    }   
+    }
+    // read-write for holding registers. Reading 4 registers, with index 1500, 1501, 1502, 1503. 
+    // These correspond to holding register numbers 401501, 401502, 401503, 401504.
+    Bridge poller holding [ start=1500, length=4, refresh=1000, type="holding" ] {
+        Thing data holding1500 [ readStart="1500", readValueType="float32", writeStart="1500", writeValueType="float32", writeType="holding" ]
+        Thing data holding1502 [ readStart="1502", readValueType="float32", writeStart="1502", writeValueType="float32", writeType="holding" ]
+    }
+    // read-only for input registers. Reading 4 registers, with index 1500, 1501, 1502, 1503. 
+    // These correspond to input register numbers 301501, 301502, 301503, 301504.
+    Bridge poller inputRegisters [ start=1500, length=4, refresh=1000, type="input" ] {
+        Thing data input1500 [ readStart="1500", readValueType="float32" ]
+        Thing data input1502 [ readStart="1502", readValueType="float32" ]
+        
+        // Extract high or low byte of the 16-bit register as unsigned 8-bit integer (uint8)
+        Thing data input1502lo [ readStart="1502.0", readValueType="uint8" ]
+        Thing data input1502hi [ readStart="1502.1", readValueType="uint8" ]
+
+        // Extract individual bits of the 16-bit register
+        // bit 0 is the least significant bit, and bit 15 is the most significant bit of the register
+        Thing data input1502bit0 [ readStart="1502.0", readValueType="uint8" ]
+        Thing data input1502bit1 [ readStart="1502.1", readValueType="uint8" ]
+        Thing data input1502bit2 [ readStart="1502.2", readValueType="uint8" ]
+    } 
+
+    // read-only for discrete inputs. Reading 4 discrete inputs, with index 1200, 1201, 1202, 1203. 
+    // These correspond to input register numbers 101201, 101202, 101203, 101204.
+    Bridge poller discreteInputs [ start=1200, length=4, refresh=1000, type="discrete" ] {
+        Thing data di1200 [ readStart="1200", readValueType="bit" ]
+        Thing data di1201 [ readStart="1201", readValueType="bit" ]
+    }
+
     // Write-only entry: thing is child of tcp directly. No readStart etc. need to be defined.    
     Thing data holding6write [ writeStart="5", writeValueType="int16", writeType="holding" ] 
-} 
+}
 ```
 
-modbus_ex1.items:
+`items/modbus_ex1.items`:
 
 ```xtend
-Switch DO4            "Digital I/O 4 []"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
-Switch DO5            "Digital I/O 5 []"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
-Number Holding6writeonly            "Holding index 5 [%d]"    { channel="modbus:data:localhostTCP:holding6write:number" }
+Switch DO4            "Digital Input index 4 [%d]"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
+Switch DO5            "Digital Input index 5 [%d]"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
+ 
+Contact DI1200            "Digital Input index 1200 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1200:contact" }
+Contact DI1201            "Digital Input index 1201 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1201:contact" }
+
+Number Input1500Float32            "Input registers 1500-1501 as float32 [%.1f]"    { channel="modbus:data:localhostTCP:inputRegisters:input1500:number" }
+Number Input1500Float32            "Input registers 1502-1503 as float32 [%.1f]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:number" }
+
+DateTime Input1500Float32LastOKRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadSuccess" }
+DateTime Input1500Float32LastBadRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadError" }
+
+Number Holding6writeonly            "Holding index 5 [%.1f]"    { channel="modbus:data:localhostTCP:holding6write:number" }
 ```
 
-modbus_ex1.sitemap:
+`sitemaps/modbus_ex1.sitemap`:
 
 ```xtend
 sitemap modbus_ex1 label="modbus_ex1"
@@ -348,7 +391,65 @@ sitemap modbus_ex1 label="modbus_ex1"
         Switch item=DO4
         Switch item=DO5
         Setpoint item=Holding6writeonly minValue=0 maxValue=100 step=20
+
+        Default item=DI1200
+        Default item=DI1201
+
+        Default item=Input1500Float32
+        Default item=Input1502Float32
+
+        Default item=Input1500Float32LastOKRead
+        Default item=Input1500Float32LastBadRead
+
+    } 
+}
+```
+
+### Writing to different address and type than read
+
+This updates the item from discrete input index 4, and writes commands to coil 5. This can be useful when the discrete input is the measurement (e.g. "is valve open?"), and the command is the control (e.g. "open/close valve").
+
+The sitemap shows the current coil status. It also has switches to set/reset coil status.
+
+`things/modbus_ex2.things`:
+
+```xtend
+Bridge modbus:tcp:localhostTCPex2 [ host="127.0.0.1", port=502 ] {
+
+    Bridge poller items [ start=4, length=2, refresh=1000, type="discrete" ] {
+        // read from index 4, write to coil 5
+        Thing data readDiscrete4WriteCoil5 [ readStart="4", readValueType="bit", writeStart="5", writeValueType="bit", writeType="coil" ]
+        Thing data resetCoil5 [ writeTransform="0", writeStart="5", writeValueType="bit", writeType="coil" ]
+        Thing data setCoil5 [ writeTransform="1", writeStart="5", writeValueType="bit", writeType="coil" ]
     }
+
+    Bridge poller coils [ start=5, length=1, refresh=500, type="coil" ] {
+        Thing data index5 [ readStart="5", readValueType="bit" ]
+    }
+}
+```
+
+`items/modbus_ex2.items`:
+
+```xtend
+Switch ReadDI4WriteDO5            "Coil 4/5 mix [%d]"    { channel="modbus:data:localhostTCPex2:items:readDiscrete4WriteCoil5:switch" }
+Switch ResetDO5            "Flip to turn Coil 5 OFF [%d]"    { channel="modbus:data:localhostTCPex2:items:resetCoil5:switch" }
+Switch SetDO5            "Flip to turn Coil 5 ON [%d]"    { channel="modbus:data:localhostTCPex2:items:setCoil5:switch" }
+Contact Coil5            "Coil 5 [%d]"    { channel="modbus:data:localhostTCPex2:coils:index5:contact" }
+
+```
+
+`sitemaps/modbus_ex2.sitemap`:
+
+```xtend
+sitemap modbus_ex2 label="modbus_ex2"
+{
+    Frame {
+        Switch item=ReadDI4WriteDO5
+        Switch item=ResetDO5
+        Switch item=SetDO5
+        Text item=Coil5
+    } 
 }
 ```
 
@@ -384,64 +485,9 @@ sitemap modbus_ex_scaling label="modbus_ex_scaling"
 See [transformation example](#transformation-example-scaling) for the `divide10.js` and `multiply10.js`.
 
 # OLD
+
 ### Item configuration examples
  
-
-#### Single coil/register per item
-
-```ini
-Switch MySwitch "My Modbus Switch" (ALL) {modbus="slave1:5"}
-```
-
-- This binds MySwitch to modbus slave defined as "slave1" in `modbus.cfg` reading/writing to the coil (5 + slave's `start` index). The `5` is called item read index.
-- If the slave is read-only, that is the `type` is `input` or `discrete`, the binding ignores any write commands. 
-- if the slave1 refers to registers, and after parsing using the registers as rules defined by the `valuetype`, zero value is considered as `OFF`, everything else as `ON`.
-
-#### Separate index for reading and writing
-
-```ini
-Switch MySwitch "My Modbus Switch" (ALL) {modbus="slave1:<6:>7"}
-``` 
-
-- In this case index 6 is used for reading while and commands are put to index 7.
-
-#### Index and value types
-
-```
-Number MyCounterH "My Counter high [%d]" (All) {modbus="slave3:0"}
-```
-
-this reads counter 1 high word when valuetype=`int8` or `uint8`
-
-```
-Number MyCounterL "My Counter low [%d]" (All) {modbus="slave3:1"}
-```
-
-this reads counter 1 low word when valuetype=`int8` or `uint8`
-
-#### 32bit floating point value numbers
-
-When using a float32 value you must use [%f] in item description.
-
-```
-Number MyCounter "My Counter [%f]" (All) {modbus="slave5:0"}`
-```
-
-The above reads two registers, starting from index 0 (plus slave offset `start`).
-
-#### Read-only items
-
-```
-Number NumberItem "Number [%.1f]" <temperature> {modbus="<[slave1:0]"}
-```
-
-
-#### Write-only items
-
-```
-Number NumberItem "Number [%.1f]" <temperature> {modbus=">[slave1:0]"}
-```
-
 #### Set coil to 1 on any command
 
 (inspired by [[Modbus] Coil reset only after item update to ON (OFF excepted) #4745](https://github.com/openhab/openhab1-addons/issues/4745))
