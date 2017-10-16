@@ -96,18 +96,39 @@ public final class WriteRequestJsonUtilities {
     }
 
     private static ModbusWriteRequestBlueprint constructBluerint(int unitId, JsonElement arrayElement) {
-        JsonObject writeObject = arrayElement.getAsJsonObject();
+        final JsonObject writeObject;
+        try {
+            writeObject = arrayElement.getAsJsonObject();
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("JSON array contained something else than a JSON object!", e);
+        }
         JsonElement functionCode = writeObject.get(JSON_FUNCTION_CODE);
         JsonElement address = writeObject.get(JSON_ADDRESS);
-        JsonArray valuesElem = writeObject.get(JSON_VALUE).getAsJsonArray();
+        final JsonArray valuesElem;
+
+        try {
+            valuesElem = writeObject.get(JSON_VALUE).getAsJsonArray();
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException(String.format("JSON object '%s' is not an JSON array!", JSON_VALUE), e);
+        }
         return constructBluerint(unitId, functionCode, address, valuesElem);
     }
 
     private static ModbusWriteRequestBlueprint constructBluerint(int unitId, JsonElement functionCodeElem,
             JsonElement addressElem, JsonArray valuesElem) {
-        int functionCodeNumeric = functionCodeElem.getAsInt();
+        final int functionCodeNumeric;
+        try {
+            functionCodeNumeric = functionCodeElem.getAsInt();
+        } catch (NullPointerException | ClassCastException | IllegalStateException e) {
+            throw new IllegalStateException(String.format("Value for '%s' is invalid", JSON_FUNCTION_CODE), e);
+        }
         ModbusWriteFunctionCode functionCode = ModbusWriteFunctionCode.fromFunctionCode(functionCodeNumeric);
-        int address = addressElem.getAsInt();
+        final int address;
+        try {
+            address = addressElem.getAsInt();
+        } catch (NullPointerException | ClassCastException | IllegalStateException e) {
+            throw new IllegalStateException(String.format("Value for '%s' is invalid", JSON_ADDRESS), e);
+        }
 
         AtomicBoolean writeSingle = new AtomicBoolean(false);
         switch (functionCode) {
