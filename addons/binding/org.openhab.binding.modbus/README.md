@@ -263,12 +263,11 @@ Empty JSON array (`[]`) can be used to suppress all writes. Function codes (FC) 
 [Modbus Wikipedia article](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) summarizes this excellently:
 
 > In the traditional standard, [entity] numbers for those entities start with a digit, followed by a number of four digits in range 1–9,999:
-
-> - coils numbers start with a zero and then span from 00001 to 09999
-> - discrete input numbers start with a one and then span from 10001 to 19999
-> - input register numbers start with a three and then span from 30001 to 39999
-> - holding register numbers start with a four and then span from 40001 to 49999
-
+> * coils numbers start with a zero and then span from 00001 to 09999
+> * discrete input numbers start with a one and then span from 10001 to 19999
+> * input register numbers start with a three and then span from 30001 to 39999
+> * holding register numbers start with a four and then span from 40001 to 49999
+>
 > This translates into [entity] addresses between 0 and 9,998 in data frames.
 
 The openHAB modbus binding uses data frame entity addresses when referring to modbus entities. That is, the entity address configured in modbus binding is passed to modbus protocol frame as-is. For example, Modbus `poller` thing with `start=3`, `length=2` and `type=holding` will read modbus entities with the following numbers 40004 and 40005.
@@ -556,7 +555,7 @@ The logic of processing commands are summarized in the table
 Bridge modbus:tcp:localhostTCPRollerShutter [ host="127.0.0.1", port=502 ] {
     Bridge poller holding [ start=0, length=3, refresh=1000, type="holding" ] {
         Thing data rollershutterData [ readStart="0", readValueType="int16",  writeTransform="JS(rollershutter.js)", writeType="holding" ]
-        
+
         // For diagnostics
         Thing data rollershutterDebug0 [ readStart="0", readValueType="int16", writeStart="0", writeValueType="int16", writeType="holding" ]
         Thing data rollershutterDebug1 [ readStart="1", readValueType="int16" ]
