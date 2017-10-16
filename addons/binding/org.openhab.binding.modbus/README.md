@@ -20,7 +20,8 @@ The binding can also *write* data to Modbus slaves using FC05 (Write single coil
 Please note the following caveats or limitations
 
 * the binding does *not* act as Modbus slave (e.g. as Modbus TCP server).
-* the binding does *not* support Modbus RTU over Modbus TCP, also known as "Modbus over TCP/IP" or "Modbus over TCP" or "Modbus RTU/IP", although normal "Modbus TCP" is supported.
+* the binding does *not* support Modbus RTU over Modbus TCP, also known as "Modbus over TCP/IP" or "Modbus over TCP" or "Modbus RTU/IP", although normal "Modbus TCP" is supported. However, there is a workaround: you can use a Virtual Serial Port Server, to emulate a COM Port and Bind it with OpenHab unsing Modbus Serial.
+
 
 ## Background material
 
@@ -255,6 +256,22 @@ Empty JSON array (`[]`) can be used to suppress all writes. Function codes (FC) 
 `REFRESH` command to item bound to any [data channel](#channels) makes `poller` thing to poll new from the Modbus slave. All data channels of children `data` things are refreshed per the normal logic.
 
 `REFRESH` can be useful tool if you like to refresh only on demand (`poller` has refresh disabled, i.e. `refresh=0`), or have custom logic of refreshing only in some special cases.
+
+
+#### Comment on addressing
+
+[Modbus Wikipedia article](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) summarizes this excellently:
+
+> In the traditional standard, [entity] numbers for those entities start with a digit, followed by a number of four digits in range 1–9,999:
+
+> - coils numbers start with a zero and then span from 00001 to 09999
+> - discrete input numbers start with a one and then span from 10001 to 19999
+> - input register numbers start with a three and then span from 30001 to 39999
+> - holding register numbers start with a four and then span from 40001 to 49999
+
+> This translates into [entity] addresses between 0 and 9,998 in data frames.
+
+The openHAB modbus binding uses data frame entity addresses when referring to modbus entities. That is, the entity address configured in modbus binding is passed to modbus protocol frame as-is. For example, Modbus `poller` thing with `start=3`, `length=2` and `type=holding` will read modbus entities with the following numbers 40004 and 40005.
 
 ### Transformations
 
@@ -605,111 +622,7 @@ sitemap modbus_ex_rollershutter label="modbus_ex_rollershutter" {
 
 ### Item configuration examples
 
-
-#### Rollershutter
-
-(inspired by [[modbus] enhance modbus binding for rollershutter items #4654](https://github.com/openhab/openhab1-addons/pull/4654))
-
-This is an example how different Rollershutter commands can be written to MODBUS.
-
-Roller shutter position is read from register 0, UP(=1)/DOWN(=-1) commands are written to register 1, and MOVE(=1)/STOP(=0) commands are written to register 2.
-
-default.items:
-
-```
-Rollershutter RollershutterItem "Roller shutter position [%.1f]" <temperature> {modbus="<[slave1:0], >[slave1:1:trigger=UP, transformation=1], >[slave1:1:trigger=DOWN, transformation=-1], >[slave1:2:trigger=MOVE, transformation=1], >[slave1:2:trigger=STOP, transformation=0]"}
-```
-
-default.sitemap:
-
-```
-sitemap demo label="Main Menu" {
-    Switch item=RollershutterItem label="Roller shutter [(%d)]" mappings=[UP="up", STOP="X", DOWN="down"]
-}
-```
-
-
-
 ## Details
-
-### Modbus functions supported
-
-#### Supported Modbus object types
-
-Modbus binding allows to connect to multiple Modbus slaves. The binding supports following Modbus *object types*
-
-- coils, also known as *digital out (DO)* (read & write)
-- discrete inputs, also known as *digital in (DI)* (read)
-- input registers (read)
-- holding registers (read & write)
-
-Binding can be configured to interpret values stored in the 16bit registers in different ways, e.g. as signed or unsigned integer.
-
-For more information on these object types, please consult [Modbus wikipedia article](https://en.wikipedia.org/wiki/Modbus).
-
-#### Read and write functions
-
-Modbus specification has different operations for reading and writing different object types. These types of operations are identified by *function code*. Some devices support only certain function codes.
-
-For more background information, please consult [Modbus wikipedia article](https://en.wikipedia.org/wiki/Modbus).
-
-The binding uses following function codes when communicating with the slaves:
-
-- read coils: function code (FC) 1 (*Read Coils*)
-- write coil: FC 5  (*Write Single Coil*)
-- read discrete inputs: FC 2 (*Read Discrete Inputs*)
-- read input registers: FC 4 (*Read Input Registers*)
-- read holding registers: FC 3 (*Read Multiple Holding Registers*)
-- write holding register: FC 6 (*Write Single Holding Register*), OR  FC 16 (*Write Multiple Holding Registers*) (see note on `writemultipleregisters` configuration parameter below)
-
-### Comment on addressing
-
-[Modbus Wikipedia article](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) summarizes this excellently:
-
-> In the traditional standard, [entity] numbers for those entities start with a digit, followed by a number of four digits in range 1–9,999:
-
-> - coils numbers start with a zero and then span from 00001 to 09999
-> - discrete input numbers start with a one and then span from 10001 to 19999
-> - input register numbers start with a three and then span from 30001 to 39999
-> - holding register numbers start with a four and then span from 40001 to 49999
-
-> This translates into [entity] addresses between 0 and 9,998 in data frames.
-
-The openHAB modbus binding uses data frame entity addresses when referring to modbus entities. That is, the entity address configured in modbus binding is passed to modbus protocol frame as-is. For example, modbus slave definition with `start=3`, `length=2` and `type=holding` will read modbus entities with the following numbers 40004 and 40005.
-
-### Many modbus binding slaves for single physical slave
-
-One needs to configure as many modbus slaves to openHAB as there are corresponding modbus requests. For example, in order to poll status of `coil` and `holding` items from a single [physical] modbus slave, two separate modbus slave definitions need to be configured in the `modbus.cfg`. For example:
-
-```
-serial.slave1.connection=/dev/pts/8:38400:8:none:1:rtu
-serial.slave1.type=coil
-serial.slave1.length=3
-
-serial.slave2.connection=/dev/pts/8:38400:8:none:1:rtu
-serial.slave2.type=holding
-serial.slave2.length=5
-```
-
-Please note that the binding requires that all slaves connecting to the same serial port share the same connection parameters (e.g. baud-rate, parity, ..). In particular are different parameter settings considered bad practice, because they can confuse the instances (slaves) on the modbus.  For additional information, see [this discussion](https://community.openHAB.org/t/connection-pooling-in-modbus-binding/5246/161?u=ssalonen) in the community forums.
-
-Similarly, one must have identical connection parameters for all tcp slaves connecting to same host+port.
-
-### Read and write functions (modbus slave type)
-
-Modbus read functions
-
-- `type=coil` uses function 1 "Read Coil Status"
-- `type=discrete` uses function 2 "Read Input Status" (readonly inputs)
-- `type=holding` uses function 3, "Read Holding Registers"
-- `type=input` uses function 4 "Read Input Register" (readonly-registers eG analogue inputs)
-
-Modbus write functions
-
-- `type=coil` uses function 5 "Write Single Coil"
-- `type=holding` uses function 6 "Write Single Register", or function 16 "Write Multiple registers" when `writemultipleregisters` is `true`
-
-See also [simplymodbus.ca](http://www.simplymodbus.ca) and [wikipedia article](https://en.wikipedia.org/wiki/Modbus#Supported_function_codes).
 
 
 ### Register interpretation (valuetype) on read & write
