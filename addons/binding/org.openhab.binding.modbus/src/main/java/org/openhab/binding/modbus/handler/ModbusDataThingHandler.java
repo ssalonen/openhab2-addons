@@ -113,7 +113,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     private boolean isReadOnly() {
-        return writeStart == null || StringUtils.isBlank(config.getWriteType());
+        return StringUtils.isBlank(config.getWriteType());
     }
 
     private boolean isWriteOnly() {
@@ -137,9 +137,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             manager.submitOneTimePoll(pollTask);
             return;
         } else if (isReadOnly()) {
-            logger.trace(
-                    "Thing '{}' command '{}' to channel '{}': no writeStart or writeType configured -> aborting processing command",
-                    getThing().getLabel(), command, channelUID);
+            logger.warn(
+                    "Thing {} '{}' command '{}' to channel '{}': no writeType configured -> aborting processing command",
+                    getThing().getUID(), getThing().getLabel(), command, channelUID);
             return;
         }
 
@@ -158,6 +158,15 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                         transformedCommand.map(c -> c.toString()).orElse("<conversion failed>"),
                         transformedCommand.map(c -> c.getClass().getName()).orElse("<conversion failed>"));
             }
+        }
+
+        // We did not have JSON output from the transformation, so writeStart is absolute required. Abort if it is
+        // missing
+        if (writeStart == null) {
+            logger.warn(
+                    "Thing {} '{}': not processing command {} since writeStart is missing and transformation output is not a JSON",
+                    getThing().getUID(), getThing().getLabel(), command);
+            return;
         }
 
         if (!transformedCommand.isPresent()) {
