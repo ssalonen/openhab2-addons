@@ -238,7 +238,7 @@ public class Transformation {
         State transformedState = TypeParser.parseState(types, transformed);
         if (transformedState == null) {
             logger.debug(
-                    "Could not transform item state '{}' (of type {}) to a State (tried the following types: {})! Command as string '{}', "
+                    "Could not transform item state '{}' (of type {}) to a State (tried the following types: {})! Input state as string '{}', "
                             + "transformed string '{}', transformation '{}'",
                     state, state.getClass().getSimpleName(), types, stateAsString, transformed, transformation);
         } else {
