@@ -269,7 +269,7 @@ public class ModbusSlaveConnectionFactoryImpl
         try {
             Thread.sleep(millisToWaitStill);
         } catch (InterruptedException e) {
-            logger.error("wait interrupted: {}", e.getMessage());
+            logger.debug("wait interrupted: {}", e);
         }
         return millisToWaitStill;
     }
