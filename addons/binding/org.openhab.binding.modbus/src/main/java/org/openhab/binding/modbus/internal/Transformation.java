@@ -229,10 +229,8 @@ public class Transformation {
      * @return Transformed command, or null if no transformation was possible
      */
     public State transformState(BundleContext context, List<Class<? extends State>> types, State state) {
-        // if (isIdentityTransform()) {
-        // // optimization, do not convert state->string->state if the transformation is identity transform
-        // return state;
-        // }
+        // Note that even identity transformations go through the State -> String -> State steps. This does add some
+        // overhead but takes care of DecimalType -> PercentType conversions, for example.
         final String stateAsString = state.toString();
         final String transformed = transform(context, stateAsString);
         State transformedState = TypeParser.parseState(types, transformed);
