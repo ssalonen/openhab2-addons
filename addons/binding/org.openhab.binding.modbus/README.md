@@ -33,6 +33,7 @@ Reader of the documentation should understand the basics of Modbus protocol. Go
 Useful tools
 
 * [binaryconvert.com](http://www.binaryconvert.com/): tool to convert numbers between different binary presentations
+* [rapidscada.net Modbus parser](http://modbus.rapidscada.net/): tool to parse Modbus requests and responses. Useful for debugging purposes when you want to understand the message sent / received.
 
 ## Supported Things
 
