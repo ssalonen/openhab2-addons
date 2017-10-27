@@ -506,6 +506,10 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         if (!initSuccessful) {
             return;
         }
+        if (isWriteOnly()) {
+            // Ignore read errors with write-only items
+            return;
+        }
         if (error instanceof ModbusConnectionException) {
             logger.error("Thing {} '{}' had connection error on read: {} ({})", getThing().getUID(),
                     getThing().getLabel(), error, error.getClass().getSimpleName());
@@ -535,6 +539,10 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     @Override
     public void onError(ModbusWriteRequestBlueprint request, Exception error) {
         if (!initSuccessful) {
+            return;
+        }
+        if (isReadOnly()) {
+            // Ignore write errors with read-only items (this should not happen)
             return;
         }
         if (error instanceof ModbusConnectionException) {
