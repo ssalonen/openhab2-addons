@@ -10,7 +10,7 @@ public class ModbusDataConfiguration {
     private String writeTransform;
     private String writeValueType;
     private boolean writeMultipleEvenWithSingleRegisterOrCoil;
-    private int writeMaxTries = 1; // backwards compatibility and tests
+    private int writeMaxTries = 3; // backwards compatibility and tests
 
     public String getReadStart() {
         return readStart;
