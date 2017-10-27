@@ -380,45 +380,45 @@ Please refer to the comments for more explanations.
 ```xtend
 Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
 
-    // read-write for coils. Reading 4 coils, with index 4, and 5.
+    // read-write for coils. Reading 4 coils, with index 4, and 5. 
     // These correspond to input register numbers 000005, and 000005
     Bridge poller coils [ start=4, length=2, refresh=1000, type="coil" ] {
         // Note the zero based indexing: first coil is index 0.
         Thing data do4 [ readStart="4", readValueType="bit", writeStart="4", writeValueType="bit", writeType="coil" ]
         Thing data do5 [ readStart="5", readValueType="bit", writeStart="5", writeValueType="bit", writeType="coil" ]
     }
-    // read-write for holding registers. Reading 4 registers, with index 1500, 1501, 1502, 1503.
+    // read-write for holding registers. Reading 4 registers, with index 1500, 1501, 1502, 1503. 
     // These correspond to holding register numbers 401501, 401502, 401503, 401504.
     Bridge poller holding [ start=1500, length=4, refresh=1000, type="holding" ] {
         Thing data holding1500 [ readStart="1500", readValueType="float32", writeStart="1500", writeValueType="float32", writeType="holding" ]
         Thing data holding1502 [ readStart="1502", readValueType="float32", writeStart="1502", writeValueType="float32", writeType="holding" ]
     }
-    // read-only for input registers. Reading 4 registers, with index 1500, 1501, 1502, 1503.
+    // read-only for input registers. Reading 4 registers, with index 1500, 1501, 1502, 1503. 
     // These correspond to input register numbers 301501, 301502, 301503, 301504.
     Bridge poller inputRegisters [ start=1500, length=4, refresh=1000, type="input" ] {
         Thing data input1500 [ readStart="1500", readValueType="float32" ]
         Thing data input1502 [ readStart="1502", readValueType="float32" ]
-
+        
         // Extract high or low byte of the 16-bit register as unsigned 8-bit integer (uint8)
         Thing data input1502lo [ readStart="1502.0", readValueType="uint8" ]
         Thing data input1502hi [ readStart="1502.1", readValueType="uint8" ]
 
         // Extract individual bits of the 16-bit register
-        // bit 0 is the least significant bit, and bit 15 is the most significant bit of the register
-        Thing data input1502bit0 [ readStart="1502.0", readValueType="uint8" ]
-        Thing data input1502bit1 [ readStart="1502.1", readValueType="uint8" ]
-        Thing data input1502bit2 [ readStart="1502.2", readValueType="uint8" ]
-    }
+        // bit 0 is the least significant bit, and bit 15 is the most significant bit
+        Thing data input1502bit0 [ readStart="1502.0", readValueType="bit" ]
+        Thing data input1502bit1 [ readStart="1502.1", readValueType="bit" ]
+        Thing data input1502bit2 [ readStart="1502.2", readValueType="bit" ]
+    } 
 
-    // read-only for discrete inputs. Reading 4 discrete inputs, with index 1200, 1201, 1202, 1203.
+    // read-only for discrete inputs. Reading 4 discrete inputs, with index 1200, 1201, 1202, 1203. 
     // These correspond to input register numbers 101201, 101202, 101203, 101204.
     Bridge poller discreteInputs [ start=1200, length=4, refresh=1000, type="discrete" ] {
         Thing data di1200 [ readStart="1200", readValueType="bit" ]
         Thing data di1201 [ readStart="1201", readValueType="bit" ]
     }
 
-    // Write-only entry: thing is child of tcp directly. No readStart etc. need to be defined.
-    Thing data holding6write [ writeStart="5", writeValueType="int16", writeType="holding" ]
+    // Write-only entry: thing is child of tcp directly. No readStart etc. need to be defined.    
+    Thing data holding6write [ writeStart="5", writeValueType="int16", writeType="holding" ] 
 }
 ```
 
