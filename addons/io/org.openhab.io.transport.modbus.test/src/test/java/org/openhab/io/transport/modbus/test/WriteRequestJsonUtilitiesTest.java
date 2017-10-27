@@ -33,8 +33,21 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [3]"//
                 + "}]").toArray(),
+                arrayContaining((Matcher) new RegisterMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
+                        ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER, 3)));
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testFC6SingleRegisterMaxTries99() {
+        assertThat(WriteRequestJsonUtilities.fromJson(55, "[{"//
+                + "\"functionCode\": 6,"//
+                + "\"address\": 5412,"//
+                + "\"value\": [3],"//
+                + "\"maxTries\": 99"//
+                + "}]").toArray(),
                 arrayContaining(
-                        (Matcher) new RegisterMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER, 3)));
+                        (Matcher) new RegisterMatcher(55, 5412, 99, ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER, 3)));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -63,8 +76,8 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [3]"//
                 + "}]").toArray(),
-                arrayContaining(
-                        (Matcher) new RegisterMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS, 3)));
+                arrayContaining((Matcher) new RegisterMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
+                        ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS, 3)));
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -75,7 +88,7 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [3, 4, 2]"//
                 + "}]").toArray(),
-                arrayContaining((Matcher) new RegisterMatcher(55, 5412,
+                arrayContaining((Matcher) new RegisterMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
                         ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS, 3, 4, 2)));
     }
 
@@ -87,7 +100,8 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [3]" // value 3 (!= 0) is converted to boolean true
                 + "}]").toArray(),
-                arrayContaining((Matcher) new CoilMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_COIL, true)));
+                arrayContaining((Matcher) new CoilMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
+                        ModbusWriteFunctionCode.WRITE_COIL, true)));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -107,8 +121,8 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [3]"//
                 + "}]").toArray(),
-                arrayContaining(
-                        (Matcher) new CoilMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS, true)));
+                arrayContaining((Matcher) new CoilMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
+                        ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS, true)));
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -119,8 +133,8 @@ public class WriteRequestJsonUtilitiesTest {
                 + "\"address\": 5412,"//
                 + "\"value\": [1, 0, 5]"//
                 + "}]").toArray(),
-                arrayContaining((Matcher) new CoilMatcher(55, 5412, ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS, true,
-                        false, true)));
+                arrayContaining((Matcher) new CoilMatcher(55, 5412, WriteRequestJsonUtilities.DEFAULT_MAX_TRIES,
+                        ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS, true, false, true)));
     }
 
     @Test(expected = IllegalStateException.class)

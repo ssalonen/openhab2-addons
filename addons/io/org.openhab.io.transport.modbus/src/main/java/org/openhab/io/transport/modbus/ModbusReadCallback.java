@@ -17,7 +17,7 @@ import net.wimpi.modbus.ModbusException;
  *
  * @author Sami Salonen
  */
-public interface ModbusReadCallback {
+public interface ModbusReadCallback extends ModbusCallback {
 
     /**
      * Callback for "input register" and "holding register" data in the case of no errors

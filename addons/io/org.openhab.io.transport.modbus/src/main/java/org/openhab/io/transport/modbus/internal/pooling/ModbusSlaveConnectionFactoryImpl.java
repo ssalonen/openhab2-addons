@@ -204,7 +204,11 @@ public class ModbusSlaveConnectionFactoryImpl
     }
 
     public void setEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration config) {
-        endpointPoolConfigs.put(endpoint, config);
+        if (config == null) {
+            endpointPoolConfigs.remove(endpoint);
+        } else {
+            endpointPoolConfigs.put(endpoint, config);
+        }
     }
 
     public EndpointPoolConfiguration getEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint) {
@@ -260,7 +264,7 @@ public class ModbusSlaveConnectionFactoryImpl
         } while (true);
     }
 
-    private long waitAtleast(Long lastOperation, long waitMillis) {
+    public static long waitAtleast(Long lastOperation, long waitMillis) {
         if (lastOperation == null) {
             return 0;
         }

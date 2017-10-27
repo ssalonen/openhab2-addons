@@ -10,9 +10,9 @@ class RegisterMatcher extends AbstractRequestComparer<ModbusWriteRegisterRequest
 
     private Integer[] expectedRegisterValues;
 
-    public RegisterMatcher(int expectedUnitId, int expectedAddress, ModbusWriteFunctionCode expectedFunctionCode,
-            Integer... expectedRegisterValues) {
-        super(expectedUnitId, expectedAddress, expectedFunctionCode);
+    public RegisterMatcher(int expectedUnitId, int expectedAddress, int expectedMaxTries,
+            ModbusWriteFunctionCode expectedFunctionCode, Integer... expectedRegisterValues) {
+        super(expectedUnitId, expectedAddress, expectedFunctionCode, expectedMaxTries);
         this.expectedRegisterValues = expectedRegisterValues;
     }
 

@@ -8,8 +8,6 @@
  */
 package org.openhab.io.transport.modbus;
 
-import net.wimpi.modbus.ModbusException;
-
 /**
  * <p>
  * ModbusWriteCallback interface.
@@ -17,7 +15,7 @@ import net.wimpi.modbus.ModbusException;
  *
  * @author Sami Salonen
  */
-public interface ModbusWriteCallback {
+public interface ModbusWriteCallback extends ModbusCallback {
 
     /**
      * Callback handler method for cases when an error occurred with write
@@ -26,7 +24,7 @@ public interface ModbusWriteCallback {
      *
      * @request ModbusWriteRequestBlueprint representing the request
      * @param Exception representing the issue with the request. Instance of
-     *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusException}.
+     *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusTransportException}.
      */
     void onError(ModbusWriteRequestBlueprint request, Exception error);
 
@@ -39,4 +37,5 @@ public interface ModbusWriteCallback {
      * @param response response matching the write request
      */
     void onWriteResponse(ModbusWriteRequestBlueprint request, ModbusResponse response);
+
 }

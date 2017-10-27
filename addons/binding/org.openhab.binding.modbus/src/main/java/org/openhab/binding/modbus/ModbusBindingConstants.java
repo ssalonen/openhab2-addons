@@ -27,9 +27,6 @@ public class ModbusBindingConstants {
     public static final ThingTypeUID THING_TYPE_MODBUS_TCP = new ThingTypeUID(BINDING_ID, "tcp");
     public static final ThingTypeUID THING_TYPE_MODBUS_SERIAL = new ThingTypeUID(BINDING_ID, "serial");
     public static final ThingTypeUID THING_TYPE_MODBUS_POLLER = new ThingTypeUID(BINDING_ID, "poller");
-    public static final ThingTypeUID THING_TYPE_MODBUS_WRITE = new ThingTypeUID(BINDING_ID, "write");
-    public static final ThingTypeUID THING_TYPE_MODBUS_READ = new ThingTypeUID(BINDING_ID, "read");
-    public static final ThingTypeUID THING_TYPE_MODBUS_READ_WRITE = new ThingTypeUID(BINDING_ID, "readwrite");
     public static final ThingTypeUID THING_TYPE_MODBUS_DATA = new ThingTypeUID(BINDING_ID, "data");
 
     // List of all Channel ids

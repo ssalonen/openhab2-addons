@@ -54,6 +54,7 @@ import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusResponse;
+import org.openhab.io.transport.modbus.ModbusTransportException;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprintImpl;
@@ -186,11 +187,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 return;
             }
             boolean data = commandAsBoolean.get();
-            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, writeStart, data, false);
+            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, writeStart, data, false,
+                    config.getWriteMaxTries());
         } else if (config.getWriteType().equals(WRITE_TYPE_HOLDING)) {
             ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(), writeValueType);
             boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegisterOrCoil() || data.size() > 1;
-            request = new ModbusWriteRegisterRequestBlueprintImpl(slaveId, writeStart, data, writeMultiple);
+            request = new ModbusWriteRegisterRequestBlueprintImpl(slaveId, writeStart, data, writeMultiple,
+                    config.getWriteMaxTries());
         } else {
             // should not happen
             throw new NotImplementedException();
@@ -504,10 +507,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
         if (error instanceof ModbusConnectionException) {
-            logger.error("Thing {} '{}' had connection error on read: {} {}", getThing().getUID(),
-                    getThing().getLabel(), error.getClass().getName(), error);
+            logger.error("Thing {} '{}' had connection error on read: {} ({})", getThing().getUID(),
+                    getThing().getLabel(), error, error.getClass().getSimpleName());
+        } else if (error instanceof ModbusTransportException) {
+            logger.error("Thing {} '{}' had error on read: {} {}", getThing().getUID(), getThing().getLabel(),
+                    error.getClass().getSimpleName(), error.getMessage());
         } else {
-            logger.error("Thing {} '{}' had error on read: {} {}. Stack trace follows for unexpected errors.",
+            logger.error("Thing {} '{}' had error on read: {} {}. Stack trace follows since this is unexpected error.",
                     getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
         }
         Map<ChannelUID, State> states = new HashMap<>();
@@ -532,10 +538,13 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
         if (error instanceof ModbusConnectionException) {
-            logger.error("Thing {} '{}' had connection error on write: {} {}", getThing().getUID(),
-                    getThing().getLabel(), error.getClass().getName(), error);
+            logger.error("Thing {} '{}' had connection error on write: {} ({})", getThing().getUID(),
+                    getThing().getLabel(), error, error.getClass().getSimpleName());
+        } else if (error instanceof ModbusTransportException) {
+            logger.error("Thing {} '{}' had error on write: {} {}", getThing().getUID(), getThing().getLabel(),
+                    error.getClass().getSimpleName(), error.getMessage());
         } else {
-            logger.error("Thing {} '{}' had error on write: {} {}. Stack trace follows for unexpected errors.",
+            logger.error("Thing {} '{}' had error on write: {} {}. Stack trace follows since this is unexpected error.",
                     getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
         }
         DateTimeType now = new DateTimeType();
@@ -630,4 +639,5 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         initSuccessful = false;
         super.dispose();
     }
+
 }

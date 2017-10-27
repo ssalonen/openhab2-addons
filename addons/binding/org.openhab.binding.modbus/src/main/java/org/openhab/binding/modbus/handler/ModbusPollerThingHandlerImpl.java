@@ -19,6 +19,7 @@ import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.openhab.binding.modbus.ModbusBindingConstants;
@@ -42,8 +43,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Sami Salonen - Initial contribution
  */
-public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
-        implements ModbusPollerThingHandler, BridgeChangedListener {
+public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements ModbusPollerThingHandler {
 
     /**
      * {@link ModbusReadCallback} that delegates all tasks forward.
@@ -60,7 +60,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         private void forEachAllChildCallbacks(Consumer<ModbusReadCallback> callback) {
             getThing().getThings().stream()
                     .filter(thing -> thing.getHandler() != null && thing.getHandler() instanceof ModbusReadCallback)
-                    .map(thing -> (ModbusReadCallback) thing.getHandler()).forEach(callback);
+                    .forEach(thing -> callback.accept((ModbusReadCallback) thing.getHandler()));
         }
 
         @Override
@@ -126,7 +126,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         public ModbusPollerReadRequest(ModbusPollerConfiguration config,
                 ModbusEndpointThingHandler slaveEndpointThingHandler) {
             super(slaveEndpointThingHandler.getSlaveId(), getFunctionCode(config.getType()), config.getStart(),
-                    config.getLength());
+                    config.getLength(), config.getMaxTries());
         }
     }
 
@@ -180,7 +180,7 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         logger.debug("initialize()");
         try {
             config = getConfigAs(ModbusPollerConfiguration.class);
-            registerPollTask(true);
+            registerPollTask();
         } catch (Exception e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     String.format("%s (%s)", e.getMessage(), e.getClass().getSimpleName()));
@@ -190,20 +190,10 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
     @Override
     public synchronized void dispose() {
         logger.debug("dispose()");
-        unregisterPollTask(true);
+        unregisterPollTask();
     }
 
-    @Override
-    public void bridgeChanged(ThingStatus bridgeStatus) {
-        if (bridgeStatus == ThingStatus.OFFLINE) {
-            unregisterPollTask(true);
-        } else if (bridgeStatus == ThingStatus.ONLINE) {
-            unregisterPollTask(false);
-            registerPollTask(true);
-        }
-    }
-
-    public synchronized void unregisterPollTask(boolean notifyChildren) {
+    public synchronized void unregisterPollTask() {
         logger.trace("unregisterPollTask()");
         if (pollTask == null || config == null) {
             return;
@@ -212,18 +202,12 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         managerRef.get().unregisterRegularPoll(pollTask);
         pollTask = null;
         updateStatus(ThingStatus.OFFLINE);
-        if (notifyChildren) {
-            notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
-        }
     }
 
-    private synchronized void registerPollTask(boolean notifyChildren) {
+    private synchronized void registerPollTask() {
         logger.trace("registerPollTask()");
         if (pollTask != null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR);
-            if (notifyChildren) {
-                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
-            }
             throw new IllegalStateException("pollTask should be unregistered before registering a new one!");
         }
 
@@ -232,9 +216,6 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
                     String.format("Bridge '%s' is offline", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
             logger.debug("No bridge handler available -- aborting init for {}", this);
-            if (notifyChildren) {
-                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
-            }
             return;
         }
         ModbusSlaveEndpoint endpoint = slaveEndpointThingHandler.asSlaveEndpoint();
@@ -242,9 +223,6 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, String.format(
                     "Bridge '%s' not completely initialized", Optional.ofNullable(getBridge()).map(b -> b.getLabel())));
             logger.debug("Bridge not initialized fully (no endpoint) -- aborting init for {}", this);
-            if (notifyChildren) {
-                notifyChildrenBridgeChanged(ThingStatus.OFFLINE);
-            }
             return;
         }
 
@@ -254,16 +232,10 @@ public class ModbusPollerThingHandlerImpl extends AbstractModbusBridgeThing
         if (config.getRefresh() <= 0L) {
             logger.debug("Not registering polling with ModbusManager since refresh disabled");
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE, "Not polling");
-            if (notifyChildren) {
-                notifyChildrenBridgeChanged(ThingStatus.ONLINE);
-            }
         } else {
             logger.debug("Registering polling with ModbusManager");
             managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
             updateStatus(ThingStatus.ONLINE);
-            if (notifyChildren) {
-                notifyChildrenBridgeChanged(ThingStatus.ONLINE);
-            }
         }
     }
 

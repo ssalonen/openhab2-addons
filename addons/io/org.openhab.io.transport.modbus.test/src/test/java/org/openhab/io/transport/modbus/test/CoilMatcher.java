@@ -10,9 +10,9 @@ class CoilMatcher extends AbstractRequestComparer<ModbusWriteCoilRequestBlueprin
 
     private Boolean[] expectedCoils;
 
-    public CoilMatcher(int expectedUnitId, int expectedAddress, ModbusWriteFunctionCode expectedFunctionCode,
-            Boolean... expectedCoils) {
-        super(expectedUnitId, expectedAddress, expectedFunctionCode);
+    public CoilMatcher(int expectedUnitId, int expectedAddress, int expectedMaxTries,
+            ModbusWriteFunctionCode expectedFunctionCode, Boolean... expectedCoils) {
+        super(expectedUnitId, expectedAddress, expectedFunctionCode, expectedMaxTries);
         this.expectedCoils = expectedCoils;
     }
 

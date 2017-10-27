@@ -56,23 +56,30 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
     private int reference;
     private BitArray bits;
     private boolean writeMultiple;
+    private int maxTries;
 
-    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data, boolean writeMultiple) {
-        this(slaveId, reference, new SingleBitArray(data), writeMultiple);
+    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data, boolean writeMultiple,
+            int maxTries) {
+        this(slaveId, reference, new SingleBitArray(data), writeMultiple, maxTries);
     }
 
-    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, BitArray data, boolean writeMultiple) {
+    public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, BitArray data, boolean writeMultiple,
+            int maxTries) {
         super();
         this.slaveId = slaveId;
         this.reference = reference;
         this.bits = data;
         this.writeMultiple = writeMultiple;
+        this.maxTries = maxTries;
 
         if (!writeMultiple && bits.size() > 1) {
             throw new IllegalArgumentException("With multiple coils, writeMultiple must be true");
         }
         if (bits.size() == 0) {
             throw new IllegalArgumentException("Must have at least one bit");
+        }
+        if (maxTries <= 0) {
+            throw new IllegalArgumentException("maxTries should be positive, was " + maxTries);
         }
     }
 
@@ -97,8 +104,13 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
     }
 
     @Override
+    public int getMaxTries() {
+        return maxTries;
+    }
+
+    @Override
     public String toString() {
         return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId).append("reference", reference)
-                .append("functionCode", getFunctionCode()).append("bits", bits).toString();
+                .append("functionCode", getFunctionCode()).append("bits", bits).append("maxTries", maxTries).toString();
     }
 }

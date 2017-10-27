@@ -12,6 +12,7 @@ import java.lang.ref.WeakReference;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
@@ -24,6 +25,31 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
  */
 public interface ModbusManager {
 
+    public interface TaskWithEndpoint<R, C extends ModbusCallback> {
+        /**
+         * Gets endpoint associated with this task
+         *
+         * @return
+         */
+        ModbusSlaveEndpoint getEndpoint();
+
+        /**
+         * Gets request associated with this task
+         *
+         * @return
+         */
+        R getRequest();
+
+        /**
+         * Gets callback associated with this task, will be called with response
+         *
+         * @return
+         */
+        WeakReference<C> getCallback();
+
+        int getMaxTries();
+    }
+
     /**
      * Poll task represents modbus read request
      *
@@ -34,27 +60,11 @@ public interface ModbusManager {
      *
      * @see ModbusManager.registerRegularPoll
      */
-    public interface PollTask {
-        /**
-         * Gets endpoint associated with this poll task
-         *
-         * @return
-         */
-        ModbusSlaveEndpoint getEndpoint();
-
-        /**
-         * Gets request associated with this poll task
-         *
-         * @return
-         */
-        ModbusReadRequestBlueprint getRequest();
-
-        /**
-         * Gets callback that will be called with the response
-         *
-         * @return
-         */
-        WeakReference<ModbusReadCallback> getCallback();
+    public interface PollTask extends TaskWithEndpoint<ModbusReadRequestBlueprint, ModbusReadCallback> {
+        @Override
+        default int getMaxTries() {
+            return getRequest().getMaxTries();
+        }
     }
 
     /**
@@ -65,27 +75,11 @@ public interface ModbusManager {
      * @author Sami Salonen
      *
      */
-    public interface WriteTask {
-        /**
-         * Gets endpoint associated with this write task
-         *
-         * @return
-         */
-        ModbusSlaveEndpoint getEndpoint();
-
-        /**
-         * Gets request associated with this write task
-         *
-         * @return
-         */
-        ModbusWriteRequestBlueprint getRequest();
-
-        /**
-         * Gets callback that will be called with the response
-         *
-         * @return
-         */
-        WeakReference<ModbusWriteCallback> getCallback();
+    public interface WriteTask extends TaskWithEndpoint<ModbusWriteRequestBlueprint, ModbusWriteCallback> {
+        @Override
+        default int getMaxTries() {
+            return getRequest().getMaxTries();
+        }
     }
 
     /**
@@ -94,7 +88,7 @@ public interface ModbusManager {
      * @param task
      * @return
      */
-    public ScheduledFuture<?> submitOneTimePoll(PollTask task);
+    public ScheduledFuture<?> submitOneTimePoll(@NonNull PollTask task);
 
     /**
      * Register regularly polled task. The method returns immediately
@@ -102,7 +96,7 @@ public interface ModbusManager {
      * @param task
      * @return
      */
-    public void registerRegularPoll(PollTask task, long pollPeriodMillis, long initialDelayMillis);
+    public void registerRegularPoll(@NonNull PollTask task, long pollPeriodMillis, long initialDelayMillis);
 
     /**
      * Unregister regularly polled task
@@ -111,29 +105,30 @@ public interface ModbusManager {
      * @return whether poll task was unregistered. Poll task is not unregistered in case of unexpected errors or
      *         non-existing poll task
      */
-    public boolean unregisterRegularPoll(PollTask task);
+    public boolean unregisterRegularPoll(@NonNull PollTask task);
 
-    public ScheduledFuture<?> submitOneTimeWrite(WriteTask task);
+    public ScheduledFuture<?> submitOneTimeWrite(@NonNull WriteTask task);
 
     /**
      * Configure general connection settings with a given endpoint
      *
-     * @param endpoint
-     * @param configuration
+     * @param endpoint endpoint to configure
+     * @param configuration configuration for the endpoint. Use null to reset the configuration to default.
      */
-    public void setEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration configuration);
+    public void setEndpointPoolConfiguration(@NonNull ModbusSlaveEndpoint endpoint,
+            EndpointPoolConfiguration configuration);
 
-    public EndpointPoolConfiguration getEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint);
+    public EndpointPoolConfiguration getEndpointPoolConfiguration(@NonNull ModbusSlaveEndpoint endpoint);
 
-    public void addListener(ModbusManagerListener listener);
+    public void addListener(@NonNull ModbusManagerListener listener);
 
-    public void removeListener(ModbusManagerListener listener);
+    public void removeListener(@NonNull ModbusManagerListener listener);
 
     /**
      * Get registered regular polls
      *
      * @return set of registered regular polls
      */
-    public Set<PollTask> getRegisteredRegularPolls();
+    public Set<@NonNull PollTask> getRegisteredRegularPolls();
 
 }
