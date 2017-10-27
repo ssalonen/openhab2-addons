@@ -34,6 +34,7 @@ Useful tools
 
 * [binaryconvert.com](http://www.binaryconvert.com/): tool to convert numbers between different binary presentations
 * [rapidscada.net Modbus parser](http://modbus.rapidscada.net/): tool to parse Modbus requests and responses. Useful for debugging purposes when you want to understand the message sent / received.
+* [JSFiddle tool](https://jsfiddle.net/rgypuuxq/) to test JavaScript (JS) transformations interactively
 
 ## Supported Things
 
@@ -297,6 +298,8 @@ Note that transformation is only one part of the overall process how polled data
 
 Please also note that you should install relevant transformations, as necessary. For example, `openhab-transformation-javascript` feature provides the javascript (`JS`) transformation.
 
+#### Transform on read
+
 **`readTransform`** can be used to transform the polled data, after a number is extracted from the polled data using `readValueType` and `readStart` (consult [Read steps](#read-steps)).
 
 There are three different format to specify the configuration:
@@ -304,6 +307,10 @@ There are three different format to specify the configuration:
 1. String `"default"`, in which case the default transformation is used. The default is to convert non-zero numbers to `ON`/`OPEN`, and zero numbers to `OFF`/`CLOSED`, respectively. If the item linked to the data channel does not accept these states, the number is converted to best-effort-basis to the states accepted by the item. For example, the extracted number is passed as-is for `Number` items, while `ON`/`OFF` would be used with `DimmerItem`.
 1. `"SERVICENAME(ARG)"` for calling a transformation service. The transformation receives the extracted number as input. This is useful for example scaling (divide by x) the polled data before it is used in openHAB. See examples for more details.
 1. Any other value is interpreted as static text, in which case the actual content of the polled value is ignored. Transformation result is always the same. The transformation output is converted to best-effort-basis to the states accepted by the item.
+
+Consult [background documentation on items](http://docs.openhab.org/concepts/items.html) to understand accepted data types (state) by each item.
+
+#### Transform on write
 
 **`writeTransform`** can be used to transform the openHAB command before it is converted to actual binary data (see [Write steps](#write-steps)).
 
@@ -418,7 +425,7 @@ Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
     }
 
     // Write-only entry: thing is child of tcp directly. No readStart etc. need to be defined.    
-    Thing data holding6write [ writeStart="5", writeValueType="int16", writeType="holding" ] 
+    Thing data holding5write [ writeStart="5", writeValueType="int16", writeType="holding" ] 
 }
 ```
 
@@ -427,17 +434,17 @@ Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
 ```xtend
 Switch DO4            "Digital Input index 4 [%d]"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
 Switch DO5            "Digital Input index 5 [%d]"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
-
+ 
 Contact DI1200            "Digital Input index 1200 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1200:contact" }
 Contact DI1201            "Digital Input index 1201 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1201:contact" }
 
 Number Input1500Float32            "Input registers 1500-1501 as float32 [%.1f]"    { channel="modbus:data:localhostTCP:inputRegisters:input1500:number" }
-Number Input1500Float32            "Input registers 1502-1503 as float32 [%.1f]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:number" }
+Number Input1502Float32            "Input registers 1502-1503 as float32 [%.1f]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:number" }
 
-DateTime Input1500Float32LastOKRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadSuccess" }
-DateTime Input1500Float32LastBadRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadError" }
+DateTime Input1502Float32LastOKRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadSuccess" }
+DateTime Input1502Float32LastBadRead            "Input registers 1502-1503 last read [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM:%1$tS]"    { channel="modbus:data:localhostTCP:inputRegisters:input1502:lastReadError" }
 
-Number Holding6writeonly            "Holding index 5 [%.1f]"    { channel="modbus:data:localhostTCP:holding6write:number" }
+Number Holding5writeonly            "Holding index 5 [%.1f]"    { channel="modbus:data:localhostTCP:holding5write:number" }
 ```
 
 `sitemaps/modbus_ex1.sitemap`:
@@ -448,7 +455,7 @@ sitemap modbus_ex1 label="modbus_ex1"
     Frame {
         Switch item=DO4
         Switch item=DO5
-        Setpoint item=Holding6writeonly minValue=0 maxValue=100 step=20
+        Setpoint item=Holding5writeonly minValue=0 maxValue=100 step=20
 
         Default item=DI1200
         Default item=DI1201
@@ -459,7 +466,7 @@ sitemap modbus_ex1 label="modbus_ex1"
         Default item=Input1500Float32LastOKRead
         Default item=Input1500Float32LastBadRead
 
-    }
+    } 
 }
 ```
 
@@ -619,11 +626,11 @@ sitemap modbus_ex_rollershutter label="modbus_ex_rollershutter" {
         // unknown command, do not write anything
         return "[]";
     } else {
-        return [
-            "[",
-                   "{\"functionCode\": 6, \"index\":" + address.toString() + ", \"value\": [" + value +  "] }",
-            "]",
-        ].join("\n")
+        return (
+            "["
+              + "{\"functionCode\": 6, \"address\":" + address.toString() + ", \"value\": [" + value +  "] }" 
+            + "]"
+        );
     }
 })(input)
 ```
