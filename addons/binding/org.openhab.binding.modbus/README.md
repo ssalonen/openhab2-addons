@@ -153,7 +153,7 @@ With low baud rates and/or long read requests (that is, many items polled), ther
 | `refresh`  | integer |          | `500`              | Poll interval in milliseconds. Use zero to disable automatic polling.                                                                                                                  |
 | `maxTries` | integer |          | `3`                | Maximum tries when reading. <br /><br />Number of tries when reading data, if some of the reading fail. For single try, enter 1.                                                       |
 
-Note: Polling can be manually triggered by sending `REFRESH` command to item bound to channel of `data` thing. When manually triggering polling, a new poll is executed as soon as possible, and sibling `data` things (i.e. things that share the same `poller` bridge) are updated.
+Note: Polling can be manually triggered by sending `REFRESH` command to item bound to channel of `data` thing. When manually triggering polling, a new poll is executed as soon as possible, and sibling `data` things (i.e. things that share the same `poller` bridge) are updated. See [Refresh command](#refresh-command) section for more details.
 
 ### `data` thing
 
@@ -161,10 +161,10 @@ Note: Polling can be manually triggered by sending `REFRESH` command to item bou
 
 | Parameter                                   | Type    | Required | Default if omitted | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ------------------------------------------- | ------- | -------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readValueType`                             | text    |          | (empty)            | How data is read from modbus. Use empty for write-only things.<br /><br />Bit value type must be used with coils and discrete inputs. With registers all value types are applicable. Valid values are: `"float32"`, `"float32_swap"`, `"int32"`, `"int32_swap"`, `"uint32"`, `"uint32_swap"`, `"int16"`, `"uint16"`, `"int8"`, `"uint8"`, or `"bit"`.                                                                                                                                                                                                                                                                                                 |
+| `readValueType`                             | text    |          | (empty)            | How data is read from modbus. Use empty for write-only things.<br /><br />Bit value type must be used with coils and discrete inputs. With registers all value types are applicable. Valid values are: `"float32"`, `"float32_swap"`, `"int32"`, `"int32_swap"`, `"uint32"`, `"uint32_swap"`, `"int16"`, `"uint16"`, `"int8"`, `"uint8"`, or `"bit"`. See also [Value types on read and write](#value-types-on-read-and-write).                                                                                                                                                                                                                                                                                                |
 | `readStart`                                 | text    |          | (empty)            | Start address to start reading the value. Use empty for write-only things. <br /><br />Input as zero-based index number, e.g. in place of `400001` (first holding register), use the address `"0"`.  Must be between (poller start) and (poller start + poller length - 1) (inclusive).<br /><br />With registers and value type less than 16 bits, you must use `"X.Y"` format where `Y` specifies the sub-element to read from the 16 bit register:<ul> <li>For example, `"3.1"` would mean pick second bit from register index `3` with bit value type. </li><li>With int8 valuetype, it would pick the high byte of register index `3`.</li></ul> |
 | `readTransform`                             | text    |          | `"default"`        | Transformation to apply to polled data, after it has been converted to number using `readValueType`. <br /><br />Use "default" to communicate that no transformation is done and value should be passed as is.<br />Use `"SERVICENAME(ARG)"` to use transformation service `SERVICENAME` with argument `ARG`. <br />Any other value than the above types will be interpreted as static text, in which case the actual content of the polled value is ignored.                                                                                                                                                                                         |
-| `writeValueType`                            | text    |          | (empty)            | How data is written to modbus. Only applicable to registers. Valid values are: `float32`, `float32_swap`, `int32`, `int32_swap`, `int16`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `writeValueType`                            | text    |          | (empty)            | How data is written to modbus. Only applicable to registers. Valid values are: `float32`, `float32_swap`, `int32`, `int32_swap`, `int16`. See also [Value types on read and write](#value-types-on-read-and-write).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `writeStart`                                | text    |          | (empty)            | Start address of the first holding register or coil in the write. Use empty for read-only things. <br />Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is.                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `writeType`                                 | text    |          | (empty)            | Type of data to write. Use empty for read-only things. Valid values: `"coil"` or `"holding"`.<br /><br /> Coil uses function code (FC) FC05 or FC15. Holding register uses FC06 or FC16. See `writeMultipleEvenWithSingleRegisterOrCoil` parameter.                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `writeTransform`                            | text    |          | `"default"`        | Transformation to apply to received commands.<br /><br />Use `"default"` to communicate that no transformation is done and value should be passed as is.    <br />Use `"SERVICENAME(ARG)"` to use transformation service `SERVICENAME` with argument `ARG`.    <br />Any other value than the above types will be interpreted as static text, in which case the actual content of the command value is ignored.                                                                                                                                                                                                                                       |
@@ -188,7 +188,7 @@ Please note that transformations might be *necessary* in order to update some da
 | `string`        | `String`        | Data as string                      |
 | `rollershutter` | `Rollershutter` | Data as roller shutter              |
 
-You can send a `REFRESH` command to items linked to any of the above channels to ask binding to explicitly poll new data from the Modbus slave.
+You can send a `REFRESH` command to items linked to any of the above channels to ask binding to explicitly poll new data from the Modbus slave. See [Refresh command](#refresh-command) section for more details.
 
 Furthermore, there are additional channels that are useful for diagnostics:
 
@@ -200,6 +200,102 @@ Furthermore, there are additional channels that are useful for diagnostics:
 | `lastWriteError`   | `DateTime` | Last erroring write   |
 
 ## Details
+
+### Comment on addressing
+
+[Modbus Wikipedia article](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) summarizes this excellently:
+
+> In the traditional standard, [entity] numbers for those entities start with a digit, followed by a number of four digits in range 1–9,999:
+> * coils numbers start with a zero and then span from 00001 to 09999
+> * discrete input numbers start with a one and then span from 10001 to 19999
+> * input register numbers start with a three and then span from 30001 to 39999
+> * holding register numbers start with a four and then span from 40001 to 49999
+>
+> This translates into [entity] addresses between 0 and 9,998 in data frames.
+
+The openHAB modbus binding uses data frame entity addresses when referring to modbus entities. That is, the entity address configured in modbus binding is passed to modbus protocol frame as-is. For example, Modbus `poller` thing with `start=3`, `length=2` and `type=holding` will read modbus entities with the following numbers 40004 and 40005.
+
+### Value types on read and write
+
+This section explains the detailed descriptions of different value types on read and write. Note that value types less than 16 bits are not supported on write (see [poller thing](#poller-thing) documentation for details).
+
+See [Full examples](#full-examples) section for practical examples.
+
+#### `bit`:
+
+- a single bit is read from the registers
+- address is given as `X.Y`, where `Y` is between 0...15 (inclusive), representing bit of the register `X`
+- index `Y=0` refers to the least significant bit
+- index `Y=1` refers to the second least significant bit, etc.
+
+#### `int8`:
+
+- a byte (8 bits) from the registers is interpreted as signed integer
+- address is given as `X.Y`, where `Y` is between 0...1 (inclusive), representing byte of the register `X`
+- index `Y=0` refers to low byte
+- index `Y=1` refers to high byte
+- it is assumed that each high and low byte is encoded in most significant bit first order
+
+#### `uint8`:
+
+- same as `int8` except values are interpreted as unsigned integers
+
+#### `int16`:
+
+- register with index is interpreted as 16 bit signed integer.
+- it is assumed that each register is encoded in most significant bit first order
+
+#### `uint16`:
+
+- same as `int16` except values are interpreted as unsigned integers
+
+#### `int32`:
+
+- registers `index` and `(index + 1)` are interpreted as signed 32bit integer
+- it assumed that the first register contains the most significant 16 bits
+- it is assumed that each register is encoded in most significant bit first order
+
+#### `uint32`:
+
+- same as `int32` except values are interpreted as unsigned integers
+
+#### `float32`:
+
+- registers `index` and `(index + 1)` are interpreted as signed 32bit floating point number
+- it assumed that the first register contains the most significant 16 bits
+- it is assumed that each register is encoded in most significant bit first order
+
+The MODBUS specification defines each 16bit word to be encoded as Big Endian,
+but there is no specification on the order of those words within 32bit or larger data types.
+The net result is that when you have a master and slave that operate with the same
+Endian mode things work fine, but add a device with a different Endian mode and it is
+very hard to correct. To resolve this the binding supports a second set of valuetypes
+that have the words swapped.
+
+If you get strange values using the `int32`, `uint32` or `float32` valuetypes then just try the `int32_swap`, `uint32_swap` or `float32_swap` valuetype, depending upon what your data type is.
+
+#### `int32_swap`:
+
+- registers `index` and `(index + 1)` are interpreted as signed 32bit integer
+- it assumed that the first register contains the least significant 16 bits
+- it is assumed that each register is encoded in most significant bit first order (Big Endian)
+
+#### `uint32_swap`:
+
+- same as `int32_swap` except values are interpreted as unsigned integers
+
+#### `float32_swap`:
+
+- registers `index` and `(index + 1)` are interpreted as signed 32bit floating point number
+- it assumed that the first register contains the least significant 16 bits
+- it is assumed that each register is encoded in most significant bit first order (Big Endian)
+
+
+### REFRESH command
+
+`REFRESH` command to item bound to any [data channel](#channels) makes `poller` thing to poll new from the Modbus slave. All data channels of children `data` things are refreshed per the normal logic.
+
+`REFRESH` can be useful tool if you like to refresh only on demand (`poller` has refresh disabled, i.e. `refresh=0`), or have custom logic of refreshing only in some special cases.
 
 ### Read steps
 
@@ -265,27 +361,6 @@ Explanation for the different properties of the JSON object in the array.
 | `address`      | number                | ✓        | (-)                | Start address of the first holding register or coil in the write. Use empty for read-only things. <br />Use zero based address, e.g. in place of 400001 (first holding register), use the address 0. This address is passed to data frame as is. |
 | `value`        | JSON array of numbers | ✓        | (-)                | Array of coil or register values. Encode coil values as `0` or `1`.                                                                                                                                                                               |
 | `maxTries`     | number                |          | 3                  | Number of tries when writing data, in case some of the writes fail. Should be at least 1.                                                                                                                                                         |
-
-#### REFRESH command
-
-`REFRESH` command to item bound to any [data channel](#channels) makes `poller` thing to poll new from the Modbus slave. All data channels of children `data` things are refreshed per the normal logic.
-
-`REFRESH` can be useful tool if you like to refresh only on demand (`poller` has refresh disabled, i.e. `refresh=0`), or have custom logic of refreshing only in some special cases.
-
-
-#### Comment on addressing
-
-[Modbus Wikipedia article](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) summarizes this excellently:
-
-> In the traditional standard, [entity] numbers for those entities start with a digit, followed by a number of four digits in range 1–9,999:
-> * coils numbers start with a zero and then span from 00001 to 09999
-> * discrete input numbers start with a one and then span from 10001 to 19999
-> * input register numbers start with a three and then span from 30001 to 39999
-> * holding register numbers start with a four and then span from 40001 to 49999
->
-> This translates into [entity] addresses between 0 and 9,998 in data frames.
-
-The openHAB modbus binding uses data frame entity addresses when referring to modbus entities. That is, the entity address configured in modbus binding is passed to modbus protocol frame as-is. For example, Modbus `poller` thing with `start=3`, `length=2` and `type=holding` will read modbus entities with the following numbers 40004 and 40005.
 
 ### Transformations
 
