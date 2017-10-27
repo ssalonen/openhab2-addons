@@ -33,13 +33,16 @@ public class ModbusReadRequestBlueprintImpl implements ModbusReadRequestBlueprin
     private ModbusReadFunctionCode functionCode;
     private int start;
     private int length;
+    private int maxTries;
 
-    public ModbusReadRequestBlueprintImpl(int slaveId, ModbusReadFunctionCode functionCode, int start, int length) {
+    public ModbusReadRequestBlueprintImpl(int slaveId, ModbusReadFunctionCode functionCode, int start, int length,
+            int maxTries) {
         super();
         this.slaveId = slaveId;
         this.functionCode = functionCode;
         this.start = start;
         this.length = length;
+        this.maxTries = maxTries;
     }
 
     @Override
@@ -63,15 +66,20 @@ public class ModbusReadRequestBlueprintImpl implements ModbusReadRequestBlueprin
     }
 
     @Override
+    public int getMaxTries() {
+        return maxTries;
+    }
+
+    @Override
     public int hashCode() {
         return new HashCodeBuilder(81, 3).append(slaveId).append(functionCode).append(start).append(length)
-                .toHashCode();
+                .append(maxTries).toHashCode();
     }
 
     @Override
     public String toString() {
         return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId).append("functionCode", functionCode)
-                .append("start", start).append("length", length).toString();
+                .append("start", start).append("length", length).append("maxTries", maxTries).toString();
     }
 
     @Override

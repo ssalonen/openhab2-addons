@@ -8,27 +8,12 @@
  */
 package org.openhab.io.transport.modbus;
 
-import net.wimpi.modbus.Modbus;
-
 /**
  *
  * @author Sami Salonen
  *
  */
-public interface ModbusReadRequestBlueprint {
-
-    /**
-     * Returns the protocol identifier of this
-     * <tt>ModbusMessage</tt> as <tt>int</tt>.<br>
-     * The identifier is a 2-byte (short) non negative
-     * integer value valid in the range of 0-65535.
-     * <p>
-     *
-     * @return the protocol identifier as <tt>int</tt>.
-     */
-    public default int getProtocolID() {
-        return Modbus.DEFAULT_PROTOCOL_ID;
-    }
+public interface ModbusReadRequestBlueprint extends ModbusRequestBlueprint {
 
     /**
      * Returns the reference of the register/coil/discrete input to to start
@@ -49,17 +34,6 @@ public interface ModbusReadRequestBlueprint {
      * @return the data length as <tt>int</tt>.
      */
     public int getDataLength();
-
-    /**
-     * Returns the unit identifier of this
-     * <tt>ModbusMessage</tt> as <tt>int</tt>.<br>
-     * The identifier is a 1-byte non negative
-     * integer value valid in the range of 0-255.
-     * <p>
-     *
-     * @return the unit identifier as <tt>int</tt>.
-     */
-    public int getUnitID();
 
     /**
      * Returns the function code of this

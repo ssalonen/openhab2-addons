@@ -54,6 +54,15 @@ public final class WriteRequestJsonUtilities {
      * Constant for the value key in the JSON
      */
     public final static String JSON_VALUE = "value";
+    /**
+     * Constant for the maxTries key in the JSON
+     */
+    public final static String JSON_MAX_TRIES = "maxTries";
+
+    /**
+     * Default maxTries when it has not been specified
+     */
+    public final static int DEFAULT_MAX_TRIES = 3;
 
     private final static JsonParser parser = new JsonParser();
 
@@ -104,6 +113,7 @@ public final class WriteRequestJsonUtilities {
         }
         JsonElement functionCode = writeObject.get(JSON_FUNCTION_CODE);
         JsonElement address = writeObject.get(JSON_ADDRESS);
+        JsonElement maxTries = writeObject.get(JSON_MAX_TRIES);
         final JsonArray valuesElem;
 
         try {
@@ -111,23 +121,32 @@ public final class WriteRequestJsonUtilities {
         } catch (IllegalStateException e) {
             throw new IllegalStateException(String.format("JSON object '%s' is not an JSON array!", JSON_VALUE), e);
         }
-        return constructBluerint(unitId, functionCode, address, valuesElem);
+        return constructBluerint(unitId, functionCode, address, maxTries, valuesElem);
     }
 
     private static ModbusWriteRequestBlueprint constructBluerint(int unitId, JsonElement functionCodeElem,
-            JsonElement addressElem, JsonArray valuesElem) {
-        final int functionCodeNumeric;
+            JsonElement addressElem, JsonElement maxTriesElem, JsonArray valuesElem) {
+        int functionCodeNumeric;
         try {
             functionCodeNumeric = functionCodeElem.getAsInt();
         } catch (NullPointerException | ClassCastException | IllegalStateException e) {
             throw new IllegalStateException(String.format("Value for '%s' is invalid", JSON_FUNCTION_CODE), e);
         }
         ModbusWriteFunctionCode functionCode = ModbusWriteFunctionCode.fromFunctionCode(functionCodeNumeric);
-        final int address;
+        int address;
         try {
             address = addressElem.getAsInt();
         } catch (NullPointerException | ClassCastException | IllegalStateException e) {
             throw new IllegalStateException(String.format("Value for '%s' is invalid", JSON_ADDRESS), e);
+        }
+        int maxTries;
+        try {
+            maxTries = maxTriesElem.getAsInt();
+        } catch (NullPointerException e) {
+            // Go with default
+            maxTries = DEFAULT_MAX_TRIES;
+        } catch (ClassCastException | IllegalStateException e) {
+            throw new IllegalStateException(String.format("Value for '%s' is invalid", JSON_MAX_TRIES), e);
         }
 
         AtomicBoolean writeSingle = new AtomicBoolean(false);
@@ -149,7 +168,7 @@ public final class WriteRequestJsonUtilities {
                     bits.setBit(i, valuesElem.get(i).getAsInt() != 0);
                 }
                 return new ModbusWriteCoilRequestBlueprintImpl(unitId, address,
-                        new BitArrayWrappingBitVector(bits, valuesElem.size()), !writeSingle.get());
+                        new BitArrayWrappingBitVector(bits, valuesElem.size()), !writeSingle.get(), maxTries);
             case WRITE_SINGLE_REGISTER:
                 writeSingle.set(true);
                 if (valuesElem.size() != 1) {
@@ -166,7 +185,7 @@ public final class WriteRequestJsonUtilities {
                     registers[i] = new ModbusRegisterImpl(valuesElem.get(i).getAsInt());
                 }
                 return new ModbusWriteRegisterRequestBlueprintImpl(unitId, address,
-                        new ModbusRegisterArrayImpl(registers), !writeSingle.get());
+                        new ModbusRegisterArrayImpl(registers), !writeSingle.get(), maxTries);
             }
             default:
                 throw new IllegalArgumentException("Unknown function code");

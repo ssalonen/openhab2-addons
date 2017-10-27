@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2010-2017 by the respective copyright holders.
  *
@@ -6,20 +5,15 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
  */
 package org.openhab.io.transport.modbus;
 
 /**
+ * <p>
+ * Base interface for callbacks used in Modbus
+ * </p>
  *
  * @author Sami Salonen
- *
  */
-@SuppressWarnings("serial")
-public class ModbusUnexpectedTransactionIdException extends ModbusTransportException {
-
-    public ModbusUnexpectedTransactionIdException() {
-
-    }
-
+public interface ModbusCallback {
 }

@@ -28,20 +28,25 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
     private int reference;
     private ModbusRegisterArray registers;
     private boolean writeMultiple;
+    private int maxTries;
 
     public ModbusWriteRegisterRequestBlueprintImpl(int slaveId, int reference, ModbusRegisterArray registers,
-            boolean writeMultiple) throws IllegalArgumentException {
+            boolean writeMultiple, int maxTries) throws IllegalArgumentException {
         super();
         this.slaveId = slaveId;
         this.reference = reference;
         this.registers = registers;
         this.writeMultiple = writeMultiple;
+        this.maxTries = maxTries;
 
         if (!writeMultiple && registers.size() > 1) {
             throw new IllegalArgumentException("With multiple registers, writeMultiple must be true");
         }
         if (registers.size() == 0) {
             throw new IllegalArgumentException("Must have at least one register");
+        }
+        if (maxTries <= 0) {
+            throw new IllegalArgumentException("maxTries should be positive");
         }
     }
 
@@ -67,9 +72,15 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
     }
 
     @Override
+    public int getMaxTries() {
+        return maxTries;
+    }
+
+    @Override
     public String toString() {
         return new ToStringBuilder(this, toStringStyle).append("slaveId", slaveId).append("reference", reference)
-                .append("functionCode", getFunctionCode()).append("registers", registers).toString();
+                .append("functionCode", getFunctionCode()).append("registers", registers).append("maxTries", maxTries)
+                .toString();
     }
 
 }

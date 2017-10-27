@@ -5,18 +5,19 @@ import org.hamcrest.TypeSafeMatcher;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 
-abstract class AbstractRequestComparer<T extends ModbusWriteRequestBlueprint>
-        extends TypeSafeMatcher<T> {
+abstract class AbstractRequestComparer<T extends ModbusWriteRequestBlueprint> extends TypeSafeMatcher<T> {
 
     private int expectedUnitId;
     private int expectedAddress;
     private ModbusWriteFunctionCode expectedFunctionCode;
+    private int expectedMaxTries;
 
     public AbstractRequestComparer(int expectedUnitId, int expectedAddress,
-            ModbusWriteFunctionCode expectedFunctionCode) {
+            ModbusWriteFunctionCode expectedFunctionCode, int expectedMaxTries) {
         this.expectedUnitId = expectedUnitId;
         this.expectedAddress = expectedAddress;
         this.expectedFunctionCode = expectedFunctionCode;
+        this.expectedMaxTries = expectedMaxTries;
     }
 
     @Override
@@ -34,6 +35,9 @@ abstract class AbstractRequestComparer<T extends ModbusWriteRequestBlueprint>
             return false;
         }
         if (item.getFunctionCode() != expectedFunctionCode) {
+            return false;
+        }
+        if (item.getMaxTries() != expectedMaxTries) {
             return false;
         }
         return doMatchData(item);

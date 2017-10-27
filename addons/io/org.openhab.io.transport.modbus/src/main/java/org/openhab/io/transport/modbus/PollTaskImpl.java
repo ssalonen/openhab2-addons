@@ -23,7 +23,7 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
  * Note: Two differentiate poll tasks are considered unequal if their callbacks are unequal.
  *
  * HashCode and equals should be defined such that two poll tasks considered the same only if their request,
- * endpoint and callback are the same.
+ * maxTries, endpoint and callback are the same.
  *
  * @author Sami Salonen
  *
@@ -88,4 +88,5 @@ public class PollTaskImpl implements PollTask {
         return new EqualsBuilder().append(request, rhs.request).append(endpoint, rhs.endpoint)
                 .append(getCallback(), rhs.getCallback()).isEquals();
     }
+
 }

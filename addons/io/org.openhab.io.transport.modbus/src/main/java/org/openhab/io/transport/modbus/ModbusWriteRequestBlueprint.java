@@ -15,7 +15,7 @@ import net.wimpi.modbus.Modbus;
  * @author Sami Salonen
  *
  */
-public interface ModbusWriteRequestBlueprint {
+public interface ModbusWriteRequestBlueprint extends ModbusRequestBlueprint {
 
     /**
      * Returns the protocol identifier of this
@@ -66,6 +66,8 @@ public interface ModbusWriteRequestBlueprint {
      * @see net.wimpi.modbus.Modbus
      */
     public ModbusWriteFunctionCode getFunctionCode();
+
+    public int getMaxTries();
 
     public void accept(ModbusWriteRequestBlueprintVisitor visitor);
 

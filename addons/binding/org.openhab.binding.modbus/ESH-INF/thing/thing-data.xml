@@ -117,6 +117,11 @@
                 <br />
                 <br />If false, FC6/FC5 are used with single register and single coil, respectively.]]></description>
             </parameter>
+            <parameter name="writeMaxTries" type="integer" min="1">
+                <label>Maximum tries when writing</label>
+                <default>3</default>
+                <description>Number of tries when writing data, if some of the writes fail. For single try, enter 1.</description>
+            </parameter>
         </config-description>
 	</thing-type>
 </thing:thing-descriptions>

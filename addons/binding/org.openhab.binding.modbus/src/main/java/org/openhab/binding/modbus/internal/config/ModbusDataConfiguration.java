@@ -10,6 +10,7 @@ public class ModbusDataConfiguration {
     private String writeTransform;
     private String writeValueType;
     private boolean writeMultipleEvenWithSingleRegisterOrCoil;
+    private int writeMaxTries = 1; // backwards compatibility and tests
 
     public String getReadStart() {
         return readStart;
@@ -75,4 +76,11 @@ public class ModbusDataConfiguration {
         this.writeMultipleEvenWithSingleRegisterOrCoil = writeMultipleEvenWithSingleRegisterOrCoil;
     }
 
+    public int getWriteMaxTries() {
+        return writeMaxTries;
+    }
+
+    public void setWriteMaxTries(int writeMaxTries) {
+        this.writeMaxTries = writeMaxTries;
+    }
 }

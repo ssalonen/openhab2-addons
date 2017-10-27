@@ -10,6 +10,7 @@ public class ModbusPollerConfiguration {
     private int start;
     private int length;
     private String type;
+    private int maxTries = 3;// backwards compatibility and tests
 
     /**
      * Gets refresh period in milliseconds
@@ -70,6 +71,14 @@ public class ModbusPollerConfiguration {
      */
     public void setType(String type) {
         this.type = type;
+    }
+
+    public int getMaxTries() {
+        return maxTries;
+    }
+
+    public void setMaxTries(int maxTries) {
+        this.maxTries = maxTries;
     }
 
 }

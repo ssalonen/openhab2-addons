@@ -17,7 +17,7 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
  *
  */
 @SuppressWarnings("serial")
-public class ModbusConnectionException extends Exception {
+public class ModbusConnectionException extends ModbusTransportException {
 
     private ModbusSlaveEndpoint endpoint;
 
