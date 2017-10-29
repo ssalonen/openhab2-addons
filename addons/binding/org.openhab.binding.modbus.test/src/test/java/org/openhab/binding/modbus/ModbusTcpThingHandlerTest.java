@@ -35,6 +35,7 @@ public class ModbusTcpThingHandlerTest {
                 new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_TCP, id));
     }
 
+    @SuppressWarnings("null")
     @Test
     public void testInitializeAndSlaveEndpoint() {
         Configuration thingConfig = new Configuration();

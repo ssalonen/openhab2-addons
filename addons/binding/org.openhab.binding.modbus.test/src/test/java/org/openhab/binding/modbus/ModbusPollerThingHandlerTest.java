@@ -42,22 +42,9 @@ import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 
+@SuppressWarnings("restriction")
 @RunWith(MockitoJUnitRunner.class)
 public class ModbusPollerThingHandlerTest {
-
-    private static class Triplet<T1, T2, T3> {
-        T1 obj1;
-        T2 obj2;
-        T3 obj3;
-
-        public Triplet(T1 obj1, T2 obj2, T3 obj3) {
-            super();
-            this.obj1 = obj1;
-            this.obj2 = obj2;
-            this.obj3 = obj3;
-        }
-
-    }
 
     @Mock
     private ModbusManager modbusManager;
@@ -84,12 +71,6 @@ public class ModbusPollerThingHandlerTest {
                 new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_POLLER, id)).withLabel("label for " + id);
     }
 
-    private static BridgeBuilder createDataThingBuilder(String id) {
-        return BridgeBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_DATA,
-                new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_DATA, id)).withLabel("label for " + id);
-    }
-
-    @SuppressWarnings("restriction")
     private void registerThingToMockRegistry(Thing thing) {
         things.add(thing);
         // update bridge with the new child thing
@@ -176,6 +157,7 @@ public class ModbusPollerThingHandlerTest {
         verifyZeroInteractions(modbusManager);
     }
 
+    @SuppressWarnings("null")
     public void testPollingGeneric(String type, Supplier<Matcher<PollTask>> pollTaskMatcherSupplier)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         Configuration pollerConfig = new Configuration();

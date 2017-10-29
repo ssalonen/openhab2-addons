@@ -8,7 +8,6 @@ import static org.mockito.Mockito.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +17,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
 import org.eclipse.smarthome.core.internal.items.ItemRegistryImpl;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.items.ItemProvider;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
 import org.eclipse.smarthome.core.library.items.DimmerItem;
@@ -47,8 +44,6 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLinkProvider;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
@@ -100,47 +95,6 @@ public class ModbusDataHandlerTest {
             this.setThingRegistry(thingRegistry);
         }
 
-        public void update() {
-            addProvider(new ItemChannelLinkProvider() {
-
-                @Override
-                public void addProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
-                }
-
-                @Override
-                public Collection<ItemChannelLink> getAll() {
-                    return links;
-                }
-
-                @Override
-                public void removeProviderChangeListener(ProviderChangeListener<ItemChannelLink> listener) {
-                }
-            });
-        }
-    };
-
-    private class ItemRegistryTestImpl extends ItemRegistryImpl {
-        public ItemRegistryTestImpl() {
-            super();
-        }
-
-        public void update() {
-            addProvider(new ItemProvider() {
-
-                @Override
-                public void addProviderChangeListener(ProviderChangeListener<Item> listener) {
-                }
-
-                @Override
-                public Collection<Item> getAll() {
-                    return items;
-                }
-
-                @Override
-                public void removeProviderChangeListener(ProviderChangeListener<Item> listener) {
-                }
-            });
-        }
     };
 
     private static final Map<String, Class<? extends Item>> channelToItemClass = new HashMap<>();
@@ -155,8 +109,6 @@ public class ModbusDataHandlerTest {
     }
 
     private List<Thing> things = new ArrayList<>();
-    private List<Item> items = new ArrayList<>();
-    private List<ItemChannelLink> links = new ArrayList<>();
     private List<WriteTask> writeTasks = new ArrayList<>();
 
     @Mock
@@ -171,7 +123,7 @@ public class ModbusDataHandlerTest {
     @Mock
     private ModbusManager manager;
 
-    private ItemRegistryTestImpl itemRegistry = new ItemRegistryTestImpl();
+    private ItemRegistryImpl itemRegistry = new ItemRegistryImpl();
     private ItemChannelLinkRegistryTestImpl linkRegistry = new ItemChannelLinkRegistryTestImpl();
 
     Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();

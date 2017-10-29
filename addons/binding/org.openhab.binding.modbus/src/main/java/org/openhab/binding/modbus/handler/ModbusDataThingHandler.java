@@ -121,6 +121,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         return !readIndex.isPresent();
     }
 
+    @SuppressWarnings("null")
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         logger.trace("Thing {} '{}' received command '{}' to channel '{}'", getThing().getUID(), getThing().getLabel(),
@@ -205,6 +206,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     }
 
+    @SuppressWarnings("null")
     private void processJsonTransform(Command command, String transformOutput) {
         final Collection<ModbusWriteRequestBlueprint> requests;
         try {

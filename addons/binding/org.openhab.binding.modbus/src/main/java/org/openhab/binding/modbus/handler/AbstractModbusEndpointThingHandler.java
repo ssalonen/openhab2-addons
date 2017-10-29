@@ -23,6 +23,7 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     protected Supplier<ModbusManager> managerRef;
     protected volatile EndpointPoolConfiguration poolConfiguration;
 
+    @SuppressWarnings("null")
     public AbstractModbusEndpointThingHandler(@NonNull Bridge bridge, @NonNull Supplier<ModbusManager> managerRef) {
         super(bridge);
         this.managerRef = managerRef;

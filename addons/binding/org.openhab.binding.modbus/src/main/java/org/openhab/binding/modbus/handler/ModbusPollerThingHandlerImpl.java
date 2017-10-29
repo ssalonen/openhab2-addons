@@ -193,6 +193,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         unregisterPollTask();
     }
 
+    @SuppressWarnings("null")
     public synchronized void unregisterPollTask() {
         logger.trace("unregisterPollTask()");
         if (pollTask == null || config == null) {
@@ -204,6 +205,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         updateStatus(ThingStatus.OFFLINE);
     }
 
+    @SuppressWarnings("null")
     private synchronized void registerPollTask() {
         logger.trace("registerPollTask()");
         if (pollTask != null) {
