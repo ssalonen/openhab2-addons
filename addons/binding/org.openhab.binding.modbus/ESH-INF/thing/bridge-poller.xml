@@ -8,8 +8,8 @@
 			<bridge-type-ref id="serial" />
 		</supported-bridge-type-refs>
 
-		<label>Poll definition</label>
-		<description>Modbus poll definition</description>
+		<label>Regular poll</label>
+		<description>Regular poll of data from Modbus slaves</description>
 		<config-description>
 			<parameter name="refresh" type="integer" min="0">
 				<label>interval</label>
@@ -20,7 +20,7 @@
 				<label>Start</label>
 				<description><![CDATA[Address of the first register, coil, or discrete input to poll. 
 				<br />
-				<br />Input as zero-based index number, e.g. in place of `400001` (first holding register), use the address `0`.]]></description>
+				<br />Input as zero-based index number, e.g. in place of 400001 (first holding register), use the address 0.]]></description>
 				<default>0</default>
 			</parameter>
 			<parameter name="length" type="integer" required="true">

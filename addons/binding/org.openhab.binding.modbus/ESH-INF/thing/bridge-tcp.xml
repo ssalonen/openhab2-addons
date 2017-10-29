@@ -3,8 +3,8 @@
 	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 	<bridge-type id="tcp">
-		<label>TCP Connection</label>
-		<description>Modbus/TCP connection</description>
+		<label>Modbus TCP slave</label>
+		<description>Endpoint for Modbus TCP slaves</description>
 		<config-description>
 			<parameter name="host" type="text" required="true">
 				<label>IP Address or hostname</label>
@@ -49,7 +49,7 @@
 			</parameter>
 			<parameter name="connectTimeoutMillis" type="integer" min="0">
 				<label>Timeout for establishing the connection</label>
-				<description>The maximum time that is waited when establishing the connection. Value of zero means thatsystem/OS default is respected. In milliseconds.</description>
+				<description>The maximum time that is waited when establishing the connection. Value of zero means that system/OS default is respected. In milliseconds.</description>
 				<default>10000</default>
 				<advanced>true</advanced>
 			</parameter>

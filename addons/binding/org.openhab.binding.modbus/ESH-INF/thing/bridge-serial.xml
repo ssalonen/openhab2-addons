@@ -3,8 +3,8 @@
 	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 	<bridge-type id="serial">
-		<label>Serial Connection</label>
-		<description>Modbus serial connection</description>
+		<label>Modbus serial slave</label>
+		<description>Endpoint for Modbus serial slaves</description>
 		<config-description>
 			<parameter name="port" type="text" required="true">
 				<label>Serial port</label>

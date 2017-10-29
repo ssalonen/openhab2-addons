@@ -7,7 +7,8 @@
 			<bridge-type-ref id="tcp"/>
 			<bridge-type-ref id="serial"/>
 		</supported-bridge-type-refs>
-		<label>Modbus data definition</label>
+		<label>Modbus data</label>
+		<description>Data thing extracts values from binary data received from Modbus slave. Similarly, it it responsible of tranlating openHAB commands to Modbus write requests</description>
 		<channels>
             <channel id="number" typeId="number-type" />
             <channel id="switch" typeId="switch-type" />
@@ -79,9 +80,10 @@
             </parameter>
             <parameter name="writeType" type="text">
                 <label>Write type</label>
-                <description><![CDATA[Type of data to write. Use empty for read-only things.
+                <description><![CDATA[Type of data to write. Leave empty for read-only things.
                 <br />
-                <br />Coil uses function code 5 or 15. Holding register uses function code 6 or 16. See "Use FC15/FC16" parameter.]]></description>
+                <br /> 
+                Coil uses function code (FC) FC05 or FC15. Holding register uses FC06 or FC16. See writeMultipleEvenWithSingleRegisterOrCoil parameter.]]></description>
                 <options>
                     <option value="coil">coil, or digital out (DO)</option>
                     <option value="holding">holding register</option>
