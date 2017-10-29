@@ -224,7 +224,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
     private static ExecutorService callbackThreadPool;
 
-    private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<ModbusManagerListener>();
+    private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<>();
 
     static {
         constructConnectionPool();
@@ -263,7 +263,7 @@ public class ModbusManagerImpl implements ModbusManager {
             });
         });
 
-        GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> genericKeyedObjectPool = new GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection>(
+        GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> genericKeyedObjectPool = new GenericKeyedObjectPool<>(
                 connectionFactory, generalPoolConfig);
         genericKeyedObjectPool.setSwallowedExceptionListener(new SwallowedExceptionListener() {
 

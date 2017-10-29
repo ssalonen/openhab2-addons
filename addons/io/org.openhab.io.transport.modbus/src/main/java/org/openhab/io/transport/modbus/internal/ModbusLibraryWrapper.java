@@ -188,7 +188,7 @@ class ModbusLibraryWrapper {
         }
         request.setUnitID(message.getUnitID());
         request.setProtocolID(message.getProtocolID());
-    
+
         return request;
     }
 
@@ -228,9 +228,10 @@ class ModbusLibraryWrapper {
                 throw new IllegalArgumentException(
                         String.format("Unexpected function code %s", message.getFunctionCode()));
             }
-    
+
         } catch (Exception e) {
-            ModbusManagerImpl.logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+            ModbusManagerImpl.logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(),
+                    e.getMessage(), e);
         }
     }
 

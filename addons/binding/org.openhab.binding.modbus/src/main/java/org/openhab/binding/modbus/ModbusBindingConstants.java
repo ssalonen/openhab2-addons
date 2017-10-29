@@ -60,7 +60,7 @@ public class ModbusBindingConstants {
     public static final String READ_TYPE_DISCRETE_INPUT = "discrete";
     public static final String READ_TYPE_INPUT_REGISTER = "input";
 
-    public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<String, ModbusReadFunctionCode>();
+    public static final Map<String, ModbusReadFunctionCode> READ_FUNCTION_CODES = new HashMap<>();
     static {
         READ_FUNCTION_CODES.put(READ_TYPE_COIL, ModbusReadFunctionCode.READ_COILS);
         READ_FUNCTION_CODES.put(READ_TYPE_DISCRETE_INPUT, ModbusReadFunctionCode.READ_INPUT_DISCRETES);

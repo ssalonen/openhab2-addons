@@ -12,7 +12,9 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import net.wimpi.modbus.procimg.InputRegister;
 
 /**
- * <p>RegisterArrayWrappingInputRegister class.</p>
+ * <p>
+ * RegisterArrayWrappingInputRegister class.
+ * </p>
  *
  * @author Sami Salonen
  */

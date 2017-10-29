@@ -26,6 +26,7 @@ public interface ModbusWriteRequestBlueprint extends ModbusRequestBlueprint {
      *
      * @return the protocol identifier as <tt>int</tt>.
      */
+    @Override
     public default int getProtocolID() {
         return Modbus.DEFAULT_PROTOCOL_ID;
     }
@@ -49,6 +50,7 @@ public interface ModbusWriteRequestBlueprint extends ModbusRequestBlueprint {
      *
      * @return the unit identifier as <tt>int</tt>.
      */
+    @Override
     public int getUnitID();
 
     /**
@@ -67,6 +69,7 @@ public interface ModbusWriteRequestBlueprint extends ModbusRequestBlueprint {
      */
     public ModbusWriteFunctionCode getFunctionCode();
 
+    @Override
     public int getMaxTries();
 
     public void accept(ModbusWriteRequestBlueprintVisitor visitor);

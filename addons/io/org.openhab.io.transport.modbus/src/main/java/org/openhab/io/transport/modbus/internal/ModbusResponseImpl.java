@@ -5,7 +5,9 @@ import org.openhab.io.transport.modbus.ModbusResponse;
 import net.wimpi.modbus.msg.ModbusMessage;
 
 /**
- * <p>ModbusResponseImpl class.</p>
+ * <p>
+ * ModbusResponseImpl class.
+ * </p>
  *
  * @author Sami Salonen
  */
