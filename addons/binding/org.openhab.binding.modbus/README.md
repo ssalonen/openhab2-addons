@@ -243,7 +243,7 @@ See [Full examples](#full-examples) section for practical examples.
 #### `int16`:
 
 - register with index is interpreted as 16 bit signed integer.
-- it is assumed that each register is encoded in most significant bit first order
+- it is assumed that register is encoded in most significant bit first order
 
 #### `uint16`:
 
@@ -453,8 +453,6 @@ Things can be configured via the Paper UI, or using a `things` file like here.
 
 This example reads different kind of Modbus items from the slave.
 
-In addition, there is write-only entry for holding register index 5 (register number **4**0006). Note that `Holding6writeonly` item state might differ from the physical slave since it is not refreshed.
-
 Please refer to the comments for more explanations.
 
 `things/modbus_ex1.things`:
@@ -500,6 +498,7 @@ Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
     }
 
     // Write-only entry: thing is child of tcp directly. No readStart etc. need to be defined.    
+    // Note that the openHAB state might differ from the physical slave since it is not refreshed at all
     Thing data holding5write [ writeStart="5", writeValueType="int16", writeType="holding" ] 
 }
 ```
@@ -710,251 +709,55 @@ sitemap modbus_ex_rollershutter label="modbus_ex_rollershutter" {
 })(input)
 ```
 
+## Changes from Modbus 1.x binding
 
+The older Modbus binding is quite different to the new binding. Major difference is the thing structure introduced in new openHAB2 binding which allows configuration uisng the PaperUI.
 
+Unfortunately there is no conversion tool to convert old configurations to new thing structure.
 
-# OLD
+Due to the introduction of things, the configuration was bound to be backwards incompatible. This offered opportunity to simplify some aspects of configuration. The major differences are configuration logic are:
 
-### Item configuration examples
+### Absolute addresses instead of relative
 
-## Details
+The new Modbus binding uses *absolute* addresses. This means that all parameters referring to addresses of input registers, holding registers, discrete inputs or coils are *entity addresses*. This means that the addresses start from zero (first entity), and can go up to 65 535. See [Wikipedia explanation](https://en.wikipedia.org/wiki/Modbus#Coil.2C_discrete_input.2C_input_register.2C_holding_register_numbers_and_addresses) for more information.
 
+Previous binding sometimes used absolute addresses (`modbus.cfg`), sometimes relative to polled data (items configuration).
 
-### Register interpretation (valuetype) on read & write
+### Register and bit addressing
 
-Note that this section applies to register elements only (`holding` or `input` type)
+Now 32 bit value types refer start register address. For example `valueType="int32"` with `start="3"` refers to 32 bit integer in registers `3` and `4`. 
 
-#### Read
+The old binding could not handle this case at all since it was assumed that the values were addressed differently. Read index of `3` would refer to 32 bit integer in registers `3*2=6` and `3*2+1=7`. It was not possible to refer to 32 bit type starting at odd index.
 
-When the binding interprets and converts polled input registers (`input`) or holding registers (`holding`) to openHAB items, the process goes like this:
+It is still not possible to read 32 bit value type starting "middle" of register. However, if such need arises the addressing syntax is extensible to covert these cases.
 
-- 1. register(s) are first parsed to a number (see below for the details, exact logic depends on `valuetype`)
-- 2a. if the item is Switch or Contact: zero is converted CLOSED / OFF. Other numbers are converted to OPEN / ON.
-- 2b. if the item is Number: the value is used as is
-- 3. transformation is done to the value, if configured. The transformation output (string) is parsed to state using item's accepted state types (e.g. number, or CLOSED/OPEN).
+Bits, and other <16 bit value types, inside registers are addressed using `start="X.Y"` convention. This is more explicit notation hopefully reduces the risk of misinterpretation.
 
-Polled registers from the Modbus slave are converted to openHAB state. The exact conversion logic depends on `valuetype` as described below.
+### Polling details
 
-Note that _first register_ refers to register with address `start` (as defined in the slave definition), _second register_ refers to register with address `start + 1` etc. The _index_ refers to item read index, e.g. item `Switch MySwitch "My Modbus Switch" (ALL) {modbus="slave1:5"}` has 5 as read index.
+The new binding polls data in parallel which means that errors with one slave do not necessarily slow down polling with some other slave.
 
-`valuetype=bit`:
+Furthermore, once can disable polling altogether and trigger polling on-demand using `REFRESH`.
 
-- a single bit is read from the registers
-- indices between 0...15 (inclusive) represent bits of the first register
-- indices between 16...31 (inclusive) represent bits of the second register, etc.
-- index 0 refers to the least significant bit of the first register
-- index 1 refers to the second least significant bit of the first register, etc.
+### Support for 32 bit value types in writing
 
-(Note that updating a bit in a holding type register will NOT work as expected across Modbus, the whole register gets rewritten. Best to use a read-only mode, such as Contact item.  Input type registers are by definition read-only.)
-
-`valuetype=int8`:
-
-- a byte (8 bits) from the registers is interpreted as signed integer
-- index 0 refers to low byte of the first register, 1 high byte of first register
-- index 2 refers to low byte of the second register, 3 high byte of second register, etc.
-- it is assumed that each high and low byte is encoded in most significant bit first order
-
-`valuetype=uint8`:
-
-- same as `int8` except values are interpreted as unsigned integers
-
-`valuetype=int16`:
-
-- register with index (counting from zero) is interpreted as 16 bit signed integer.
-- it is assumed that each register is encoded in most significant bit first order
-
-`valuetype=uint16`:
-
-- same as `int16` except values are interpreted as unsigned integers
-
-`valuetype=int32`:
-
-- registers (2 index) and ( 2 *index + 1) are interpreted as signed 32bit integer.
-- it assumed that the first register contains the most significant 16 bits
-- it is assumed that each register is encoded in most significant bit first order
-
-`valuetype=uint32`:
-
-- same as `int32` except values are interpreted as unsigned integers
-
-`valuetype=float32`:
-
-- registers (2 index) and ( 2 *index + 1) are interpreted as signed 32bit floating point number.
-- it assumed that the first register contains the most significant 16 bits
-- it is assumed that each register is encoded in most significant bit first order
-
-##### Word Swapped valuetypes (New since 1.9.0)
-
-The MODBUS specification defines each 16bit word to be encoded as Big Endian,
-but there is no specification on the order of those words within 32bit or larger data types.
-The net result is that when you have a master and slave that operate with the same
-Endian mode things work fine, but add a device with a different Endian mode and it is
-very hard to correct. To resolve this the binding supports a second set of valuetypes
-that have the words swapped.
-
-If you get strange values using the `int32`, `uint32` or `float32` valuetypes then just try the `int32_swap`, `uint32_swap` or `float32_swap` valuetype, depending upon what your data type is.
-
-`valuetype=int32_swap`:
-
-- registers (2 index) and ( 2 *index + 1) are interpreted as signed 32bit integer.
-- it assumed that the first register contains the least significant 16 bits
-- it is assumed that each register is encoded in most significant bit first order (Big Endian)
-
-`valuetype=uint32_swap`:
-
-- same as `int32_swap` except values are interpreted as unsigned integers
-
-`valuetype=float32_swap`:
-
-- registers (2 index) and ( 2 *index + 1) are interpreted as signed 32bit floating point number.
-- it assumed that the first register contains the least significant 16 bits
-- it is assumed that each register is encoded in most significant bit first order (Big Endian)
-
-
-##### Extra notes
-
-- `valuetypes` smaller than one register (less than 16 bits) actually read the whole register, and finally extract single bit from the result.
-
-#### Write
-
-When the binding processes openHAB command (e.g. sent by `sendCommand` as explained [here](https://github.com/openhab/openhab1-addons/wiki/Actions)), the process goes as follows
-
-1. it is checked whether the associated item is bound to holding register. If not, command is ignored.
-2. command goes through transformation, if configured. No matter what commands the associated item accepts, the transformation can always output number (DecimalType), OPEN/CLOSED (OpenClosedType) and ON/OFF (OnOffType).
-3. command is converted to 16bit integer (in [two's complement format](https://www.cs.cornell.edu/~tomf/notes/cps104/twoscomp.html)). See below for details.
-4. the 16bits are written to the register with address `start` (as defined in the slave definition)
-
-Conversion rules for converting command to 16bit integer
-
-- UP, ON, OPEN commands that are converter to number 1
-- DOWN, OFF, CLOSED commands are converted to number 0
-- Decimal commands are truncated as 32 bit integer (in 2's complement representation), and then the least significant 16 bits of this integer are extracted.
-- INCREASE, DECREASE: see below
-
-Other commands are not supported.
-
-**Note: The way Decimal commands are handled currently means that it is probably not useful to try to use Decimal commands with non-16bit `valuetype`s.**
-
-Converting INCREASE and DECREASE commands to numbers is more complicated
-
-(After 1.10.0)
-
-1. Most recently polled state (as it has gone through the read transformations etc.) of this item is acquired
-2. add/subtract `1` from the state. If the state is not a number, the whole command is ignored.
-
-(Before 1.10.0)
-
-1. Register matching (`start` + read index) is interpreted as unsigned 16bit integer. Previous polled register value is used
-2. add/subtract `1` from the integer
-
-**Note (before 1.10.0): note that INCREASE and DECREASE ignore valuetype when using the previously polled value. Thus, it is not recommended to use INCREASE and DECREASE commands with other than `valuetype=uint16`**
-
-#### Modbus RTU over TCP
-
-Some devices uses modbus RTU over TCP. This is usually Modbus RTU encapsulation in an ethernet packet. So, those devices does not work with Modbus TCP binding since it is Modbus with a special header. Also Modbus RTU over TCP is not supported by Openhab Modbus Binding. But there is a workaround: you can use a Virtual Serial Port Server, to emulate a COM Port and Bind it with OpenHab unsing Modbus Serial.
-
-
-
-## Config Examples
-
-Please take a look at [Samples-Binding-Config page](https://github.com/openhab/openhab1-addons/wiki/Samples-Binding-Config) or examine to the following examples.
-
-- Minimal construction in modbus.cfg for TCP connections will look like:
-
-```
-# read 10 coils starting from address 0
-tcp.slave1.connection=192.168.1.50
-tcp.slave1.length=10
-tcp.slave1.type=coil
-```
-
-- Minimal construction in modbus.cfg for serial connections will look like:
-
-```
-# read 10 coils starting from address 0
-serial.slave1.connection=/dev/ttyUSB0
-tcp.slave1.length=10
-tcp.slave1.type=coil
-```
-
-- More complex setup could look like
-
-```
-# Poll values very 300ms = 0.3 seconds
-poll=300
-
-# Connect to modbus slave at 192.168.1.50, port 502
-tcp.slave1.connection=192.168.1.50:502
-# use slave id 41 in requests
-tcp.slave1.id=41
-# read 32 coils (digital outputs) starting from address 0
-tcp.slave1.start=0
-tcp.slave1.length=32
-tcp.slave1.type=coil
-```
-
-- Another example where coils, discrete inputs (`discrete`) and input registers (`input`) are polled from modbus tcp slave at `192.168.6.180`.
-
-> (original example description:)
-> example for an moxa e1214 module in simple io mode
-> 6 output switches starting from modbus address 0 and
-> 6 inputs from modbus address 10000 (the function 2 implizits the modbus 10000 address range)
-> you only read 6 input bits and say start from 0
-> the moxa manual ist not right clear in this case
-
-```ini
-poll=300
-
-# Query coils from 192.168.6.180
-tcp.slave1.connection=192.168.6.180:502
-tcp.slave1.id=1
-tcp.slave1.start=0
-tcp.slave1.length=6
-tcp.slave1.type=coil
-
-# Query discrete inputs from 192.168.6.180
-tcp.slave2.connection=192.168.6.180:502
-tcp.slave2.id=1
-tcp.slave2.start=0
-tcp.slave2.length=6
-tcp.slave2.type=discrete
-
-# Query input registers from 192.168.6.180
-tcp.slave3.connection=192.168.6.180:502
-tcp.slave3.id=1
-tcp.slave3.start=17
-tcp.slave3.length=2
-tcp.slave3.type=input
-
-# Query holding registers from 192.168.6.181
-# Holding registers matching addresses 33 and 34 are read
-tcp.slave4.connection=192.168.6.181:502
-tcp.slave4.id=1
-tcp.slave4.start=33
-tcp.slave4.length=2
-tcp.slave4.type=holding
-
-# Query 2 input registers from 192.168.6.181.
-# Interpret the two registers as single 32bit floating point number
-tcp.slave5.connection=192.168.6.181:502
-tcp.slave5.id=1
-tcp.slave5.start=10
-tcp.slave5.length=2
-tcp.slave5.type=input
-tcp.slave5.valuetype=float32
-```
-
-Above we used the same modbus gateway with ip 192.168.6.180 multiple times
-on different modbus address ranges and modbus functions.
+The new binding supports 32 bit values types when writing.
 
 ## Troubleshooting
+
+### Thing status
+
+Check thing status for errors in configuration or communication.
 
 ### Enable verbose logging
 
 Enable `DEBUG` or `TRACE` (even more verbose) logging for the loggers named:
 
-* `net.wimpi.modbus`
 * `org.openhab.binding.modbus`
+* `org.openhab.io.transport.modbus`
+* `net.wimpi.modbus`
+
+Consult [openHAB2 logging documentation](http://docs.openhab.org/administration/logging.html#defining-what-to-log) for more information.
 
 ## For developers
 
@@ -1001,24 +804,14 @@ tcp.slave1.connection=127.0.0.1:55502
 
 See this [community post](https://community.openhab.org/t/something-is-rounding-my-float-values-in-sitemap/13704/32?u=ssalonen) explaining how `pollmb` and `diagslave` can be used to debug modbus communication.
 
-### Troubleshooting
+You can also use `modpoll` to write data:
 
-To troubleshoot, you might be asked to update to latest development version. You can find the "snapshot" or development version from [Cloudbees CI](https://openhab.ci.cloudbees.com/job/openHAB1-Addons/lastSuccessfulBuild/artifact/bundles/binding/org.openhab.binding.modbus/target/).
 
-With modbus binding before 1.9.0, it strongly recommended to try out with the latest development version since many bugs were fixed in 1.9.0. Furthermore, error logging is enhanced in this new version.
-
-If the problem persists in the new version, it is recommended to try to isolate to issue using minimal configuration. Easiest would be to have a fresh openHAB installation, and configure it minimally (if possible, single modbus slave in `modbus.cfg`, single item, no rules etc.). This helps the developers and community to debug the issue.
-
-Problems can be communicated via [community.openhab.org](https://community.openhab.org). Please use the search function to find out existing reports of the same issue.
-
-It helps greatly to document the issue in detail (especially how to reproduce the issue), and attach the related [verbose logs](#enable-verbose-debug-logging). Try to keep interaction minimal during this test; for example, if the problem occurs with modbus read alone, do not touch the the switch items in openHAB sitemap (would trigger write).
-
-For attaching the logs to a community post, the [pastebin.com](http://pastebin.com/) service is strongly recommended to keep the thread readable. It is useful to store the logs from openHAB startup, and let it run for a while.
-
-Remember to attach configuration lines from modbus.cfg, item definitions related to modbus binding, and any relevant rules (if any). You can use [pastebin.com](http://pastebin.com/) for this purpose as well.
-
-To summarize, here are the recommended steps in case of errors
-
-1. Update to latest development version; especially if you are using modbus binding version before 1.9.0
-2. isolate the issue using minimal configuration, and enable verbose logging (see above)
-3. record logs and configuration to [pastebin.com](http://pastebin.com/).
+```bash
+# write value=5 to holding register 40001 (index=0 in the binding)
+./modpoll -m tcp -a 1 -r 1 -t4 -p 502 127.0.0.1 5
+# set coil 00001 (index=0 in the binding) to TRUE
+./modpoll -m tcp -a 1 -r 1 -t0 -p 502 127.0.0.1 1
+# write float32
+./modpoll -m tcp -a 1 -r 1 -t4:float -p 502 127.0.0.1 3.14
+```
