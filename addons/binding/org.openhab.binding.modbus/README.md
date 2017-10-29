@@ -739,6 +739,14 @@ The new binding polls data in parallel which means that errors with one slave do
 
 Furthermore, once can disable polling altogether and trigger polling on-demand using `REFRESH`.
 
+### Transformation changes
+
+With the new binding the transformations get slightly different input. In polling, the transformation always receives number as input (see [Read steps](#read-steps)). Old binding had converted the input based on item type.
+
+### Trigger removed
+
+The old binding had `trigger` parameter in item configuration to react only to some openHAB commands, or to some polled states. There is no trigger anymore but one can use transformations to accomplish the same thing. See [Transformations](#transformations) for examples.
+
 ### Support for 32 bit value types in writing
 
 The new binding supports 32 bit values types when writing.
