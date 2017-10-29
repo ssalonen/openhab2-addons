@@ -12,9 +12,7 @@ import java.util.Iterator;
 import java.util.stream.IntStream;
 
 /**
- * <p>
- * ModbusRegisterArray interface.
- * </p>
+ * Interface for immutable sequence of Modbus registers
  *
  * @author Sami Salonen
  */
@@ -38,6 +36,9 @@ public interface ModbusRegisterArray extends Iterable<ModbusRegister> {
      */
     int size();
 
+    /**
+     * Iterator over all the registers
+     */
     @Override
     default Iterator<ModbusRegister> iterator() {
         return IntStream.range(0, size()).mapToObj(i -> getRegister(i)).iterator();

@@ -19,7 +19,8 @@
 package org.openhab.io.transport.modbus.endpoint;
 
 /**
- *
+ * Endpoint for TCP slaves
+ * 
  * @author Sami Salonen
  *
  */

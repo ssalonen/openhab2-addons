@@ -13,9 +13,7 @@ import org.openhab.io.transport.modbus.ModbusResponse;
 import net.wimpi.modbus.msg.ModbusMessage;
 
 /**
- * <p>
- * ModbusResponseImpl class.
- * </p>
+ * Basic implementation of {@link ModbusResponse}
  *
  * @author Sami Salonen
  */
@@ -28,9 +26,17 @@ public class ModbusResponseImpl implements ModbusResponse {
         this.responseFunctionCode = response.getFunctionCode();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getFunctionCode() {
         return responseFunctionCode;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ModbusResponseImpl(responseFC=%d)", responseFunctionCode);
     }
 
 }

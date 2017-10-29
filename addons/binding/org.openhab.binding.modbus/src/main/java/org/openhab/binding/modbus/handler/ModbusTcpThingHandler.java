@@ -18,7 +18,7 @@ import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 
 /**
- *
+ * Endpoint thing handler for TCP slaves
  *
  * @author Sami Salonen - Initial contribution
  */
@@ -29,7 +29,9 @@ public class ModbusTcpThingHandler
         super(bridge, managerRef);
     }
 
-    @SuppressWarnings("null")
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void configure() {
         config = getConfigAs(ModbusTcpConfiguration.class);
@@ -45,7 +47,9 @@ public class ModbusTcpThingHandler
 
     }
 
-    @SuppressWarnings("null")
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig) {
         return String.format(
@@ -54,7 +58,9 @@ public class ModbusTcpThingHandler
                 this.endpoint.getAddress(), this.endpoint.getPort());
     }
 
-    @SuppressWarnings("null")
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getSlaveId() {
         if (config == null) {

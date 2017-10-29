@@ -15,9 +15,7 @@ import org.openhab.io.transport.modbus.BitArray;
 import net.wimpi.modbus.util.BitVector;
 
 /**
- * <p>
- * BitArrayWrappingBitVector class.
- * </p>
+ * BitArray implementation which wraps {@link BitVector}
  *
  * @author Sami Salonen
  */
@@ -26,11 +24,23 @@ public class BitArrayWrappingBitVector implements BitArray {
     private BitVector wrapped;
     private int safeSize;
 
+    /**
+     * Construct instance using BitVector data
+     *
+     * Depending how the wrapped data is constructed, its size might not be correct (bug of jamod library, as of
+     * 2017-10). Due to this reason, <code>safeSize</code> is provided to check out-of-bounds situations
+     *
+     * @param wrapped wrapped data
+     * @param safeSize size of wrapped data
+     */
     public BitArrayWrappingBitVector(BitVector wrapped, int safeSize) {
         this.wrapped = wrapped;
         this.safeSize = safeSize;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean getBit(int index) {
         if (index >= size()) {
@@ -39,6 +49,9 @@ public class BitArrayWrappingBitVector implements BitArray {
         return this.wrapped.getBit(index);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int size() {
         return safeSize;

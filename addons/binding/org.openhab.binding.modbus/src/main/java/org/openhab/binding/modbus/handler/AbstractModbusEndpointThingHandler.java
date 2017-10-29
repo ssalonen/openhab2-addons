@@ -22,13 +22,21 @@ import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
+/**
+ * Base class for Modbus Slave endpoint thing handlers
+ *
+ * @author Sami Salonen
+ *
+ * @param <E> endpoint class
+ * @param <C> config class
+ */
 public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEndpoint, C> extends BaseBridgeHandler
         implements ModbusManagerListener, ModbusEndpointThingHandler {
 
     protected volatile C config;
     protected volatile E endpoint;
-    @NonNull
-    protected Supplier<ModbusManager> managerRef;
+
+    protected @NonNull Supplier<ModbusManager> managerRef;
     protected volatile EndpointPoolConfiguration poolConfiguration;
 
     @SuppressWarnings("null")
@@ -37,6 +45,9 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
         this.managerRef = managerRef;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
     }
@@ -46,6 +57,9 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
      */
     protected abstract void configure();
 
+    /**
+     * {@inheritDoc}
+     */
     @SuppressWarnings("null")
     @Override
     public void initialize() {
@@ -58,6 +72,9 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void dispose() {
         if (managerRef != null) {
@@ -65,6 +82,9 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusSlaveEndpoint asSlaveEndpoint() {
         return endpoint;
@@ -73,13 +93,26 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Override
     public abstract int getSlaveId();
 
+    /**
+     * Format error message in case some other endpoint has been configured with different
+     * {@link EndpointPoolConfiguration}
+     *
+     * @param otherPoolConfig
+     * @return
+     */
     protected abstract String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Supplier<ModbusManager> getManagerRef() {
         return managerRef;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint otherEndpoint,
             EndpointPoolConfiguration otherPoolConfiguration) {

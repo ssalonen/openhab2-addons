@@ -12,6 +12,12 @@ import org.openhab.io.transport.modbus.ModbusTransportException;
 
 import net.wimpi.modbus.ModbusSlaveException;
 
+/**
+ * Exception for explicit exception responses from Modbus slave
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusSlaveErrorResponseException extends ModbusTransportException {
 
     private static final long serialVersionUID = 6334580162425192133L;

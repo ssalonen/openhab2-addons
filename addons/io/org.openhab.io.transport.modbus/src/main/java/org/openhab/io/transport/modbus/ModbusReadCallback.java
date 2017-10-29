@@ -8,12 +8,8 @@
  */
 package org.openhab.io.transport.modbus;
 
-import net.wimpi.modbus.ModbusException;
-
 /**
- * <p>
- * ModbusReadCallback interface.
- * </p>
+ * Interface for read callbacks
  *
  * @author Sami Salonen
  */
@@ -40,7 +36,7 @@ public interface ModbusReadCallback extends ModbusCallback {
      *
      * @request ModbusRequestBlueprint representing the request
      * @param Exception representing the issue with the request. Instance of
-     *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusException}.
+     *            {@link ModbusUnexpectedTransactionIdException} or {@link ModbusTransportException}.
      */
     void onError(ModbusReadRequestBlueprint request, Exception error);
 

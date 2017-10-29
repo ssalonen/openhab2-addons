@@ -19,6 +19,7 @@
 package org.openhab.io.transport.modbus.endpoint;
 
 /**
+ * Endpoint for UDP slaves
  *
  * @author Sami Salonen
  *

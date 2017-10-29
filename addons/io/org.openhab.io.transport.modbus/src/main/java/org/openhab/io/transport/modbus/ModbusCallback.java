@@ -9,9 +9,7 @@
 package org.openhab.io.transport.modbus;
 
 /**
- * <p>
  * Base interface for callbacks used in Modbus
- * </p>
  *
  * @author Sami Salonen
  */

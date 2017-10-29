@@ -204,7 +204,6 @@ public class BitUtilitiesCommandToRegistersTest {
                         new Object[] { IncreaseDecreaseType.INCREASE, ValueType.FLOAT32_SWAP,
                                 NotImplementedException.class });
 
-        // TODO: test OnOff OpenClosed and unknown commands
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

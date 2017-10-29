@@ -15,7 +15,7 @@ import org.eclipse.jdt.annotation.NonNull;
 import net.wimpi.modbus.Modbus;
 
 /**
- * Modbus write function codes supported by this binding
+ * Modbus write function codes supported by this transport
  *
  * @author Sami Salonen
  */
@@ -31,10 +31,22 @@ public enum ModbusWriteFunctionCode {
         functionCode = code;
     }
 
+    /**
+     * Get numeric function code represented by this instance
+     *
+     * @return
+     */
     public int getFunctionCode() {
         return functionCode;
     }
 
+    /**
+     * Construct {@link ModbusWriteFunctionCode} from the numeric function code
+     *
+     * @param functionCode numeric function code
+     * @return {@link ModbusWriteFunctionCode} matching the numeric function code
+     * @throws IllegalArgumentException with unsupported functions
+     */
     @SuppressWarnings("null")
     public static @NonNull ModbusWriteFunctionCode fromFunctionCode(int functionCode) throws IllegalArgumentException {
         return Stream.of(ModbusWriteFunctionCode.values()).filter(v -> v.getFunctionCode() == functionCode).findFirst()

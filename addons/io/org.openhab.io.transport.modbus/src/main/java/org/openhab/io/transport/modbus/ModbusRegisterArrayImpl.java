@@ -11,9 +11,7 @@ package org.openhab.io.transport.modbus;
 import org.apache.commons.lang.StringUtils;
 
 /**
- * <p>
- * ModbusRegisterArrayImpl class.
- * </p>
+ * Immutable {@link ModbusRegisterArray} implementation
  *
  * @author Sami Salonen
  */
@@ -21,6 +19,12 @@ public class ModbusRegisterArrayImpl implements ModbusRegisterArray {
 
     private ModbusRegister[] registers;
 
+    /**
+     * Construct plain <code>ModbusRegister[]</code> array from register values
+     *
+     * @param registerValues register values, each <code>int</code> corresponding to one register
+     * @return
+     */
     public static ModbusRegister[] registersFromValues(int... registerValues) {
         ModbusRegister[] registers = new ModbusRegister[registerValues.length];
         for (int i = 0; i < registerValues.length; i++) {
@@ -29,19 +33,38 @@ public class ModbusRegisterArrayImpl implements ModbusRegisterArray {
         return registers;
     }
 
+    /**
+     * Construct ModbusRegisterArrayImpl from array of {@link ModbusRegister}
+     *
+     * @param registers
+     */
     public ModbusRegisterArrayImpl(ModbusRegister[] registers) {
         this.registers = registers;
     }
 
+    /**
+     * Construct plain <code>ModbusRegisterArrayImpl</code> array from register values
+     *
+     * @param registerValues register values, each <code>int</code> corresponding to one register
+     * @return
+     */
     public ModbusRegisterArrayImpl(int... registerValues) {
         this(registersFromValues(registerValues));
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     */
     @Override
     public ModbusRegister getRegister(int index) {
         return registers[index];
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     */
     @Override
     public int size() {
         return registers.length;

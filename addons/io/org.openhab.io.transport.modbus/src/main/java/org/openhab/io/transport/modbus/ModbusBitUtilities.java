@@ -20,9 +20,7 @@ import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.types.Command;
 
 /**
- * <p>
- * ModbusBitUtilities class.
- * </p>
+ * Utilities for working with binary data.
  *
  * @author Sami Salonen
  */
@@ -152,12 +150,13 @@ public class ModbusBitUtilities {
     }
 
     /**
+     * Convert command to array of registers using a specific value type
      *
-     * @param command
-     * @param type
-     * @return
-     * @throws NotImplementedException in cases where implementation is lacking for the type. This can be considered a
-     *             bug
+     * @param command command to be converted
+     * @param type value type to use in conversion
+     * @return array of registers
+     * @throws NotImplementedException in cases where implementation is lacking for the type. This is thrown with 1-bit
+     *             and 8-bit value types
      */
     public static ModbusRegisterArray commandToRegisters(Command command, ModbusConstants.ValueType type) {
         DecimalType numericCommand;
@@ -241,11 +240,14 @@ public class ModbusBitUtilities {
     }
 
     /**
-     * Calculates boolean value that will be written to the device as a result of OpenHAB command
-     * Used with item bound to "coil" type slaves
+     * Converts command to a boolean
      *
-     * @param command OpenHAB command received by the item
-     * @return new boolean value to be written to the device
+     * true value is represented by {@link OnOffType.ON}, {@link OpenClosedType.OPEN}.
+     * false value is represented by {@link OnOffType.OFF}, {@link OpenClosedType.CLOSED}.
+     * Furthermore, {@link DecimalType} are converted to boolean true if they are unequal to zero.
+     *
+     * @param command to convert to boolean
+     * @return Boolean value matching the command. Empty if command cannot be converted
      */
     public static Optional<Boolean> translateCommand2Boolean(Command command) {
         if (command.equals(OnOffType.ON)) {

@@ -9,6 +9,7 @@
 package org.openhab.io.transport.modbus;
 
 /**
+ * Write request for registers
  *
  * @author Sami Salonen
  *

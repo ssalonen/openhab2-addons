@@ -47,16 +47,25 @@ public class PollTaskImpl implements PollTask {
         this.callback = new WeakReference<>(callback);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusReadRequestBlueprint getRequest() {
         return request;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusSlaveEndpoint getEndpoint() {
         return endpoint;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public WeakReference<ModbusReadCallback> getCallback() {
         return callback;

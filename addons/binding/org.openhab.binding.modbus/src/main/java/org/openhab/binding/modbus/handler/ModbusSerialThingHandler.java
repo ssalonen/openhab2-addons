@@ -18,7 +18,7 @@ import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
 
 /**
- *
+ * Endpoint thing handler for serial slaves
  *
  * @author Sami Salonen - Initial contribution
  */
@@ -29,7 +29,9 @@ public class ModbusSerialThingHandler
         super(bridge, managerRef);
     }
 
-    @SuppressWarnings("null")
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void configure() {
         config = getConfigAs(ModbusSerialConfiguration.class);
@@ -49,7 +51,9 @@ public class ModbusSerialThingHandler
 
     }
 
-    @SuppressWarnings("null")
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig) {
         return String.format(
@@ -58,7 +62,6 @@ public class ModbusSerialThingHandler
                 this.endpoint.getPortName());
     }
 
-    @SuppressWarnings("null")
     @Override
     public int getSlaveId() {
         if (config == null) {

@@ -12,6 +12,12 @@ import org.openhab.io.transport.modbus.ModbusTransportException;
 
 import net.wimpi.modbus.ModbusIOException;
 
+/**
+ * Exception for all IO errors
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusSlaveIOException extends ModbusTransportException {
 
     private static final long serialVersionUID = -8910463902857643468L;

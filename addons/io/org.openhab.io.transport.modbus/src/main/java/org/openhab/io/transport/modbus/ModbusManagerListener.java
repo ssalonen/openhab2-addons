@@ -12,14 +12,18 @@ import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 /**
- * <p>
- * ModbusManagerListener interface.
- * </p>
+ * Interface for {@link ModbusManager} listeners
  *
  * @author Sami Salonen
  */
 public interface ModbusManagerListener {
 
+    /**
+     * Called on every call for {@link ModbusManager.setEndpointPoolConfiguration}
+     *
+     * @param endpoint value passed in call of <code>setEndpointPoolConfiguration</code>
+     * @param configuration value passed in call of <code>setEndpointPoolConfiguration</code>
+     */
     public void onEndpointPoolConfigurationSet(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration configuration);
 
 }

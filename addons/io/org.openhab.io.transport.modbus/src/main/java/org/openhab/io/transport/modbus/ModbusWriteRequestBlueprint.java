@@ -11,7 +11,8 @@ package org.openhab.io.transport.modbus;
 import net.wimpi.modbus.Modbus;
 
 /**
- *
+ * Base interface for Modbus write requests
+ * 
  * @author Sami Salonen
  *
  */
@@ -69,9 +70,17 @@ public interface ModbusWriteRequestBlueprint extends ModbusRequestBlueprint {
      */
     public ModbusWriteFunctionCode getFunctionCode();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getMaxTries();
 
+    /**
+     * Accept visitor
+     *
+     * @param visitor
+     */
     public void accept(ModbusWriteRequestBlueprintVisitor visitor);
 
 }

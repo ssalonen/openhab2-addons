@@ -19,15 +19,12 @@
 package org.openhab.io.transport.modbus;
 
 /**
+ * Exception representing situation where transaction id of the response does not match request
  *
  * @author Sami Salonen
  *
  */
 @SuppressWarnings("serial")
 public class ModbusUnexpectedTransactionIdException extends ModbusTransportException {
-
-    public ModbusUnexpectedTransactionIdException() {
-
-    }
 
 }

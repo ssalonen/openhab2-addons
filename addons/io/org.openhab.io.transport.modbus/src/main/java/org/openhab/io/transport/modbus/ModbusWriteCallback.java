@@ -9,9 +9,7 @@
 package org.openhab.io.transport.modbus;
 
 /**
- * <p>
- * ModbusWriteCallback interface.
- * </p>
+ * Interface for write callbacks
  *
  * @author Sami Salonen
  */

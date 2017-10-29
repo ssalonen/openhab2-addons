@@ -16,6 +16,7 @@ import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 /**
+ * Simple implementation for Modbus write requests
  *
  * @author Sami Salonen
  *
@@ -39,16 +40,25 @@ public class WriteTaskImpl implements WriteTask {
         this.callback = new WeakReference<>(callback);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusSlaveEndpoint getEndpoint() {
         return endpoint;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusWriteRequestBlueprint getRequest() {
         return request;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public WeakReference<ModbusWriteCallback> getCallback() {
         return callback;

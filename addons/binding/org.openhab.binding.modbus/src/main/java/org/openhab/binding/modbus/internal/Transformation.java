@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
  * Inspired from other openHAB binding "Transformation" classes.
  *
  * @author Sami Salonen
- * @since 1.10.0
  *
  */
 public class Transformation {
@@ -70,7 +69,7 @@ public class Transformation {
         DEFAULT_TYPES.add(OnOffType.class);
     }
 
-    static private final Logger logger = LoggerFactory.getLogger(Transformation.class);
+    private final Logger logger = LoggerFactory.getLogger(Transformation.class);
 
     private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
 

@@ -20,9 +20,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import net.wimpi.modbus.procimg.InputRegister;
 
 /**
- * <p>
- * RegisterArrayWrappingInputRegister class.
- * </p>
+ * Implementation of {@link ModbusRegisterArray} which wraps array of {@link InputRegister}
  *
  * @author Sami Salonen
  */
@@ -36,16 +34,25 @@ public class RegisterArrayWrappingInputRegister implements ModbusRegisterArray {
             this.wrappedRegister = wrapped[index];
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public byte[] getBytes() {
             return wrappedRegister.toBytes();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int getValue() {
             return wrappedRegister.getValue();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int toUnsignedShort() {
             return wrappedRegister.toUnsignedShort();
@@ -60,11 +67,17 @@ public class RegisterArrayWrappingInputRegister implements ModbusRegisterArray {
         this.wrapped = wrapped;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusRegister getRegister(int index) {
         return cache.computeIfAbsent(index, i -> new RegisterReference(i));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int size() {
         return wrapped.length;

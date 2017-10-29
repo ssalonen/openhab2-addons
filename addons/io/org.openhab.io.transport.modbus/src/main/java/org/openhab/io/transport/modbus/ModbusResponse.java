@@ -17,6 +17,14 @@ package org.openhab.io.transport.modbus;
  */
 public interface ModbusResponse {
 
+    /**
+     * Function code of the response.
+     *
+     * Note that in case of Slave responding with Modbus exception response, the response
+     * function code might differ from request function code
+     *
+     * @return function code of the response
+     */
     public int getFunctionCode();
 
 }

@@ -39,8 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link ModbusPollerThingHandlerImpl} is responsible for handling commands, which are
- * sent to one of the channels.
+ * The {@link ModbusPollerThingHandlerImpl} is responsible for polling Modbus slaves. Errors and data is delegated to
+ * child thing handlers inheriting from {@link ModbusReadCallback} -- in practice: {@link ModbusDataThingHandler}.
  *
  * @author Sami Salonen - Initial contribution
  */
@@ -149,6 +149,9 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusEndpointThingHandler getEndpointThingHandler() {
         Bridge bridge = getBridge();
@@ -194,6 +197,11 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         unregisterPollTask();
     }
 
+    /**
+     * Unregister poll task.
+     *
+     * No-op in case no poll task is registered, or if the initialization is incomplete.
+     */
     @SuppressWarnings("null")
     public synchronized void unregisterPollTask() {
         logger.trace("unregisterPollTask()");
@@ -206,6 +214,9 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         updateStatus(ThingStatus.OFFLINE);
     }
 
+    /**
+     * Register poll task
+     */
     @SuppressWarnings("null")
     private synchronized void registerPollTask() {
         logger.trace("registerPollTask()");
@@ -242,11 +253,17 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Supplier<ModbusManager> getManagerRef() {
         return managerRef;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PollTask getPollTask() {
         return pollTask;

@@ -13,9 +13,7 @@ import java.util.Arrays;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
 /**
- * <p>
- * ModbusRegisterImpl class.
- * </p>
+ * Basic {@link ModbusRegister} implementation
  *
  * @author Sami Salonen
  */
@@ -24,7 +22,7 @@ public class ModbusRegisterImpl implements ModbusRegister {
     private SimpleInputRegister wrapped;
 
     /**
-     * Constructs a new <tt>BytesRegister</tt> instance.
+     * Constructs a new instance for bytes
      *
      * @param b1 the first (hi) byte of the word.
      * @param b2 the second (low) byte of the word.
@@ -33,20 +31,37 @@ public class ModbusRegisterImpl implements ModbusRegister {
         wrapped = new SimpleInputRegister(b1, b2);
     }
 
+    /**
+     * Construct register for at
+     *
+     * @param val value representing register data. The <code>int</code> will be downcasted to <code>short</code>.
+     */
     public ModbusRegisterImpl(int val) {
         wrapped = new SimpleInputRegister(val);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     */
     @Override
     public byte[] getBytes() {
         return wrapped.toBytes();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     */
     @Override
     public int getValue() {
         return wrapped.getValue();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     */
     @Override
     public int toUnsignedShort() {
         return wrapped.toUnsignedShort();

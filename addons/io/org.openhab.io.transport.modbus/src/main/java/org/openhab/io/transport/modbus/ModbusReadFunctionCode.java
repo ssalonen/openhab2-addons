@@ -9,7 +9,7 @@
 package org.openhab.io.transport.modbus;
 
 /**
- * Modbus read function codes supported by this binding
+ * Modbus read function codes supported by this transport
  *
  * @author Sami Salonen
  */

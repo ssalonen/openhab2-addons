@@ -9,29 +9,30 @@
 package org.openhab.io.transport.modbus;
 
 /**
- * <p>
- * ModbusRegister interface.
- * </p>
+ * Interface for 16 bit Modbus registers.
  *
  * @author Sami Salonen
  */
 public interface ModbusRegister {
+
+    /**
+     * Get raw data represented by this register. Since register is 16 bits, array of length 2 will be returned.
+     *
+     * @return byte array of length 2, high byte first.
+     */
     public byte[] getBytes();
 
     /**
-     * Returns the value of this <tt>InputRegister</tt>.
-     * The value is stored as <tt>int</tt> but should be
-     * treated like a 16-bit word.
+     * Returns the value of this register as integer representing 16 bit data parsed as signed integer.
      *
-     * @return the value as <tt>int</tt>.
+     * @return the register content as unsigned integer
      */
     public int getValue();
 
     /**
-     * Returns the content of this <tt>Register</tt> as
-     * unsigned 16-bit value (unsigned short).
+     * Returns the value of this register as integer representing 16 bit data parsed as unsigned integer.
      *
-     * @return the content as unsigned short (<tt>int</tt>).
+     * @return the register content as unsigned integer
      */
     public int toUnsignedShort();
 }

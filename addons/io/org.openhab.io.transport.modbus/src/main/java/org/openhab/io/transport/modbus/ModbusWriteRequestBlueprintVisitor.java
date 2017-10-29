@@ -17,8 +17,18 @@ package org.openhab.io.transport.modbus;
  */
 public interface ModbusWriteRequestBlueprintVisitor {
 
+    /**
+     * Visit request writing coil data
+     *
+     * @param blueprint
+     */
     public void visit(ModbusWriteCoilRequestBlueprint blueprint);
 
+    /**
+     * Visit request writing register data
+     *
+     * @param blueprint
+     */
     public void visit(ModbusWriteRegisterRequestBlueprint blueprint);
 
 }

@@ -9,6 +9,7 @@
 package org.openhab.binding.modbus.internal.config;
 
 /**
+ * Configuration for poller thing
  *
  * @author Sami Salonen
  *

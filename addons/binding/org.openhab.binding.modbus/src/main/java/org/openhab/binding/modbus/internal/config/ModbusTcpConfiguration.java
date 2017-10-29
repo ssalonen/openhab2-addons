@@ -9,6 +9,7 @@
 package org.openhab.binding.modbus.internal.config;
 
 /**
+ * Configuration for tcp thing
  *
  * @author Sami Salonen
  *

@@ -12,6 +12,7 @@ import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
+ * Implementation for writing registers
  *
  * @author Sami Salonen
  *
@@ -30,6 +31,18 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
     private boolean writeMultiple;
     private int maxTries;
 
+    /**
+     * Construct coil write request with many bits of data
+     *
+     * @param slaveId slave id to write to
+     * @param reference reference address
+     * @param registers register(s) to write
+     * @param writeMultiple whether to use {@link ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS} over
+     *            {@link ModbusWriteFunctionCode.WRITE_COIL}. Useful with single register of data.
+     * @param maxTries maximum number of tries in case of errors, should be at least 1
+     * @throws IllegalArgumentException in case <code>data</code> is empty, <code>writeMultiple</code> is
+     *             <code>false</code> but there are many registers to write.
+     */
     public ModbusWriteRegisterRequestBlueprintImpl(int slaveId, int reference, ModbusRegisterArray registers,
             boolean writeMultiple, int maxTries) throws IllegalArgumentException {
         super();
@@ -50,27 +63,42 @@ public class ModbusWriteRegisterRequestBlueprintImpl implements ModbusWriteRegis
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getReference() {
         return reference;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getUnitID() {
         return slaveId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusWriteFunctionCode getFunctionCode() {
         return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS
                 : ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusRegisterArray getRegisters() {
         return registers;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getMaxTries() {
         return maxTries;

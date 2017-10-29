@@ -9,14 +9,23 @@
 package org.openhab.io.transport.modbus;
 
 /**
+ * Write request for coils
  *
  * @author Sami Salonen
  *
  */
 public interface ModbusWriteCoilRequestBlueprint extends ModbusWriteRequestBlueprint {
 
+    /**
+     * Coil data to write
+     *
+     * @return coils to write
+     */
     public BitArray getCoils();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public default void accept(ModbusWriteRequestBlueprintVisitor visitor) {
         visitor.visit(this);

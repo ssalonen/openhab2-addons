@@ -14,15 +14,35 @@ import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 
 /**
+ * Interface for poller thing handlers
  *
  * @author Sami Salonen
  *
  */
 public interface ModbusPollerThingHandler {
 
+    /**
+     * Return {@link PollTask} represented by this thing.
+     *
+     * Note that the poll task might be <code>null</code> in case initialization is not complete.
+     * Also note that it is not guaranteed that the poll task is registered as regular poll with {@link ModbusManager}
+     * (refresh=0 setting)
+     *
+     * @return
+     */
     public PollTask getPollTask();
 
+    /**
+     * Get {@link ModbusManager} supplier
+     *
+     * @return
+     */
     public Supplier<ModbusManager> getManagerRef();
 
+    /**
+     * Return the endpoint thing handler
+     *
+     * @return
+     */
     public ModbusEndpointThingHandler getEndpointThingHandler();
 }

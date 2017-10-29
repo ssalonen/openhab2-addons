@@ -9,6 +9,7 @@
 package org.openhab.io.transport.modbus;
 
 /**
+ * Low-level interface representing a read request
  *
  * @author Sami Salonen
  *

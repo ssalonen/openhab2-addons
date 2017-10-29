@@ -11,6 +11,7 @@ package org.openhab.io.transport.modbus;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 /**
+ * Exception for connection issues
  *
  * @author Sami Salonen
  *
@@ -20,11 +21,20 @@ public class ModbusConnectionException extends ModbusTransportException {
 
     private ModbusSlaveEndpoint endpoint;
 
+    /**
+     *
+     * @param endpoint endpoint associated with this exception
+     */
     public ModbusConnectionException(ModbusSlaveEndpoint endpoint) {
         this.endpoint = endpoint;
 
     }
 
+    /**
+     * Get endpoint associated with this connection error
+     *
+     * @return endpoint with the error
+     */
     public ModbusSlaveEndpoint getEndpoint() {
         return endpoint;
     }

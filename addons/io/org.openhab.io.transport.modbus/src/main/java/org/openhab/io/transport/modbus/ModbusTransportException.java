@@ -8,7 +8,14 @@
  */
 package org.openhab.io.transport.modbus;
 
-@SuppressWarnings("serial")
+/**
+ * Base exception for all exceptions in Modbus transport bundle
+ *
+ * @author Sami Salonen
+ *
+ */
 public class ModbusTransportException extends Exception {
+
+    private static final long serialVersionUID = 1684767401685843339L;
 
 }

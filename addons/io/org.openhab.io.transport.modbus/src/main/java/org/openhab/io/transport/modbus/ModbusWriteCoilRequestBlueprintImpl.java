@@ -12,6 +12,7 @@ import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
+ * Implementation for writing coils
  *
  * @author Sami Salonen
  *
@@ -24,6 +25,12 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
         toStringStyle.setUseShortClassName(true);
     }
 
+    /**
+     * Implementation of {@link BitArray} with single bit as data
+     *
+     * @author salski
+     *
+     */
     private static class SingleBitArray implements BitArray {
 
         private boolean bit;
@@ -58,11 +65,33 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
     private boolean writeMultiple;
     private int maxTries;
 
+    /**
+     * Construct coil write request with single bit of data
+     *
+     * @param slaveId slave id to write to
+     * @param reference reference address
+     * @param data bit to write
+     * @param writeMultiple whether to use {@link ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS} over
+     *            {@link ModbusWriteFunctionCode.WRITE_COIL}
+     * @param maxTries maximum number of tries in case of errors, should be at least 1
+     */
     public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, boolean data, boolean writeMultiple,
             int maxTries) {
         this(slaveId, reference, new SingleBitArray(data), writeMultiple, maxTries);
     }
 
+    /**
+     * Construct coil write request with many bits of data
+     *
+     * @param slaveId slave id to write to
+     * @param reference reference address
+     * @param data bit(s) to write
+     * @param writeMultiple whether to use {@link ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS} over
+     *            {@link ModbusWriteFunctionCode.WRITE_COIL}. Useful with single bit of data.
+     * @param maxTries maximum number of tries in case of errors, should be at least 1
+     * @throws IllegalArgumentException in case <code>data</code> is empty, <code>writeMultiple</code> is
+     *             <code>false</code> but there are many bits to write.
+     */
     public ModbusWriteCoilRequestBlueprintImpl(int slaveId, int reference, BitArray data, boolean writeMultiple,
             int maxTries) {
         super();
@@ -83,26 +112,41 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getUnitID() {
         return slaveId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getReference() {
         return reference;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusWriteFunctionCode getFunctionCode() {
         return writeMultiple ? ModbusWriteFunctionCode.WRITE_MULTIPLE_COILS : ModbusWriteFunctionCode.WRITE_COIL;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BitArray getCoils() {
         return bits;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getMaxTries() {
         return maxTries;

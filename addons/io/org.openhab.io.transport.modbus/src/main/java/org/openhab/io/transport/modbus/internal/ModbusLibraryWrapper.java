@@ -28,6 +28,8 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpointVisitor;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusUDPSlaveEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.wimpi.modbus.io.ModbusSerialTransaction;
 import net.wimpi.modbus.io.ModbusTCPTransaction;
@@ -55,10 +57,20 @@ import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 import net.wimpi.modbus.util.BitVector;
 
-class ModbusLibraryWrapper {
+/**
+ * Conversion utilities between underlying Modbus library (net.wimpi.modbus) and this transport bundle
+ *
+ * @author Sami Salonen
+ *
+ */
+public class ModbusLibraryWrapper {
+
+    private static Logger getLogger() {
+        return LoggerFactory.getLogger(ModbusManagerImpl.class);
+    }
 
     /**
-     * Convert the general request to MODBUS library request object
+     * Convert the general request to Modbus library request object
      *
      * @param message
      * @throws IllegalArgumentException
@@ -70,7 +82,7 @@ class ModbusLibraryWrapper {
      *             bug
      * @return MODBUS library request matching the write request
      */
-    static ModbusRequest createRequest(ModbusWriteRequestBlueprint message) {
+    public static ModbusRequest createRequest(ModbusWriteRequestBlueprint message) {
         // ModbusRequest[] request = new ModbusRequest[1];
         AtomicReference<ModbusRequest> request = new AtomicReference<>();
         AtomicBoolean writeSingle = new AtomicBoolean(false);
@@ -134,7 +146,7 @@ class ModbusLibraryWrapper {
                 });
                 break;
             default:
-                ModbusManagerImpl.logger.error("Unexpected function code {}", message.getFunctionCode());
+                getLogger().error("Unexpected function code {}", message.getFunctionCode());
                 throw new IllegalStateException(
                         String.format("Unexpected function code %s", message.getFunctionCode()));
         }
@@ -144,7 +156,16 @@ class ModbusLibraryWrapper {
         return modbusRequest;
     }
 
-    static ModbusTransaction createTransactionForEndpoint(ModbusSlaveEndpoint endpoint,
+    /**
+     * Create a fresh transaction for the given endpoint and connection
+     *
+     * The retries of the transaction will be disabled.
+     *
+     * @param endpoint
+     * @param connection
+     * @return
+     */
+    public static ModbusTransaction createTransactionForEndpoint(ModbusSlaveEndpoint endpoint,
             Optional<ModbusSlaveConnection> connection) {
         ModbusTransaction transaction = endpoint.accept(new ModbusSlaveEndpointVisitor<ModbusTransaction>() {
 
@@ -181,7 +202,13 @@ class ModbusLibraryWrapper {
         return transaction;
     }
 
-    static ModbusRequest createRequest(ModbusReadRequestBlueprint message) {
+    /**
+     * Create fresh request corresponding to {@link ModbusReadRequestBlueprint}
+     *
+     * @param message
+     * @return
+     */
+    public static ModbusRequest createRequest(ModbusReadRequestBlueprint message) {
         ModbusRequest request;
         if (message.getFunctionCode() == ModbusReadFunctionCode.READ_COILS) {
             request = new ReadCoilsRequest(message.getReference(), message.getDataLength());
@@ -200,18 +227,37 @@ class ModbusLibraryWrapper {
         return request;
     }
 
-    static BitVector convertBits(BitArray bits) {
+    /**
+     * Convert {@link BitArray} to {@link BitVector}
+     *
+     * @param bits
+     * @return
+     */
+    public static BitVector convertBits(BitArray bits) {
         BitVector bitVector = new BitVector(bits.size());
         IntStream.range(0, bits.size()).forEach(i -> bitVector.setBit(i, bits.getBit(i)));
         return bitVector;
     }
 
-    static Register[] convertRegisters(ModbusRegisterArray arr) {
+    /**
+     * Convert {@link ModbusRegisterArray} to array of {@link Register}
+     *
+     * @param bits
+     * @return
+     */
+    public static Register[] convertRegisters(ModbusRegisterArray arr) {
         return IntStream.range(0, arr.size()).mapToObj(i -> new SimpleInputRegister(arr.getRegister(i).getValue()))
                 .collect(Collectors.toList()).toArray(new Register[0]);
     }
 
-    static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
+    /**
+     * Invoke callback with the data received
+     *
+     * @param message original request
+     * @param callback callback for read
+     * @param response Modbus library response object
+     */
+    public static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
             // jamod library seems to be a bit buggy when it comes number of coils in the response, so we use
@@ -238,8 +284,7 @@ class ModbusLibraryWrapper {
             }
 
         } catch (Exception e) {
-            ModbusManagerImpl.logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(),
-                    e.getMessage(), e);
+            getLogger().error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
         }
     }
 

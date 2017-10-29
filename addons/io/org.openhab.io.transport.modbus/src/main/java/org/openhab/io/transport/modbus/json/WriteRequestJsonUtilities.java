@@ -31,11 +31,7 @@ import com.google.gson.JsonParser;
 import net.wimpi.modbus.util.BitVector;
 
 /**
- * <p>
  * Utilities for converting JSON to {@link ModbusWriteRequestBlueprint}
- * </p>
- *
- *
  *
  *
  * @author Sami Salonen
@@ -78,7 +74,7 @@ public final class WriteRequestJsonUtilities {
      * - address: reference or start address of the write
      * - value: array of data to be written. Use zero and one when writing coils. With registers, each number
      * corresponds to register's 16 bit data.
-     *
+     * - maxTries: number of tries with the write in case of errors
      *
      *
      * @param unitId unit id for the constructed {@link ModbusWriteRequestBlueprint}
@@ -90,6 +86,7 @@ public final class WriteRequestJsonUtilities {
      * @see WriteRequestJsonUtilities.JSON_FUNCTION_CODE
      * @see WriteRequestJsonUtilities.JSON_ADDRESS
      * @see WriteRequestJsonUtilities.JSON_VALUE
+     * @see WriteRequestJsonUtilities.JSON_MAX_TRIES
      */
     public static Collection<ModbusWriteRequestBlueprint> fromJson(int unitId, String jsonString) {
         JsonArray jsonArray = parser.parse(jsonString).getAsJsonArray();
@@ -162,7 +159,6 @@ public final class WriteRequestJsonUtilities {
                     throw new IllegalArgumentException("Must provide at least one coil");
                 }
                 BitVector bits = new BitVector(valuesElem.size());
-                // TODO: how does true/false work?
                 for (int i = 0; i < valuesElem.size(); i++) {
                     bits.setBit(i, valuesElem.get(i).getAsInt() != 0);
                 }

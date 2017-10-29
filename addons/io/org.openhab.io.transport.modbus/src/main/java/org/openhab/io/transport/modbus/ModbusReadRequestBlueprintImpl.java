@@ -12,17 +12,18 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 
 /**
  * Immutable implementation of {@link ModbusReadRequestBlueprint}
  *
- * Equals and hashCode implemented for PollTask. Two instances of this class are considered the same if they have
- * the equal parameters (same slave id, start, length and function).
+ * Equals and hashCode implemented keeping {@link PollTask} in mind: two instances of this class are considered the same
+ * if they have
+ * the equal parameters (same slave id, start, length, function code and maxTries).
  *
  * @author Sami Salonen
  *
  */
-
 public class ModbusReadRequestBlueprintImpl implements ModbusReadRequestBlueprint {
     private static StandardToStringStyle toStringStyle = new StandardToStringStyle();
     static {
@@ -45,26 +46,41 @@ public class ModbusReadRequestBlueprintImpl implements ModbusReadRequestBlueprin
         this.maxTries = maxTries;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getUnitID() {
         return slaveId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getReference() {
         return start;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ModbusReadFunctionCode getFunctionCode() {
         return functionCode;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getDataLength() {
         return length;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getMaxTries() {
         return maxTries;

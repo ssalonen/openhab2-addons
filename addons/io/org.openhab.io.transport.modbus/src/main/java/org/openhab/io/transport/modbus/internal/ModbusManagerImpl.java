@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.SwallowedExceptionListener;
@@ -61,9 +60,11 @@ import net.wimpi.modbus.msg.ModbusResponse;
 import net.wimpi.modbus.net.ModbusSlaveConnection;
 
 /**
- * <p>
- * ModbusManagerImpl class.
- * </p>
+ * Main implementation of ModbusManager
+ *
+ * We use connection pool to ensure that only single transaction is ongoing per each endpoint. This is especially
+ * important with serial slaves but practice has shown that even many tcp slaves have limited
+ * capability to handle many connections at the same time
  *
  * @author Sami Salonen
  */
@@ -94,7 +95,16 @@ public class ModbusManagerImpl implements ModbusManager {
 
     }
 
-    static private <R> void checkTransactionId(ModbusResponse response, ModbusRequest libRequest,
+    /**
+     * Check that transaction id of the response and request match
+     *
+     * @param response
+     * @param libRequest
+     * @param task
+     * @param operationId
+     * @throws ModbusUnexpectedTransactionIdException
+     */
+    private <R> void checkTransactionId(ModbusResponse response, ModbusRequest libRequest,
             TaskWithEndpoint<R, ? extends ModbusCallback> task, String operationId)
             throws ModbusUnexpectedTransactionIdException {
         // Compare request and response transaction ID. NOTE: ModbusTransaction.getTransactionID() is static and
@@ -108,6 +118,12 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
+    /**
+     * Implementation for the PollTask operation
+     *
+     * @author Sami Salonen
+     *
+     */
     private class PollExecutor implements ModbusOperation<PollTask> {
         @Override
         public void accept(String operationId, PollTask task, ModbusSlaveConnection connection)
@@ -122,13 +138,13 @@ public class ModbusManagerImpl implements ModbusManager {
             ModbusRequest libRequest = ModbusLibraryWrapper.createRequest(request);
             transaction.setRequest(libRequest);
 
-            logger.trace("Going execute transaction with request (FC={}): {} [operation ID {}]",
+            logger.trace("Going execute transaction with request request (FC={}): {} [operation ID {}]",
                     request.getFunctionCode(), libRequest.getHexMessage(), operationId);
             // Might throw ModbusIOException (I/O error) or ModbusSlaveException (explicit exception response from
             // slave)
             transaction.execute();
             ModbusResponse response = transaction.getResponse();
-            logger.trace("Response for read (FC={}, transaction ID={}): {} [operation ID {}]",
+            logger.trace("Response for read request (FC={}, transaction ID={}): {} [operation ID {}]",
                     response.getFunctionCode(), response.getTransactionID(), response.getHexMessage(), operationId);
             checkTransactionId(response, libRequest, task, operationId);
             callbackThreadPool.execute(() -> {
@@ -138,6 +154,12 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
+    /**
+     * Implementation for WriteTask operation
+     *
+     * @author Sami Salonen
+     *
+     */
     private class WriteExecutor implements ModbusOperation<WriteTask> {
         @Override
         public void accept(String operationId, WriteTask task, ModbusSlaveConnection connection)
@@ -152,14 +174,14 @@ public class ModbusManagerImpl implements ModbusManager {
             ModbusRequest libRequest = ModbusLibraryWrapper.createRequest(request);
             transaction.setRequest(libRequest);
 
-            logger.trace("Going execute transaction with request (FC={}): {} [operation ID {}]",
+            logger.trace("Going execute transaction with read request (FC={}): {} [operation ID {}]",
                     request.getFunctionCode(), libRequest.getHexMessage(), operationId);
 
             // Might throw ModbusIOException (I/O error) or ModbusSlaveException (explicit exception response from
             // slave)
             transaction.execute();
             ModbusResponse response = transaction.getResponse();
-            logger.trace("Response for read (FC={}, transaction ID={}): {} [operation ID {}]",
+            logger.trace("Response for write request (FC={}, transaction ID={}): {} [operation ID {}]",
                     response.getFunctionCode(), response.getTransactionID(), response.getHexMessage(), operationId);
 
             checkTransactionId(response, libRequest, task, operationId);
@@ -168,7 +190,7 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
-    static final Logger logger = LoggerFactory.getLogger(ModbusManagerImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(ModbusManagerImpl.class);
 
     /**
      * Time to wait between connection passive+borrow, i.e. time to wait between
@@ -186,11 +208,8 @@ public class ModbusManagerImpl implements ModbusManager {
      */
     public static final long DEFAULT_SERIAL_INTER_TRANSACTION_DELAY_MILLIS = 35;
 
-    public static final long MODBUS_POLLER_THREADS = 10;
-    public static final long MODBUS_POLLER_CALLBACK_THREADS = 5;
-
-    private static final String MODBUS_POLLER_THREAD_POOL_NAME = "MODBUS_POLLER_THREAD_POOL";
-    private static final String MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME = "MODBUS_POLLER_CALLBACK_THREAD_POOL";
+    private static final String MODBUS_POLLER_THREAD_POOL_NAME = "modbusManagerPollerThreadPool";
+    private static final String MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME = "modbusManagerCallbackThreadPool";
 
     private static GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
 
@@ -277,7 +296,8 @@ public class ModbusManagerImpl implements ModbusManager {
 
             @Override
             public void onSwallowException(Exception e) {
-                logger.error("Connection pool swallowed unexpected exception: {}", e.getMessage());
+                LoggerFactory.getLogger(ModbusManagerImpl.class)
+                        .error("Connection pool swallowed unexpected exception: {}", e.getMessage());
 
             }
         });
@@ -359,8 +379,7 @@ public class ModbusManagerImpl implements ModbusManager {
         return connection;
     }
 
-    private static <R> void invokeCallbackWithError(ModbusRequestBlueprint request, ModbusCallback callback,
-            Exception error) {
+    private <R> void invokeCallbackWithError(ModbusRequestBlueprint request, ModbusCallback callback, Exception error) {
         try {
             if (request instanceof ModbusReadRequestBlueprint) {
                 ((ModbusReadCallback) callback).onError((ModbusReadRequestBlueprint) request, error);
@@ -370,15 +389,13 @@ public class ModbusManagerImpl implements ModbusManager {
                 throw new IllegalStateException(String.format("Request %s or callback %s is of wrong type.",
                         request.getClass().getName(), callback.getClass().getName()));
             }
-        } catch (
-
-        Exception e) {
+        } catch (Exception e) {
             logger.error("Unhandled exception in callback: {} {} with request {}", e.getClass().getName(),
                     e.getMessage(), request, e);
         }
     }
 
-    private static void invokeCallbackWithResponse(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
+    private void invokeCallbackWithResponse(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
             org.openhab.io.transport.modbus.ModbusResponse response) {
         try {
             callback.onWriteResponse(request, response);
@@ -549,6 +566,9 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ScheduledFuture<?> submitOneTimePoll(PollTask task) {
         long scheduleTime = System.currentTimeMillis();
@@ -562,6 +582,9 @@ public class ModbusManagerImpl implements ModbusManager {
         return future;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void registerRegularPoll(@NonNull PollTask task, long pollPeriodMillis, long initialDelayMillis) {
         scheduledPollTasks.compute(task, (prevTask, prevFuture) -> {
@@ -579,6 +602,9 @@ public class ModbusManagerImpl implements ModbusManager {
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean unregisterRegularPoll(PollTask task) {
         // cancel poller
@@ -612,6 +638,9 @@ public class ModbusManagerImpl implements ModbusManager {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ScheduledFuture<?> submitOneTimeWrite(WriteTask task) {
         long scheduleTime = System.currentTimeMillis();
@@ -625,11 +654,9 @@ public class ModbusManagerImpl implements ModbusManager {
         return future;
     }
 
-    public void setDefaultPoolConfigurationFactory(
-            Function<ModbusSlaveEndpoint, EndpointPoolConfiguration> defaultPoolConfigurationFactory) {
-        connectionFactory.setDefaultPoolConfigurationFactory(defaultPoolConfigurationFactory);
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint, EndpointPoolConfiguration configuration) {
         connectionFactory.setEndpointPoolConfiguration(endpoint, configuration);
@@ -638,9 +665,36 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public EndpointPoolConfiguration getEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint) {
+    public @NonNull EndpointPoolConfiguration getEndpointPoolConfiguration(ModbusSlaveEndpoint endpoint) {
         return connectionFactory.getEndpointPoolConfiguration(endpoint);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addListener(ModbusManagerListener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void removeListener(ModbusManagerListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Set<@NonNull PollTask> getRegisteredRegularPolls() {
+        return this.scheduledPollTasks.keySet();
     }
 
     protected void activate(Map<String, Object> configProperties) {
@@ -685,21 +739,6 @@ public class ModbusManagerImpl implements ModbusManager {
             connectionFactory = null;
             logger.info("Modbus manager deactivated");
         }
-    }
-
-    @Override
-    public void addListener(ModbusManagerListener listener) {
-        listeners.add(listener);
-    }
-
-    @Override
-    public void removeListener(ModbusManagerListener listener) {
-        listeners.remove(listener);
-    }
-
-    @Override
-    public Set<@NonNull PollTask> getRegisteredRegularPolls() {
-        return this.scheduledPollTasks.keySet();
     }
 
 }
