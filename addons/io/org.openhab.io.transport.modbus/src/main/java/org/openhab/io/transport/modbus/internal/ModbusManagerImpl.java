@@ -479,6 +479,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     tryIndex++;
                     operation.accept(operationId, task, connection.get());
                     lastError.set(null);
+                    break;
                 } catch (ModbusIOException e) {
                     lastError.set(new ModbusSlaveIOException(e));
                     // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
