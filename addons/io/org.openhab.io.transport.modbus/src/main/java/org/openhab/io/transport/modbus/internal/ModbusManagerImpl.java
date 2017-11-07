@@ -475,8 +475,10 @@ public class ModbusManagerImpl implements ModbusManager {
                     return;
                 }
 
+                boolean willRetry = false;
                 try {
                     tryIndex++;
+                    willRetry = tryIndex < maxTries;
                     operation.accept(operationId, task, connection.get());
                     lastError.set(null);
                     break;
@@ -484,9 +486,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     lastError.set(new ModbusSlaveIOException(e));
                     // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
                     // broken pipe on write)
-                    if (tryIndex < maxTries) {
-                        // If tryIndex >= maxTries, the loop will end (note that tryIndex has been incremented
-                        // already)
+                    if (willRetry) {
                         logger.warn(
                                 "Try {} out of {} failed when executing request ({}). Will try again soon. Error was I/O error, so reseting the connection. Error details: {} {} [operation ID {}]",
                                 tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
@@ -504,9 +504,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 } catch (ModbusSlaveException e) {
                     lastError.set(new ModbusSlaveErrorResponseException(e));
                     // Slave returned explicit error response, no reason to re-establish new connection
-                    if (tryIndex < maxTries) {
-                        // If tryIndex >= maxTries, the loop will end (note that tryIndex has been incremented
-                        // already)
+                    if (willRetry) {
                         logger.warn(
                                 "Try {} out of {} failed when executing request ({}). Will try again soon. Error was: {} {} [operation ID {}]",
                                 tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
@@ -519,9 +517,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 } catch (ModbusUnexpectedTransactionIdException e) {
                     lastError.set(e);
                     // transaction error details already logged
-                    if (tryIndex < maxTries) {
-                        // If tryIndex >= maxTries, the loop will end (note that tryIndex has been incremented
-                        // already)
+                    if (willRetry) {
                         logger.warn(
                                 "Try {} out of {} failed when executing request ({}). Will try again soon. The response transaction ID did not match the request. Reseting the connection. Error details: {} {} [operation ID {}]",
                                 tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
