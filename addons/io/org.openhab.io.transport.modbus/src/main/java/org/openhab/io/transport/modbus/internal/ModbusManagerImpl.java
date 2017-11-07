@@ -499,7 +499,9 @@ public class ModbusManagerImpl implements ModbusManager {
                     // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
                     // connection
                     connection = Optional.empty();
-                    connection = getConnection(operationId, oneOffTask, task);
+                    if (willRetry) {
+                        connection = getConnection(operationId, oneOffTask, task);
+                    }
                     continue;
                 } catch (ModbusSlaveException e) {
                     lastError.set(new ModbusSlaveErrorResponseException(e));
@@ -530,7 +532,9 @@ public class ModbusManagerImpl implements ModbusManager {
                     // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
                     // connection
                     connection = Optional.empty();
-                    connection = getConnection(operationId, oneOffTask, task);
+                    if (willRetry) {
+                        connection = getConnection(operationId, oneOffTask, task);
+                    }
                     continue;
                 } catch (Exception e) {
                     lastError.set(e);
@@ -542,7 +546,9 @@ public class ModbusManagerImpl implements ModbusManager {
                     // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
                     // connection
                     connection = Optional.empty();
-                    connection = getConnection(operationId, oneOffTask, task);
+                    if (willRetry) {
+                        connection = getConnection(operationId, oneOffTask, task);
+                    }
                     continue;
                 }
             }
