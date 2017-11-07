@@ -539,9 +539,15 @@ public class ModbusManagerImpl implements ModbusManager {
                 } catch (Exception e) {
                     lastError.set(e);
                     // Some other (unexpected) exception occurred
-                    logger.error(
-                            "Last try {} failed when executing request ({}). Aborting. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
-                            tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
+                    if (willRetry) {
+                        logger.warn(
+                                "Try {} out of {} failed when executing request ({}). Will try again soon. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
+                                tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
+                    } else {
+                        logger.error(
+                                "Last try {} failed when executing request ({}). Aborting. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
+                                tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
+                    }
                     invalidate(endpoint, connection);
                     // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
                     // connection
