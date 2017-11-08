@@ -506,8 +506,8 @@ Bridge modbus:tcp:localhostTCP [ host="127.0.0.1", port=502, id=2 ] {
 `items/modbus_ex1.items`:
 
 ```xtend
-Switch DO4            "Digital Input index 4 [%d]"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
-Switch DO5            "Digital Input index 5 [%d]"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
+Switch DO4            "Digital Output index 4 [%d]"    { channel="modbus:data:localhostTCP:coils:do4:switch" }
+Switch DO5            "Digital Output index 5 [%d]"    { channel="modbus:data:localhostTCP:coils:do5:switch" }
  
 Contact DI1200            "Digital Input index 1200 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1200:contact" }
 Contact DI1201            "Digital Input index 1201 [%d]"    { channel="modbus:data:localhostTCP:discreteInputs:di1201:contact" }
