@@ -19,6 +19,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
+import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
@@ -66,17 +67,29 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
 
         @Override
         public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+            resetCommunicationError();
             forEachAllChildCallbacks(callback -> callback.onRegisters(request, registers));
         }
 
         @Override
         public void onBits(ModbusReadRequestBlueprint request, BitArray coils) {
+            resetCommunicationError();
             forEachAllChildCallbacks(callback -> callback.onBits(request, coils));
         }
 
         @Override
         public void onError(ModbusReadRequestBlueprint request, Exception error) {
             forEachAllChildCallbacks(callback -> callback.onError(request, error));
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                    String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
+        }
+
+        private void resetCommunicationError() {
+            ThingStatusInfo statusInfo = thing.getStatusInfo();
+            if (ThingStatus.OFFLINE.equals(statusInfo.getStatus())
+                    && ThingStatusDetail.COMMUNICATION_ERROR.equals(statusInfo.getStatusDetail())) {
+                updateStatus(ThingStatus.ONLINE);
+            }
         }
 
         private ThingUID getThingUID() {
