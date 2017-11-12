@@ -157,8 +157,8 @@ public class ModbusSlaveConnectionFactoryImpl
         if (obj.getObject() == null) {
             return;
         }
+        ModbusSlaveConnection connection = obj.getObject();
         try {
-            ModbusSlaveConnection connection = obj.getObject();
             EndpointPoolConfiguration config = getEndpointPoolConfiguration(endpoint);
 
             if (connection.isConnected()) {
@@ -171,6 +171,11 @@ public class ModbusSlaveConnectionFactoryImpl
             } else {
                 // invariant: !connection.isConnected()
                 tryConnect(endpoint, obj, connection, config);
+            }
+        } catch (InterruptedException e) {
+            // Someone wants to cancel us, reset the connection and abort
+            if (connection.isConnected()) {
+                connection.resetConnection();
             }
         } catch (Exception e) {
             logger.error("Error connecting connection {} for endpoint {}: {}", obj.getObject(), endpoint,
@@ -289,6 +294,10 @@ public class ModbusSlaveConnectionFactoryImpl
                 ((PooledConnection) obj).setLastConnected(curTime);
                 lastConnectMillis.put(endpoint, curTime);
                 break;
+            } catch (InterruptedException e) {
+                logger.error("connect try {}/{} error: {}. Connection {}. Endpoint {}", tryIndex, maxTries,
+                        e.getMessage(), connection, endpoint);
+                throw e;
             } catch (Exception e) {
                 tryIndex++;
                 logger.error("connect try {}/{} error: {}. Connection {}. Endpoint {}", tryIndex, maxTries,
@@ -309,8 +318,9 @@ public class ModbusSlaveConnectionFactoryImpl
      * @param lastOperation last time operation was executed, or null if it has not been executed
      * @param waitMillis
      * @return milliseconds slept
+     * @throws InterruptedException
      */
-    public static long waitAtleast(Long lastOperation, long waitMillis) {
+    public static long waitAtleast(Long lastOperation, long waitMillis) throws InterruptedException {
         if (lastOperation == null) {
             return 0;
         }
@@ -320,6 +330,7 @@ public class ModbusSlaveConnectionFactoryImpl
             Thread.sleep(millisToWaitStill);
         } catch (InterruptedException e) {
             LoggerFactory.getLogger(ModbusSlaveConnectionFactoryImpl.class).debug("wait interrupted: {}", e);
+            throw e;
         }
         return millisToWaitStill;
     }
