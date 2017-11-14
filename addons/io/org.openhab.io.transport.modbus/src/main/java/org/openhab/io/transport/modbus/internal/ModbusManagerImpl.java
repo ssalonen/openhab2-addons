@@ -263,7 +263,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 @Override
                 public EndpointPoolConfiguration visit(ModbusTCPSlaveEndpoint modbusIPSlavePoolingKey) {
                     EndpointPoolConfiguration endpointPoolConfig = new EndpointPoolConfiguration();
-                    endpointPoolConfig.setPassivateBorrowMinMillis(DEFAULT_TCP_INTER_TRANSACTION_DELAY_MILLIS);
+                    endpointPoolConfig.setInterTransactionDelayMillis(DEFAULT_TCP_INTER_TRANSACTION_DELAY_MILLIS);
                     endpointPoolConfig.setConnectMaxTries(Modbus.DEFAULT_RETRIES);
                     return endpointPoolConfig;
                 }
@@ -273,7 +273,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     EndpointPoolConfiguration endpointPoolConfig = new EndpointPoolConfiguration();
                     // never "disconnect" (close/open serial port) serial connection between borrows
                     endpointPoolConfig.setReconnectAfterMillis(-1);
-                    endpointPoolConfig.setPassivateBorrowMinMillis(DEFAULT_SERIAL_INTER_TRANSACTION_DELAY_MILLIS);
+                    endpointPoolConfig.setInterTransactionDelayMillis(DEFAULT_SERIAL_INTER_TRANSACTION_DELAY_MILLIS);
                     endpointPoolConfig.setConnectMaxTries(Modbus.DEFAULT_RETRIES);
                     return endpointPoolConfig;
                 }
@@ -281,7 +281,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 @Override
                 public EndpointPoolConfiguration visit(ModbusUDPSlaveEndpoint modbusUDPSlavePoolingKey) {
                     EndpointPoolConfiguration endpointPoolConfig = new EndpointPoolConfiguration();
-                    endpointPoolConfig.setPassivateBorrowMinMillis(DEFAULT_TCP_INTER_TRANSACTION_DELAY_MILLIS);
+                    endpointPoolConfig.setInterTransactionDelayMillis(DEFAULT_TCP_INTER_TRANSACTION_DELAY_MILLIS);
                     endpointPoolConfig.setConnectMaxTries(Modbus.DEFAULT_RETRIES);
                     return endpointPoolConfig;
                 }
@@ -442,11 +442,17 @@ public class ModbusManagerImpl implements ModbusManager {
      */
     private <R extends ModbusRequestBlueprint, C extends ModbusCallback, T extends TaskWithEndpoint<R, C>> void executeOperation(
             @NonNull T task, boolean oneOffTask, ModbusOperation<T> operation) {
+        if (connectionFactory == null) {
+            // deactivated manager
+            logger.trace("Deactivated manager - aborting operation.");
+            return;
+        }
         R request = task.getRequest();
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         WeakReference<C> callback = task.getCallback();
         int maxTries = task.getMaxTries();
         AtomicReference<Exception> lastError = new AtomicReference<>();
+        long retryDelay = connectionFactory.getEndpointPoolConfiguration(endpoint).getInterTransactionDelayMillis();
 
         if (maxTries <= 0) {
             throw new IllegalArgumentException("maxTries should be positive");
@@ -463,30 +469,36 @@ public class ModbusManagerImpl implements ModbusManager {
             if (!connection.isPresent()) {
                 // Could not acquire connection, time to abort
                 // Error logged already, error callback called as well
+                logger.trace("Initial connection was not successful, aborting. [operation ID {}]", operationId);
                 return;
             }
 
             int tryIndex = 0;
-            long lastTryMillis = System.currentTimeMillis();
+            /**
+             * last execution is tracked such that the endpoint is not spammed on retry. First retry can be executed
+             * right away since getConnection ensures enough time has passed since last transaction. More precisely,
+             * ModbusSlaveConnectionFactoryImpl sleeps on activate() (i.e. before returning connection).
+             */
+            Long lastTryMillis = null;
             while (tryIndex < maxTries) {
                 logger.trace("Try {} out of {} [operation ID {}]", tryIndex + 1, maxTries, operationId);
                 if (!connection.isPresent()) {
-                    // Retry with failed with failed re-connect
-                    // logged already, callback called as well
+                    // Connection was likely reseted with previous try, and connection was not successfully
+                    // re-established. Error has been logged, time to abort.
+                    logger.trace("Try {} out of {}. Connection was not successful, aborting. [operation ID {}]",
+                            tryIndex + 1, maxTries, operationId);
                     return;
                 }
                 // Check poll task is still registered (this is all asynchronous)
                 if (!oneOffTask && task instanceof PollTask) {
                     verifyTaskIsRegistered((PollTask) task);
                 }
-                if (tryIndex > 0) {
-                    // When retrying with the same connection, let's ensure that enough time is between the retries
-                    logger.trace("Ensuring that enough time passes before retrying again. Sleeping [operation ID {}]",
-                            operationId);
-                    ModbusSlaveConnectionFactoryImpl.waitAtleast(lastTryMillis,
-                            connectionFactory.getEndpointPoolConfiguration(endpoint).getPassivateBorrowMinMillis());
-                    logger.trace("Sleep ended [operation ID {}]", operationId);
-                }
+                // Let's ensure that enough time is between the retries
+                logger.trace(
+                        "Ensuring that enough time passes before retrying again. Sleeping if necessary [operation ID {}]",
+                        operationId);
+                long slept = ModbusSlaveConnectionFactoryImpl.waitAtleast(lastTryMillis, retryDelay);
+                logger.trace("Sleep ended, slept {} [operation ID {}]", operationId, slept);
                 if (callbackThreadPool == null) {
                     logger.debug("Manager has been shut down, aborting proecssing request {} [operation ID {}]",
                             request, operationId);
@@ -513,13 +525,9 @@ public class ModbusManagerImpl implements ModbusManager {
                                 "Last try {} failed when executing request ({}). Aborting. Error was I/O error, so reseting the connection. Error details: {} {} [operation ID {}]",
                                 tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
                     }
+                    // Invalidate connection, and empty (so that new connection is acquired before new retry)
                     invalidate(endpoint, connection);
-                    // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
-                    // connection
                     connection = Optional.empty();
-                    if (willRetry) {
-                        connection = getConnection(operationId, oneOffTask, task);
-                    }
                     continue;
                 } catch (ModbusSlaveException e) {
                     lastError.set(new ModbusSlaveErrorResponseException(e));
@@ -546,13 +554,9 @@ public class ModbusManagerImpl implements ModbusManager {
                                 "Last try {} failed when executing request ({}). Aborting. The response transaction ID did not match the request. Reseting the connection. Error details: {} {} [operation ID {}]",
                                 tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
                     }
+                    // Invalidate connection, and empty (so that new connection is acquired before new retry)
                     invalidate(endpoint, connection);
-                    // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
-                    // connection
                     connection = Optional.empty();
-                    if (willRetry) {
-                        connection = getConnection(operationId, oneOffTask, task);
-                    }
                     continue;
                 } catch (Exception e) {
                     lastError.set(e);
@@ -566,14 +570,17 @@ public class ModbusManagerImpl implements ModbusManager {
                                 "Last try {} failed when executing request ({}). Aborting. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
                                 tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
                     }
+                    // Invalidate connection, and empty (so that new connection is acquired before new retry)
                     invalidate(endpoint, connection);
-                    // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
-                    // connection
                     connection = Optional.empty();
-                    if (willRetry) {
+                    continue;
+                } finally {
+                    lastTryMillis = System.currentTimeMillis();
+                    // Connection was reseted in error handling and needs to be reconnected.
+                    // Try to re-establish connection.
+                    if (willRetry && !connection.isPresent()) {
                         connection = getConnection(operationId, oneOffTask, task);
                     }
-                    continue;
                 }
             }
             if (lastError.get() != null) {
@@ -590,9 +597,8 @@ public class ModbusManagerImpl implements ModbusManager {
         } catch (InterruptedException e) {
             logger.warn("Poll task was canceled -- not executing/proceeding with the poll: {} [operation ID {}]",
                     e.getMessage(), operationId);
+            // Invalidate connection, and empty (so that new connection is acquired before new retry)
             invalidate(endpoint, connection);
-            // set the invalidated connection to "null" such that it is not returned to pool. Then get a new
-            // connection
             connection = Optional.empty();
         } finally {
             returnConnection(endpoint, connection);

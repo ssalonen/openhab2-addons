@@ -60,7 +60,7 @@ public class ModbusTcpThingHandlerTest {
         expectedPoolConfiguration.setConnectMaxTries(3);
         expectedPoolConfiguration.setConnectTimeoutMillis(5);
         expectedPoolConfiguration.setInterConnectDelayMillis(2);
-        expectedPoolConfiguration.setPassivateBorrowMinMillis(1);
+        expectedPoolConfiguration.setInterTransactionDelayMillis(1);
         expectedPoolConfiguration.setReconnectAfterMillis(4);
 
         Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
@@ -108,7 +108,7 @@ public class ModbusTcpThingHandlerTest {
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
         EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
-        poolConfiguration.setPassivateBorrowMinMillis(2);
+        poolConfiguration.setInterTransactionDelayMillis(2);
         // Different endpoint (port 45), so should not affect this thing
         thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 45), poolConfiguration);
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
@@ -136,7 +136,7 @@ public class ModbusTcpThingHandlerTest {
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
         EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
-        poolConfiguration.setPassivateBorrowMinMillis(2);
+        poolConfiguration.setInterTransactionDelayMillis(2);
         // Same endpoint and different parameters -> OFFLINE
         thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 44), poolConfiguration);
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
@@ -165,7 +165,7 @@ public class ModbusTcpThingHandlerTest {
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
 
         EndpointPoolConfiguration poolConfiguration = new EndpointPoolConfiguration();
-        poolConfiguration.setPassivateBorrowMinMillis(1);
+        poolConfiguration.setInterTransactionDelayMillis(1);
         // Same endpoint and same parameters -> should not affect this thing
         thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 44), poolConfiguration);
         assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
