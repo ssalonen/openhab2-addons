@@ -207,11 +207,16 @@ public class ModbusManagerImpl implements ModbusManager {
      * here https://community.openhab.org/t/connection-pooling-in-modbus-binding/5246/111?u=ssalonen
      */
     public static final long DEFAULT_SERIAL_INTER_TRANSACTION_DELAY_MILLIS = 35;
-
+    /**
+     * Thread naming for modbus read & write requests. Also used by the monitor thread
+     */
     private static final String MODBUS_POLLER_THREAD_POOL_NAME = "modbusManagerPollerThreadPool";
+    /**
+     * Thread naming for executing callbacks
+     */
     private static final String MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME = "modbusManagerCallbackThreadPool";
 
-    private static GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
+    private static final GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
 
     static {
         // When the pool is exhausted, multiple calling threads may be simultaneously blocked waiting for instances to
@@ -242,23 +247,15 @@ public class ModbusManagerImpl implements ModbusManager {
      * - https://community.openhab.org/t/modbus-connection-problem/6108/
      * - https://community.openhab.org/t/connection-pooling-in-modbus-binding/5246/
      */
-    private static KeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> connectionPool;
-    static ModbusSlaveConnectionFactoryImpl connectionFactory;
-
+    private volatile KeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> connectionPool;
+    private volatile ModbusSlaveConnectionFactoryImpl connectionFactory;
     private volatile Map<@NonNull PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
+    private volatile ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
+    private volatile ExecutorService callbackThreadPool;
+    private volatile Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<>();
+    private volatile ScheduledFuture<?> monitorFuture;
 
-    private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
-    private static ExecutorService callbackThreadPool;
-
-    private Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<>();
-
-    private ScheduledFuture<?> monitorFuture;
-
-    static {
-        constructConnectionPool();
-    }
-
-    private static void constructConnectionPool() {
+    private void constructConnectionPool() {
         connectionFactory = new ModbusSlaveConnectionFactoryImpl();
         connectionFactory.setDefaultPoolConfigurationFactory(endpoint -> {
             return endpoint.accept(new ModbusSlaveEndpointVisitor<EndpointPoolConfiguration>() {
@@ -673,7 +670,7 @@ public class ModbusManagerImpl implements ModbusManager {
 
             // Make sure connections to this endpoint are closed when they are returned to pool (which
             // is usually pretty soon as transactions should be relatively short-lived)
-            ModbusManagerImpl.connectionFactory.disconnectOnReturn(task.getEndpoint(), System.currentTimeMillis());
+            connectionFactory.disconnectOnReturn(task.getEndpoint(), System.currentTimeMillis());
 
             future.cancel(true);
 
