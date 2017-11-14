@@ -513,7 +513,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     lastError.set(null);
                     break;
                 } catch (ModbusIOException e) {
-                    lastError.set(new ModbusSlaveIOException(e));
+                    lastError.set(new ModbusSlaveIOExceptionImpl(e));
                     // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
                     // broken pipe on write)
                     if (willRetry) {
@@ -530,7 +530,7 @@ public class ModbusManagerImpl implements ModbusManager {
                     connection = Optional.empty();
                     continue;
                 } catch (ModbusSlaveException e) {
-                    lastError.set(new ModbusSlaveErrorResponseException(e));
+                    lastError.set(new ModbusSlaveErrorResponseExceptionImpl(e));
                     // Slave returned explicit error response, no reason to re-establish new connection
                     if (willRetry) {
                         logger.warn(
