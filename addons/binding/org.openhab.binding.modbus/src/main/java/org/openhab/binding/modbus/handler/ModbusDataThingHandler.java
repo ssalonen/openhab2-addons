@@ -180,6 +180,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
 
         ModbusWriteRequestBlueprint request;
+        boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegisterOrCoil();
         if (config.getWriteType().equals(WRITE_TYPE_COIL)) {
             Optional<Boolean> commandAsBoolean = ModbusBitUtilities.translateCommand2Boolean(transformedCommand.get());
             if (!commandAsBoolean.isPresent()) {
@@ -189,11 +190,11 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 return;
             }
             boolean data = commandAsBoolean.get();
-            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, writeStart, data, false,
+            request = new ModbusWriteCoilRequestBlueprintImpl(slaveId, writeStart, data, writeMultiple,
                     config.getWriteMaxTries());
         } else if (config.getWriteType().equals(WRITE_TYPE_HOLDING)) {
             ModbusRegisterArray data = ModbusBitUtilities.commandToRegisters(transformedCommand.get(), writeValueType);
-            boolean writeMultiple = config.isWriteMultipleEvenWithSingleRegisterOrCoil() || data.size() > 1;
+            writeMultiple = writeMultiple || data.size() > 1;
             request = new ModbusWriteRegisterRequestBlueprintImpl(slaveId, writeStart, data, writeMultiple,
                     config.getWriteMaxTries());
         } else {
