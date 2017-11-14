@@ -160,17 +160,15 @@ public class ModbusSlaveConnectionFactoryImpl
         ModbusSlaveConnection connection = obj.getObject();
         try {
             EndpointPoolConfiguration config = getEndpointPoolConfiguration(endpoint);
-
-            if (connection.isConnected()) {
-                if (config != null) {
-                    long waited = waitAtleast(lastPassivateMillis.get(endpoint), config.getPassivateBorrowMinMillis());
-                    logger.trace(
-                            "Waited {}ms (passivateBorrowMinMillis {}ms) before giving returning connection {} for endpoint {}, to ensure delay between transactions.",
-                            waited, config.getPassivateBorrowMinMillis(), obj.getObject(), endpoint);
-                }
-            } else {
-                // invariant: !connection.isConnected()
+            if (!connection.isConnected()) {
                 tryConnect(endpoint, obj, connection, config);
+            }
+
+            if (config != null) {
+                long waited = waitAtleast(lastPassivateMillis.get(endpoint), config.getPassivateBorrowMinMillis());
+                logger.trace(
+                        "Waited {}ms (passivateBorrowMinMillis {}ms) before giving returning connection {} for endpoint {}, to ensure delay between transactions.",
+                        waited, config.getPassivateBorrowMinMillis(), obj.getObject(), endpoint);
             }
         } catch (InterruptedException e) {
             // Someone wants to cancel us, reset the connection and abort
