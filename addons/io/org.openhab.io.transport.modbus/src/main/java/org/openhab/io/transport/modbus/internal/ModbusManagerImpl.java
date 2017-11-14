@@ -231,7 +231,11 @@ public class ModbusManagerImpl implements ModbusManager {
         // block infinitely when exhausted
         generalPoolConfig.setMaxWaitMillis(-1);
 
-        // make sure we return connected connections from/to connection pool
+        // Connections are "tested" on return. Effectively, disconnected connections are destroyed when returning on
+        // pool
+        // Note that we do not test on borrow -- that would mean blocking situation when connection cannot be
+        // established.
+        // Instead, borrowing connection from pool can return unconnected connection.
         generalPoolConfig.setTestOnReturn(true);
 
         // disable JMX
