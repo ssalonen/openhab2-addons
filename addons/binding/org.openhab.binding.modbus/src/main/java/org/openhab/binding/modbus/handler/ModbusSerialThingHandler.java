@@ -39,7 +39,7 @@ public class ModbusSerialThingHandler
         poolConfiguration = new EndpointPoolConfiguration();
         poolConfiguration.setConnectMaxTries(config.getConnectMaxTries());
         poolConfiguration.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
-        poolConfiguration.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        poolConfiguration.setInterTransactionDelayMillis(config.getTimeBetweenTransactionsMillis());
 
         // Never reconnect serial connections "automatically"
         poolConfiguration.setInterConnectDelayMillis(1000);

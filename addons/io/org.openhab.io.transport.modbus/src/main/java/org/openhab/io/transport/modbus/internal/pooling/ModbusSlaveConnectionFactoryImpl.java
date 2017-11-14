@@ -165,10 +165,10 @@ public class ModbusSlaveConnectionFactoryImpl
             }
 
             if (config != null) {
-                long waited = waitAtleast(lastPassivateMillis.get(endpoint), config.getPassivateBorrowMinMillis());
+                long waited = waitAtleast(lastPassivateMillis.get(endpoint), config.getInterTransactionDelayMillis());
                 logger.trace(
-                        "Waited {}ms (passivateBorrowMinMillis {}ms) before giving returning connection {} for endpoint {}, to ensure delay between transactions.",
-                        waited, config.getPassivateBorrowMinMillis(), obj.getObject(), endpoint);
+                        "Waited {}ms (interTransactionDelayMillis {}ms) before giving returning connection {} for endpoint {}, to ensure delay between transactions.",
+                        waited, config.getInterTransactionDelayMillis(), obj.getObject(), endpoint);
             }
         } catch (InterruptedException e) {
             // Someone wants to cancel us, reset the connection and abort
@@ -276,13 +276,13 @@ public class ModbusSlaveConnectionFactoryImpl
             try {
                 if (config != null) {
                     long waited = waitAtleast(lastConnect,
-                            Math.max(config.getInterConnectDelayMillis(), config.getPassivateBorrowMinMillis()));
+                            Math.max(config.getInterConnectDelayMillis(), config.getInterTransactionDelayMillis()));
                     if (waited > 0) {
                         logger.trace(
-                                "Waited {}ms (interConnectDelayMillis {}ms, passivateBorrowMinMillis {}ms) before "
+                                "Waited {}ms (interConnectDelayMillis {}ms, interTransactionDelayMillis {}ms) before "
                                         + "connecting disconnected connection {} for endpoint {}, to allow delay "
                                         + "between connections re-connects",
-                                waited, config.getInterConnectDelayMillis(), config.getPassivateBorrowMinMillis(),
+                                waited, config.getInterConnectDelayMillis(), config.getInterTransactionDelayMillis(),
                                 obj.getObject(), endpoint);
                     }
 
