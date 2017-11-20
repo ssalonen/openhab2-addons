@@ -295,8 +295,8 @@ public class ModbusSlaveConnectionFactoryImpl
                 lastConnectMillis.put(endpoint, curTime);
                 break;
             } catch (InterruptedException e) {
-                logger.error("connect try {}/{} error: {}. Connection {}. Endpoint {}", tryIndex, maxTries,
-                        e.getMessage(), connection, endpoint);
+                logger.error("connect try {}/{} error: {}. Aborting since interrupted. Connection {}. Endpoint {}.",
+                        tryIndex, maxTries, e.getMessage(), connection, endpoint);
                 throw e;
             } catch (Exception e) {
                 tryIndex++;
