@@ -8,15 +8,19 @@
  */
 package org.openhab.io.transport.modbus;
 
+import java.lang.ref.WeakReference;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 /**
- * Implementation of {@link PollTask} that differentiates tasks using endpoint and request.
+ * Implementation of {@link PollTaskWithCallback} that differentiates tasks using endpoint, request and callbacks.
+ *
+ * Note: Two differentiate poll tasks are considered unequal if their callbacks are unequal.
  *
  * HashCode and equals should be defined such that two poll tasks considered the same only if their request,
  * maxTries, endpoint and callback are the same.
@@ -24,47 +28,38 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
  * @author Sami Salonen
  *
  */
-public class PollTaskImpl implements PollTask {
+public class PollTaskWithCallbackImpl extends PollTaskImpl implements PollTaskWithCallback {
 
     static StandardToStringStyle toStringStyle = new StandardToStringStyle();
     static {
         toStringStyle.setUseShortClassName(true);
     }
 
-    private ModbusSlaveEndpoint endpoint;
-    private ModbusReadRequestBlueprintImpl request;
+    private WeakReference<ModbusReadCallback> callback;
 
-    public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprintImpl request) {
-        super();
-        this.endpoint = endpoint;
-        this.request = request;
+    public PollTaskWithCallbackImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprintImpl request,
+            ModbusReadCallback callback) {
+        super(endpoint, request);
+        this.callback = new WeakReference<>(callback);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ModbusReadRequestBlueprint getRequest() {
-        return request;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ModbusSlaveEndpoint getEndpoint() {
-        return endpoint;
+    public WeakReference<ModbusReadCallback> getCallback() {
+        return callback;
     }
 
     @Override
     public int hashCode() {
-        return new HashCodeBuilder(9, 7).append(request).append(getEndpoint()).toHashCode();
+        return new HashCodeBuilder(9, 3).append(getRequest()).append(getEndpoint()).append(getCallback()).toHashCode();
     }
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this, toStringStyle).append("request", request).append("endpoint", endpoint)
-                .toString();
+        return new ToStringBuilder(this, toStringStyle).append("request", getRequest())
+                .append("endpoint", getEndpoint()).append("callback", getCallback()).toString();
     }
 
     @Override
@@ -78,8 +73,9 @@ public class PollTaskImpl implements PollTask {
         if (obj.getClass() != getClass()) {
             return false;
         }
-        PollTaskImpl rhs = (PollTaskImpl) obj;
-        return new EqualsBuilder().append(request, rhs.request).append(endpoint, rhs.endpoint).isEquals();
+        PollTaskWithCallbackImpl rhs = (PollTaskWithCallbackImpl) obj;
+        return new EqualsBuilder().append(getRequest(), rhs.getRequest()).append(getEndpoint(), rhs.getEndpoint())
+                .append(getCallback(), rhs.getCallback()).isEquals();
     }
 
 }

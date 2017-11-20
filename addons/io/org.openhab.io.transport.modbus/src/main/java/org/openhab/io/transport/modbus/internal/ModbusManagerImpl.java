@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
@@ -29,12 +30,14 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
+import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusCallback;
 import org.openhab.io.transport.modbus.ModbusConnectionException;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusManagerListener;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
+import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusTransportException;
 import org.openhab.io.transport.modbus.ModbusUnexpectedTransactionIdException;
@@ -69,6 +72,101 @@ import net.wimpi.modbus.net.ModbusSlaveConnection;
  * @author Sami Salonen
  */
 public class ModbusManagerImpl implements ModbusManager {
+
+    private final class PollTaskWrapper implements PollTaskWithCallback {
+        private final @NonNull PollTask task;
+        private final ModbusReadCallback callback;
+
+        private PollTaskWrapper(@NonNull PollTask task, ModbusReadCallback callbackOverride) {
+            this.task = task;
+            this.callback = callbackOverride;
+        }
+
+        @Override
+        public ModbusReadRequestBlueprint getRequest() {
+            return task.getRequest();
+        }
+
+        @Override
+        public ModbusSlaveEndpoint getEndpoint() {
+            return task.getEndpoint();
+        }
+
+        @Override
+        public WeakReference<ModbusReadCallback> getCallback() {
+            return new WeakReference<>(callback);
+        }
+    }
+
+    private final class WriteTaskWrapper implements WriteTaskWithCallback {
+        private final @NonNull WriteTask task;
+        private final ModbusWriteCallback callback;
+
+        private WriteTaskWrapper(@NonNull WriteTask task, ModbusWriteCallback callbackOverride) {
+            this.task = task;
+            this.callback = callbackOverride;
+        }
+
+        @Override
+        public ModbusWriteRequestBlueprint getRequest() {
+            return task.getRequest();
+        }
+
+        @Override
+        public ModbusSlaveEndpoint getEndpoint() {
+            return task.getEndpoint();
+        }
+
+        @Override
+        public WeakReference<ModbusWriteCallback> getCallback() {
+            return new WeakReference<>(callback);
+        }
+    }
+
+    private final class CompletableFutureReadCallback implements ModbusReadCallback {
+        private final CompletableFuture<Object> completableFuture;
+
+        private CompletableFutureReadCallback(CompletableFuture<Object> completableFuture) {
+            this.completableFuture = completableFuture;
+        }
+
+        @Override
+        public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+            completableFuture.complete(registers);
+        }
+
+        @Override
+        public void onError(ModbusReadRequestBlueprint request, Exception error) {
+            completableFuture.completeExceptionally(error);
+        }
+
+        @Override
+        public void onBits(ModbusReadRequestBlueprint request, BitArray bits) {
+            completableFuture.complete(bits);
+        }
+    }
+
+    private final class CompletableFutureWriteCallback implements ModbusWriteCallback {
+
+        private final CompletableFuture<org.openhab.io.transport.modbus.ModbusResponse> completableFuture;
+
+        private CompletableFutureWriteCallback(
+                CompletableFuture<org.openhab.io.transport.modbus.ModbusResponse> completableFuture) {
+            this.completableFuture = completableFuture;
+        }
+
+        @Override
+        public void onError(ModbusWriteRequestBlueprint request, Exception error) {
+            completableFuture.completeExceptionally(error);
+        }
+
+        @Override
+        public void onWriteResponse(ModbusWriteRequestBlueprint request,
+                org.openhab.io.transport.modbus.ModbusResponse response) {
+            completableFuture.complete(response);
+        }
+
+    }
 
     private static class PollTaskUnregistered extends Exception {
         public PollTaskUnregistered(String msg) {
@@ -105,7 +203,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * @throws ModbusUnexpectedTransactionIdException
      */
     private <R> void checkTransactionId(ModbusResponse response, ModbusRequest libRequest,
-            TaskWithEndpoint<R, ? extends ModbusCallback> task, String operationId)
+            TaskWithCallback<R, ? extends ModbusCallback> task, String operationId)
             throws ModbusUnexpectedTransactionIdException {
         // Compare request and response transaction ID. NOTE: ModbusTransaction.getTransactionID() is static and
         // not safe to use
@@ -124,9 +222,9 @@ public class ModbusManagerImpl implements ModbusManager {
      * @author Sami Salonen
      *
      */
-    private class PollExecutor implements ModbusOperation<PollTask> {
+    private class PollExecutor implements ModbusOperation<PollTaskWithCallback> {
         @Override
-        public void accept(String operationId, PollTask task, ModbusSlaveConnection connection)
+        public void accept(String operationId, PollTaskWithCallback task, ModbusSlaveConnection connection)
                 throws ModbusException, ModbusTransportException {
             ModbusSlaveEndpoint endpoint = task.getEndpoint();
             ModbusReadRequestBlueprint request = task.getRequest();
@@ -160,9 +258,9 @@ public class ModbusManagerImpl implements ModbusManager {
      * @author Sami Salonen
      *
      */
-    private class WriteExecutor implements ModbusOperation<WriteTask> {
+    private class WriteExecutor implements ModbusOperation<WriteTaskWithCallback> {
         @Override
-        public void accept(String operationId, WriteTask task, ModbusSlaveConnection connection)
+        public void accept(String operationId, WriteTaskWithCallback task, ModbusSlaveConnection connection)
                 throws ModbusException, ModbusTransportException {
             ModbusSlaveEndpoint endpoint = task.getEndpoint();
             ModbusWriteRequestBlueprint request = task.getRequest();
@@ -245,7 +343,7 @@ public class ModbusManagerImpl implements ModbusManager {
     private static KeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> connectionPool;
     static ModbusSlaveConnectionFactoryImpl connectionFactory;
 
-    private volatile Map<@NonNull PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
+    private volatile Map<@NonNull PollTaskWithCallback, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
 
     private static ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
     private static ExecutorService callbackThreadPool;
@@ -366,7 +464,7 @@ public class ModbusManagerImpl implements ModbusManager {
      *         connection cannot be established
      * @throws PollTaskUnregistered
      */
-    private <R extends ModbusRequestBlueprint, C extends ModbusCallback, T extends TaskWithEndpoint<R, C>> Optional<ModbusSlaveConnection> getConnection(
+    private <R extends ModbusRequestBlueprint, C extends ModbusCallback, T extends TaskWithCallback<R, C>> Optional<ModbusSlaveConnection> getConnection(
             String operationId, boolean oneOffTask, @NonNull T task) throws PollTaskUnregistered {
         logger.trace(
                 "Executing task {} (oneOff={})! Waiting for connection. Idle connections for this endpoint: {}, and active {} [operation ID {}]",
@@ -421,7 +519,7 @@ public class ModbusManagerImpl implements ModbusManager {
         }
     }
 
-    private void verifyTaskIsRegistered(PollTask task) throws PollTaskUnregistered {
+    private void verifyTaskIsRegistered(PollTaskWithCallback task) throws PollTaskUnregistered {
         if (!this.scheduledPollTasks.containsKey(task)) {
             String msg = String.format("Poll task %s is unregistered", task);
             logger.debug(msg);
@@ -443,7 +541,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * @param oneOffTask
      * @param operation
      */
-    private <R extends ModbusRequestBlueprint, C extends ModbusCallback, T extends TaskWithEndpoint<R, C>> void executeOperation(
+    private <R extends ModbusRequestBlueprint, C extends ModbusCallback, T extends TaskWithCallback<R, C>> void executeOperation(
             @NonNull T task, boolean oneOffTask, ModbusOperation<T> operation) {
         R request = task.getRequest();
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
@@ -479,8 +577,8 @@ public class ModbusManagerImpl implements ModbusManager {
                     return;
                 }
                 // Check poll task is still registered (this is all asynchronous)
-                if (!oneOffTask && task instanceof PollTask) {
-                    verifyTaskIsRegistered((PollTask) task);
+                if (!oneOffTask && task instanceof PollTaskWithCallback) {
+                    verifyTaskIsRegistered((PollTaskWithCallback) task);
                 }
                 if (tryIndex > 0) {
                     // When retrying with the same connection, let's ensure that enough time is between the retries
@@ -607,7 +705,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * {@inheritDoc}
      */
     @Override
-    public ScheduledFuture<?> submitOneTimePoll(PollTask task) {
+    public ScheduledFuture<?> submitOneTimePoll(PollTaskWithCallback task) {
         long scheduleTime = System.currentTimeMillis();
         logger.debug("Scheduling one-off poll task {}", task);
         ScheduledFuture<?> future = scheduledThreadPoolExecutor.schedule(() -> {
@@ -627,7 +725,22 @@ public class ModbusManagerImpl implements ModbusManager {
      * {@inheritDoc}
      */
     @Override
-    public void registerRegularPoll(@NonNull PollTask task, long pollPeriodMillis, long initialDelayMillis) {
+    public CompletableFuture<Object> submitOneTimePoll(@NonNull PollTask task) {
+        CompletableFuture<Object> completableFuture = new CompletableFuture<>();
+        ModbusReadCallback callback = new CompletableFutureReadCallback(completableFuture);
+
+        PollTaskWithCallback pollTask = new PollTaskWrapper(task, callback);
+        final ScheduledFuture<?> future = submitOneTimePoll(pollTask);
+        completableFuture.whenCompleteAsync((result, error) -> future.cancel(true), callbackThreadPool);
+        return completableFuture;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerRegularPoll(@NonNull PollTaskWithCallback task, long pollPeriodMillis,
+            long initialDelayMillis) {
         synchronized (this) {
             logger.trace("Registering poll task {} with period {} using initial delay {}", task, pollPeriodMillis,
                     initialDelayMillis);
@@ -660,7 +773,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * {@inheritDoc}
      */
     @Override
-    public boolean unregisterRegularPoll(PollTask task) {
+    public boolean unregisterRegularPoll(PollTaskWithCallback task) {
         synchronized (this) {
             // cancel poller
             ScheduledFuture<?> future = scheduledPollTasks.remove(task);
@@ -701,7 +814,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * {@inheritDoc}
      */
     @Override
-    public ScheduledFuture<?> submitOneTimeWrite(WriteTask task) {
+    public ScheduledFuture<?> submitOneTimeWrite(@NonNull WriteTaskWithCallback task) {
         long scheduleTime = System.currentTimeMillis();
         logger.debug("Scheduling one-off write task {}", task);
         ScheduledFuture<?> future = scheduledThreadPoolExecutor.schedule(() -> {
@@ -711,6 +824,25 @@ public class ModbusManagerImpl implements ModbusManager {
             executeOperation(task, true, new WriteExecutor());
         }, 0L, TimeUnit.MILLISECONDS);
         return future;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CompletableFuture<org.openhab.io.transport.modbus.ModbusResponse> submitOneTimeWrite(
+            @NonNull WriteTask task) {
+        CompletableFuture<org.openhab.io.transport.modbus.ModbusResponse> completableFuture = new CompletableFuture<>();
+        ModbusWriteCallback callback = new CompletableFutureWriteCallback(completableFuture);
+
+        WriteTaskWithCallback writeTask = new WriteTaskWrapper(task, callback);
+        final ScheduledFuture<?> future = submitOneTimeWrite(writeTask);
+        completableFuture.whenCompleteAsync((response, error) -> {
+            // This CompletableFuture is canceled, in which case we want to cancel the original future as well. If
+            // future is already completed, cancel has no effect.
+            future.cancel(true);
+        }, callbackThreadPool);
+        return completableFuture;
     }
 
     /**
@@ -752,7 +884,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * {@inheritDoc}
      */
     @Override
-    public Set<@NonNull PollTask> getRegisteredRegularPolls() {
+    public Set<@NonNull PollTaskWithCallback> getRegisteredRegularPolls() {
         return this.scheduledPollTasks.keySet();
     }
 
@@ -795,8 +927,8 @@ public class ModbusManagerImpl implements ModbusManager {
     protected void deactivate() {
         synchronized (this) {
             if (connectionPool != null) {
-                Set<@NonNull PollTask> polls = getRegisteredRegularPolls();
-                for (PollTask task : polls) {
+                Set<@NonNull PollTaskWithCallback> polls = getRegisteredRegularPolls();
+                for (PollTaskWithCallback task : polls) {
                     unregisterRegularPoll(task);
                 }
 

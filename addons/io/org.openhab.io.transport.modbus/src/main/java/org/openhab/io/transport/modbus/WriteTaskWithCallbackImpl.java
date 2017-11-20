@@ -8,9 +8,11 @@
  */
 package org.openhab.io.transport.modbus;
 
+import java.lang.ref.WeakReference;
+
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
-import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
+import org.openhab.io.transport.modbus.ModbusManager.WriteTaskWithCallback;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 
 /**
@@ -19,41 +21,32 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
  * @author Sami Salonen
  *
  */
-public class WriteTaskImpl implements WriteTask {
+public class WriteTaskWithCallbackImpl extends WriteTaskImpl implements WriteTaskWithCallback {
 
     private static final StandardToStringStyle toStringStyle = new StandardToStringStyle();
     static {
         toStringStyle.setUseShortClassName(true);
     }
 
-    private ModbusSlaveEndpoint endpoint;
-    private ModbusWriteRequestBlueprint request;
+    private WeakReference<ModbusWriteCallback> callback;
 
-    public WriteTaskImpl(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request) {
-        super();
-        this.endpoint = endpoint;
-        this.request = request;
+    public WriteTaskWithCallbackImpl(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request,
+            ModbusWriteCallback callback) {
+        super(endpoint, request);
+        this.callback = new WeakReference<>(callback);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ModbusSlaveEndpoint getEndpoint() {
-        return endpoint;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ModbusWriteRequestBlueprint getRequest() {
-        return request;
+    public WeakReference<ModbusWriteCallback> getCallback() {
+        return callback;
     }
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this, toStringStyle).append("request", request).append("endpoint", endpoint)
-                .toString();
+        return new ToStringBuilder(this, toStringStyle).append("request", getRequest())
+                .append("endpoint", getEndpoint()).append("callback", getCallback()).toString();
     }
 }

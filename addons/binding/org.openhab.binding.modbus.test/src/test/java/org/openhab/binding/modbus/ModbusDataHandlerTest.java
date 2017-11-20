@@ -72,8 +72,8 @@ import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
-import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
+import org.openhab.io.transport.modbus.ModbusManager.WriteTaskWithCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegister;
@@ -117,7 +117,7 @@ public class ModbusDataHandlerTest {
     }
 
     private List<Thing> things = new ArrayList<>();
-    private List<WriteTask> writeTasks = new ArrayList<>();
+    private List<WriteTaskWithCallback> writeTasks = new ArrayList<>();
 
     @Mock
     private BundleContext bundleContext;
@@ -211,7 +211,7 @@ public class ModbusDataHandlerTest {
     }
 
     @SuppressWarnings("null")
-    private Bridge createPoller(String readwriteId, String pollerId, PollTask task) {
+    private Bridge createPoller(String readwriteId, String pollerId, PollTaskWithCallback task) {
 
         final Bridge poller;
         ThingUID thingUID = new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_POLLER, pollerId);
@@ -303,7 +303,7 @@ public class ModbusDataHandlerTest {
         });
 
         Mockito.when(manager.submitOneTimeWrite(any())).then(invocation -> {
-            WriteTask task = invocation.getArgumentAt(0, WriteTask.class);
+            WriteTaskWithCallback task = invocation.getArgumentAt(0, WriteTaskWithCallback.class);
             writeTasks.add(task);
             return Mockito.mock(ScheduledFuture.class);
         });
@@ -326,7 +326,7 @@ public class ModbusDataHandlerTest {
         doReturn(pollLength).when(request).getDataLength();
         doReturn(functionCode).when(request).getFunctionCode();
 
-        PollTask task = Mockito.mock(PollTask.class);
+        PollTaskWithCallback task = Mockito.mock(PollTaskWithCallback.class);
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
@@ -457,7 +457,7 @@ public class ModbusDataHandlerTest {
         doReturn(pollLength).when(request).getDataLength();
         doReturn(functionCode).when(request).getFunctionCode();
 
-        PollTask task = Mockito.mock(PollTask.class);
+        PollTaskWithCallback task = Mockito.mock(PollTaskWithCallback.class);
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
@@ -526,7 +526,7 @@ public class ModbusDataHandlerTest {
         // Minimally mocked request
         ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
 
-        PollTask task = Mockito.mock(PollTask.class);
+        PollTaskWithCallback task = Mockito.mock(PollTaskWithCallback.class);
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
@@ -680,7 +680,7 @@ public class ModbusDataHandlerTest {
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
                 is(nullValue(State.class)));
         assertThat(writeTasks.size(), is(equalTo(1)));
-        WriteTask writeTask = writeTasks.get(0);
+        WriteTaskWithCallback writeTask = writeTasks.get(0);
         assertThat(writeTask.getRequest().getFunctionCode(), is(equalTo(ModbusWriteFunctionCode.WRITE_COIL)));
         assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
         assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().size(), is(equalTo(1)));
@@ -706,7 +706,7 @@ public class ModbusDataHandlerTest {
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
                 is(nullValue(State.class)));
         assertThat(writeTasks.size(), is(equalTo(1)));
-        WriteTask writeTask = writeTasks.get(0);
+        WriteTaskWithCallback writeTask = writeTasks.get(0);
         assertThat(writeTask.getRequest().getFunctionCode(), is(equalTo(ModbusWriteFunctionCode.WRITE_COIL)));
         assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
         assertThat(((ModbusWriteCoilRequestBlueprint) writeTask.getRequest()).getCoils().size(), is(equalTo(1)));
@@ -732,7 +732,7 @@ public class ModbusDataHandlerTest {
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_WRITE_ERROR,
                 is(nullValue(State.class)));
         assertThat(writeTasks.size(), is(equalTo(1)));
-        WriteTask writeTask = writeTasks.get(0);
+        WriteTaskWithCallback writeTask = writeTasks.get(0);
         assertThat(writeTask.getRequest().getFunctionCode(),
                 is(equalTo(ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER)));
         assertThat(writeTask.getRequest().getReference(), is(equalTo(50)));
@@ -778,7 +778,7 @@ public class ModbusDataHandlerTest {
                 is(nullValue(State.class)));
         assertThat(writeTasks.size(), is(equalTo(2)));
         {
-            WriteTask writeTask = writeTasks.get(0);
+            WriteTaskWithCallback writeTask = writeTasks.get(0);
             assertThat(writeTask.getRequest().getFunctionCode(),
                     is(equalTo(ModbusWriteFunctionCode.WRITE_MULTIPLE_REGISTERS)));
             assertThat(writeTask.getRequest().getReference(), is(equalTo(5412)));
@@ -792,7 +792,7 @@ public class ModbusDataHandlerTest {
                     .getValue(), is(equalTo(5)));
         }
         {
-            WriteTask writeTask = writeTasks.get(1);
+            WriteTaskWithCallback writeTask = writeTasks.get(1);
             assertThat(writeTask.getRequest().getFunctionCode(),
                     is(equalTo(ModbusWriteFunctionCode.WRITE_SINGLE_REGISTER)));
             assertThat(writeTask.getRequest().getReference(), is(equalTo(555)));
@@ -812,7 +812,7 @@ public class ModbusDataHandlerTest {
         doReturn(3).when(request).getDataLength();
         doReturn(functionCode).when(request).getFunctionCode();
 
-        PollTask task = Mockito.mock(PollTask.class);
+        PollTaskWithCallback task = Mockito.mock(PollTaskWithCallback.class);
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
@@ -863,7 +863,7 @@ public class ModbusDataHandlerTest {
         doReturn(pollLength).when(request).getDataLength();
         doReturn(functionCode).when(request).getFunctionCode();
 
-        PollTask task = Mockito.mock(PollTask.class);
+        PollTaskWithCallback task = Mockito.mock(PollTaskWithCallback.class);
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 

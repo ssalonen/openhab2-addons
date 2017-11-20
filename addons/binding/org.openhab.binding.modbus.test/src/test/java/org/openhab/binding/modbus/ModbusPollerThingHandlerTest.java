@@ -46,7 +46,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 
@@ -166,7 +166,7 @@ public class ModbusPollerThingHandlerTest {
     }
 
     @SuppressWarnings("null")
-    public void testPollingGeneric(String type, Supplier<Matcher<PollTask>> pollTaskMatcherSupplier)
+    public void testPollingGeneric(String type, Supplier<Matcher<PollTaskWithCallback>> pollTaskMatcherSupplier)
             throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
         Configuration pollerConfig = new Configuration();
         pollerConfig.put("refresh", 150L);
@@ -191,16 +191,16 @@ public class ModbusPollerThingHandlerTest {
         verifyNoMoreInteractions(modbusManager);
     }
 
-    private boolean checkPollTask(PollTask item, ModbusReadFunctionCode functionCode) {
+    private boolean checkPollTask(PollTaskWithCallback item, ModbusReadFunctionCode functionCode) {
         return item.getEndpoint().equals(tcpThingHandler.asSlaveEndpoint()) && item.getRequest().getDataLength() == 13
                 && item.getRequest().getFunctionCode() == functionCode && item.getRequest().getProtocolID() == 0
                 && item.getRequest().getReference() == 5 && item.getRequest().getUnitID() == 9;
     }
 
-    Matcher<PollTask> isRequestOkGeneric(ModbusReadFunctionCode functionCode) {
-        return new TypeSafeMatcher<PollTask>() {
+    Matcher<PollTaskWithCallback> isRequestOkGeneric(ModbusReadFunctionCode functionCode) {
+        return new TypeSafeMatcher<PollTaskWithCallback>() {
             @Override
-            public boolean matchesSafely(PollTask item) {
+            public boolean matchesSafely(PollTaskWithCallback item) {
                 return checkPollTask(item, functionCode);
             }
 
@@ -211,10 +211,10 @@ public class ModbusPollerThingHandlerTest {
         };
     }
 
-    Matcher<PollTask> okCoilRequest() {
-        return new TypeSafeMatcher<PollTask>() {
+    Matcher<PollTaskWithCallback> okCoilRequest() {
+        return new TypeSafeMatcher<PollTaskWithCallback>() {
             @Override
-            public boolean matchesSafely(PollTask item) {
+            public boolean matchesSafely(PollTaskWithCallback item) {
                 // we are not testing the callback at all!
                 return item.getEndpoint().equals(tcpThingHandler.asSlaveEndpoint())
                         && item.getRequest().getDataLength() == 13
@@ -277,14 +277,14 @@ public class ModbusPollerThingHandlerTest {
 
         // verify registration
         final AtomicReference<WeakReference<ModbusReadCallback>> callbackRef = new AtomicReference<>();
-        verify(modbusManager).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
+        verify(modbusManager).registerRegularPoll(argThat(new TypeSafeMatcher<PollTaskWithCallback>() {
 
             @Override
             public void describeTo(Description description) {
             }
 
             @Override
-            protected boolean matchesSafely(PollTask item) {
+            protected boolean matchesSafely(PollTaskWithCallback item) {
                 callbackRef.set(item.getCallback());
                 return checkPollTask(item, ModbusReadFunctionCode.READ_COILS);
 
@@ -298,14 +298,14 @@ public class ModbusPollerThingHandlerTest {
         thingHandler.dispose();
 
         // 1) should first unregister poll task
-        verify(modbusManager).unregisterRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
+        verify(modbusManager).unregisterRegularPoll(argThat(new TypeSafeMatcher<PollTaskWithCallback>() {
 
             @Override
             public void describeTo(Description description) {
             }
 
             @Override
-            protected boolean matchesSafely(PollTask item) {
+            protected boolean matchesSafely(PollTaskWithCallback item) {
                 assertThat(item.getCallback(), is(sameInstance(callbackRef.get())));
                 return checkPollTask(item, ModbusReadFunctionCode.READ_COILS);
 

@@ -12,12 +12,12 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 
 /**
  * Immutable implementation of {@link ModbusReadRequestBlueprint}
  *
- * Equals and hashCode implemented keeping {@link PollTask} in mind: two instances of this class are considered the same
+ * Equals and hashCode implemented keeping {@link PollTaskWithCallback} in mind: two instances of this class are considered the same
  * if they have
  * the equal parameters (same slave id, start, length, function code and maxTries).
  *

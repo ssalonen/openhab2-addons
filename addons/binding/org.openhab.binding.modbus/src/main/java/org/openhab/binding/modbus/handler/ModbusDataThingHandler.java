@@ -49,7 +49,7 @@ import org.openhab.io.transport.modbus.ModbusConnectionException;
 import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
@@ -60,7 +60,7 @@ import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
-import org.openhab.io.transport.modbus.WriteTaskImpl;
+import org.openhab.io.transport.modbus.WriteTaskWithCallbackImpl;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.json.WriteRequestJsonUtilities;
 import org.slf4j.Logger;
@@ -107,7 +107,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private volatile int slaveId;
     private volatile ModbusSlaveEndpoint slaveEndpoint;
     private volatile ModbusManager manager;
-    private volatile PollTask pollTask;
+    private volatile PollTaskWithCallback pollTask;
     private volatile boolean initSuccessful;
 
     public ModbusDataThingHandler(@NonNull Thing thing) {
@@ -201,7 +201,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             throw new NotImplementedException();
         }
 
-        WriteTaskImpl writeTask = new WriteTaskImpl(slaveEndpoint, request, this);
+        WriteTaskWithCallbackImpl writeTask = new WriteTaskWithCallbackImpl(slaveEndpoint, request, this);
         logger.trace("Submitting write task: {}", writeTask);
         manager.submitOneTimeWrite(writeTask);
 
@@ -219,7 +219,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
 
-        requests.stream().map(request -> new WriteTaskImpl(slaveEndpoint, request, this)).forEach(writeTask -> {
+        requests.stream().map(request -> new WriteTaskWithCallbackImpl(slaveEndpoint, request, this)).forEach(writeTask -> {
             logger.trace("Submitting write task: {} (based from transformation {})", writeTask, transformOutput);
             manager.submitOneTimeWrite(writeTask);
         });
@@ -347,7 +347,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
     }
 
-    private boolean validateReadValueType(PollTask pollTask) {
+    private boolean validateReadValueType(PollTaskWithCallback pollTask) {
         if (!readIndex.isPresent()) {
             // write-only
             return true;
@@ -372,7 +372,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
     }
 
-    private boolean validateReadIndex(PollTask pollTask) {
+    private boolean validateReadIndex(PollTaskWithCallback pollTask) {
         if (!readIndex.isPresent()) {
             return true;
         }

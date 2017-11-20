@@ -11,7 +11,7 @@ package org.openhab.binding.modbus.handler;
 import java.util.function.Supplier;
 
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 
 /**
  * Interface for poller thing handlers
@@ -22,7 +22,7 @@ import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 public interface ModbusPollerThingHandler {
 
     /**
-     * Return {@link PollTask} represented by this thing.
+     * Return {@link PollTaskWithCallback} represented by this thing.
      *
      * Note that the poll task might be <code>null</code> in case initialization is not complete.
      * Also note that it is not guaranteed that the poll task is registered as regular poll with {@link ModbusManager}
@@ -30,7 +30,7 @@ public interface ModbusPollerThingHandler {
      *
      * @return
      */
-    public PollTask getPollTask();
+    public PollTaskWithCallback getPollTask();
 
     /**
      * Get {@link ModbusManager} supplier

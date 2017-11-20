@@ -10,6 +10,7 @@ package org.openhab.io.transport.modbus;
 
 import java.lang.ref.WeakReference;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 
 import org.eclipse.jdt.annotation.NonNull;
@@ -31,7 +32,7 @@ public interface ModbusManager {
      * @param <R> request type
      * @param <C> callback type
      */
-    public interface TaskWithEndpoint<R, C extends ModbusCallback> {
+    public interface Task<R> {
         /**
          * Gets endpoint associated with this task
          *
@@ -46,14 +47,20 @@ public interface ModbusManager {
          */
         R getRequest();
 
-        /**
-         * Gets callback associated with this task, will be called with response
-         *
-         * @return
-         */
+        int getMaxTries();
+    }
+
+    /**
+     * Common base interface for read and write tasks.
+     *
+     * @author Sami Salonen
+     *
+     * @param <R> request type
+     * @param <C> callback type
+     */
+    public interface TaskWithCallback<R, C extends ModbusCallback> extends Task<R> {
         WeakReference<C> getCallback();
 
-        int getMaxTries();
     }
 
     /**
@@ -66,7 +73,36 @@ public interface ModbusManager {
      *
      * @see ModbusManager.registerRegularPoll
      */
-    public interface PollTask extends TaskWithEndpoint<ModbusReadRequestBlueprint, ModbusReadCallback> {
+    public interface PollTask extends Task<ModbusReadRequestBlueprint> {
+        @Override
+        default int getMaxTries() {
+            return getRequest().getMaxTries();
+        }
+    }
+
+    /**
+     * Poll task represents Modbus read request
+     *
+     * Must be hashable. HashCode and equals should be defined such that no two poll tasks are registered that are
+     * equal.
+     *
+     * @author Sami Salonen
+     *
+     * @see ModbusManager.registerRegularPoll
+     */
+    public interface PollTaskWithCallback
+            extends TaskWithCallback<ModbusReadRequestBlueprint, ModbusReadCallback>, PollTask {
+    }
+
+    /**
+     * Poll task represents Modbus write request
+     *
+     * Unlike {@link PollTaskWithCallback}, this does not have to be hashable.
+     *
+     * @author Sami Salonen
+     *
+     */
+    public interface WriteTask extends Task<ModbusWriteRequestBlueprint> {
         @Override
         default int getMaxTries() {
             return getRequest().getMaxTries();
@@ -76,26 +112,37 @@ public interface ModbusManager {
     /**
      * Poll task represents Modbus write request
      *
-     * Unlike {@link PollTask}, this does not have to be hashable.
+     * Unlike {@link PollTaskWithCallback}, this does not have to be hashable.
      *
      * @author Sami Salonen
      *
      */
-    public interface WriteTask extends TaskWithEndpoint<ModbusWriteRequestBlueprint, ModbusWriteCallback> {
-        @Override
-        default int getMaxTries() {
-            return getRequest().getMaxTries();
-        }
+    public interface WriteTaskWithCallback
+            extends TaskWithCallback<ModbusWriteRequestBlueprint, ModbusWriteCallback>, WriteTask {
     }
 
     /**
      * Submit one-time poll task. The method returns immediately, and the execution of the poll task will happen in
      * background.
      *
+     * {@link CompletableFuture} can be used to access the polled data or errors during execution. When successful, the
+     * polled data is either {@link ModbusRegisterArray} or {@link BitArray}.
+     *
      * @param task
      * @return future representing the polled task
      */
-    public ScheduledFuture<?> submitOneTimePoll(@NonNull PollTask task);
+    public CompletableFuture<Object> submitOneTimePoll(@NonNull PollTask task);
+
+    /**
+     * Submit one-time poll task. The method returns immediately, and the execution of the poll task will happen in
+     * background.
+     *
+     * Callback of task receives polled data and errors.
+     *
+     * @param task
+     * @return future representing the polled task
+     */
+    public ScheduledFuture<?> submitOneTimePoll(@NonNull PollTaskWithCallback task);
 
     /**
      * Register regularly polled task. The method returns immediately, and the execution of the poll task will happen in
@@ -104,7 +151,7 @@ public interface ModbusManager {
      * @param task
      * @return
      */
-    public void registerRegularPoll(@NonNull PollTask task, long pollPeriodMillis, long initialDelayMillis);
+    public void registerRegularPoll(@NonNull PollTaskWithCallback task, long pollPeriodMillis, long initialDelayMillis);
 
     /**
      * Unregister regularly polled task
@@ -113,16 +160,29 @@ public interface ModbusManager {
      * @return whether poll task was unregistered. Poll task is not unregistered in case of unexpected errors or
      *         in the case where the poll task is not registered in the first place
      */
-    public boolean unregisterRegularPoll(@NonNull PollTask task);
+    public boolean unregisterRegularPoll(@NonNull PollTaskWithCallback task);
 
     /**
      * Submit one-time write task. The method returns immediately, and the execution of the task will happen in
      * background.
      *
+     * {@link CompletableFuture} can be used to access the polled data or errors during execution.
+     *
      * @param task
      * @return future representing the task
      */
-    public ScheduledFuture<?> submitOneTimeWrite(@NonNull WriteTask task);
+    public CompletableFuture<ModbusResponse> submitOneTimeWrite(@NonNull WriteTask task);
+
+    /**
+     * Submit one-time write task. The method returns immediately, and the execution of the task will happen in
+     * background.
+     *
+     * Callback of task receives {@link ModbusResponse} or errors.
+     *
+     * @param task
+     * @return future representing the task
+     */
+    public ScheduledFuture<?> submitOneTimeWrite(@NonNull WriteTaskWithCallback task);
 
     /**
      * Configure general connection settings with a given endpoint
@@ -162,6 +222,6 @@ public interface ModbusManager {
      *
      * @return set of registered regular polls
      */
-    public Set<@NonNull PollTask> getRegisteredRegularPolls();
+    public Set<@NonNull PollTaskWithCallback> getRegisteredRegularPolls();
 
 }

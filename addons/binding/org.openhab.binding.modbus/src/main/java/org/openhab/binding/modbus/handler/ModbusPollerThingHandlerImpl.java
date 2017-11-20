@@ -28,13 +28,13 @@ import org.openhab.binding.modbus.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.config.ModbusPollerConfiguration;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusManager;
-import org.openhab.io.transport.modbus.ModbusManager.PollTask;
+import org.openhab.io.transport.modbus.ModbusManager.PollTaskWithCallback;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.PollTaskImpl;
+import org.openhab.io.transport.modbus.PollTaskWithCallbackImpl;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +147,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
     private Logger logger = LoggerFactory.getLogger(ModbusPollerThingHandlerImpl.class);
 
     private ModbusPollerConfiguration config;
-    private volatile PollTask pollTask;
+    private volatile PollTaskWithCallback pollTask;
     private Supplier<ModbusManager> managerRef;
 
     private ModbusReadCallback callbackDelegator = new ReadCallbackDelegator();
@@ -254,7 +254,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         }
 
         ModbusReadRequestBlueprintImpl request = new ModbusPollerReadRequest(config, slaveEndpointThingHandler);
-        pollTask = new PollTaskImpl(endpoint, request, callbackDelegator);
+        pollTask = new PollTaskWithCallbackImpl(endpoint, request, callbackDelegator);
 
         if (config.getRefresh() <= 0L) {
             logger.debug("Not registering polling with ModbusManager since refresh disabled");
@@ -278,7 +278,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
      * {@inheritDoc}
      */
     @Override
-    public PollTask getPollTask() {
+    public PollTaskWithCallback getPollTask() {
         return pollTask;
     }
 
