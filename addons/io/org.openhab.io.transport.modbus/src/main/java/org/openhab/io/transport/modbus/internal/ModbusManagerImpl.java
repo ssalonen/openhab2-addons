@@ -77,9 +77,9 @@ public class ModbusManagerImpl implements ModbusManager {
         private final @NonNull PollTask task;
         private final ModbusReadCallback callback;
 
-        private PollTaskWrapper(@NonNull PollTask task, ModbusReadCallback callbackOverride) {
+        private PollTaskWrapper(@NonNull PollTask task, ModbusReadCallback callback) {
             this.task = task;
-            this.callback = callbackOverride;
+            this.callback = callback;
         }
 
         @Override
@@ -102,9 +102,9 @@ public class ModbusManagerImpl implements ModbusManager {
         private final @NonNull WriteTask task;
         private final ModbusWriteCallback callback;
 
-        private WriteTaskWrapper(@NonNull WriteTask task, ModbusWriteCallback callbackOverride) {
+        private WriteTaskWrapper(@NonNull WriteTask task, ModbusWriteCallback callback) {
             this.task = task;
-            this.callback = callbackOverride;
+            this.callback = callback;
         }
 
         @Override
