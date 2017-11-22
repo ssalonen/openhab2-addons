@@ -279,7 +279,13 @@ public class ModbusManagerImpl implements ModbusManager {
     private volatile KeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> connectionPool;
     private volatile ModbusSlaveConnectionFactoryImpl connectionFactory;
     private volatile Map<@NonNull PollTask, ScheduledFuture<?>> scheduledPollTasks = new ConcurrentHashMap<>();
+    /**
+     * Executor for requests
+     */
     private volatile ExpressionThreadPoolExecutor scheduledThreadPoolExecutor;
+    /**
+     * Executor for callbacks. Kept separate to allow polling to continue
+     */
     private volatile ExecutorService callbackThreadPool;
     private volatile Collection<ModbusManagerListener> listeners = new CopyOnWriteArraySet<>();
     private volatile ScheduledFuture<?> monitorFuture;
