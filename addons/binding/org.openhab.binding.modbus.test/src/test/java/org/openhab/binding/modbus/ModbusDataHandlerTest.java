@@ -336,7 +336,6 @@ public class ModbusDataHandlerTest {
         dataConfig.put("readStart", start);
         dataConfig.put("readTransform", "default");
         dataConfig.put("readValueType", valueType.getConfigValue());
-        dataConfig.put("writeValueType", valueType.getConfigValue());
         ModbusDataThingHandler dataHandler = createDataHandler("data1", pollerThing,
                 builder -> builder.withConfiguration(dataConfig), context);
         assertThat(dataHandler.getThing().getStatus(), is(equalTo(expectedStatus)));
@@ -822,7 +821,6 @@ public class ModbusDataHandlerTest {
         dataConfig.put("readStart", "1");
         dataConfig.put("readTransform", "default");
         dataConfig.put("readValueType", valueType.getConfigValue());
-        dataConfig.put("writeValueType", valueType.getConfigValue());
         ModbusDataThingHandler dataHandler = createDataHandler("data1", poller,
                 builder -> builder.withConfiguration(dataConfig));
         assertThat(dataHandler.getThing().getStatus(), is(equalTo(expectedStatus)));
@@ -885,4 +883,96 @@ public class ModbusDataHandlerTest {
         verify(manager).submitOneTimePoll(task);
     }
 
+    @Test
+    public void testReadOnlyData() {
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Bridge poller = createPoller("readwrite1", "poller1", task);
+
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0");
+        dataConfig.put("readTransform", "default");
+        dataConfig.put("readValueType", "bit");
+
+        String thingId = "read1";
+
+        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
+                builder -> builder.withConfiguration(dataConfig), bundleContext);
+        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
+
+    @Test
+    public void testWriteOnlyData() {
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Bridge poller = createPoller("readwrite1", "poller1", task);
+
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "bit");
+        dataConfig.put("writeType", "coil");
+
+        String thingId = "read1";
+
+        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
+                builder -> builder.withConfiguration(dataConfig), bundleContext);
+        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
+
+    @Test
+    public void testWriteOnlyData() {
+        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+        int pollLength = 3;
+
+        // Minimally mocked request
+        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+        doReturn(pollLength).when(request).getDataLength();
+        doReturn(functionCode).when(request).getFunctionCode();
+
+        PollTask task = Mockito.mock(PollTask.class);
+        doReturn(endpoint).when(task).getEndpoint();
+        doReturn(request).when(task).getRequest();
+
+        Bridge poller = createPoller("readwrite1", "poller1", task);
+
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "bit");
+        dataConfig.put("writeType", "coil");
+
+        String thingId = "read1";
+
+        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
+                builder -> builder.withConfiguration(dataConfig), bundleContext);
+        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
 }
