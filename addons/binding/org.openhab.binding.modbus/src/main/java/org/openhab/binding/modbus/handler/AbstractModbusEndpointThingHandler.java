@@ -64,11 +64,17 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Override
     public void initialize() {
         synchronized (this) {
-            configure();
 
-            managerRef.get().addListener(this);
-            managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
-            updateStatus(ThingStatus.ONLINE);
+            try {
+                configure();
+
+                managerRef.get().addListener(this);
+                managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
+                updateStatus(ThingStatus.ONLINE);
+            } catch (Throwable e) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                        "Exception during initialization: %s (%s)", e.getMessage(), e.getClass().getSimpleName()));
+            }
         }
     }
 

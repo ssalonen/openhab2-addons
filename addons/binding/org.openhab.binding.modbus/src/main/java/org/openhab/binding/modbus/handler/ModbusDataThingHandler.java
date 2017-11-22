@@ -231,65 +231,57 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         // Long running initialization should be done asynchronously in background.
         try {
             logger.trace("initialize() of thing {} '{}' starting", thing.getUID(), thing.getLabel());
-            try {
-                config = getConfigAs(ModbusDataConfiguration.class);
-                Bridge bridge = getBridge();
-                if (bridge == null) {
-                    logger.debug("Thing {} '{}' has no bridge", getThing().getUID(), getThing().getLabel());
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
-                    return;
-                }
-                if (bridge.getHandler() == null) {
-                    logger.warn("Bridge {} '{}' has no handler.", bridge.getUID(), bridge.getLabel());
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                            String.format("Bridge %s '%s' configuration incomplete or with errors", bridge.getUID(),
-                                    bridge.getLabel()));
-                    return;
-                }
-                if (bridge.getHandler() instanceof ModbusEndpointThingHandler) {
-                    // Write-only thing, parent is endpoint
-                    @SuppressWarnings("null")
-                    @NonNull
-                    ModbusEndpointThingHandler bridgeHandler = (@NonNull ModbusEndpointThingHandler) bridge
-                            .getHandler();
-                    slaveId = bridgeHandler.getSlaveId();
-                    slaveEndpoint = bridgeHandler.asSlaveEndpoint();
-                    manager = bridgeHandler.getManagerRef().get();
-                } else {
-                    @SuppressWarnings("null")
-                    @NonNull
-                    ModbusPollerThingHandler bridgeHandler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
-                    pollTask = bridgeHandler.getPollTask();
-                    if (pollTask == null) {
-                        logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
-                                bridge.getLabel(), getThing().getUID(), getThing().getLabel());
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
-                                String.format("Poller %s '%s' has no poll task", bridge.getUID(), bridge.getLabel()));
-                        return;
-                    }
-                    slaveId = pollTask.getRequest().getUnitID();
-                    slaveEndpoint = pollTask.getEndpoint();
-                    manager = bridgeHandler.getManagerRef().get();
-                    pollStart = pollTask.getRequest().getReference();
-
-                }
-                if (!validateAndParseReadParameters()) {
-                    // status already updated to OFFLINE
-                    return;
-                }
-                if (!validateAndPArseWriteParameters()) {
-                    // status already updated to OFFLINE
-                    return;
-                }
-
-            } catch (Throwable e) {
-                logger.error("Initialize failed (unexpectedly) for thing {} '{}'", getThing().getUID(),
-                        getThing().getLabel(), e);
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, e.toString());
+            config = getConfigAs(ModbusDataConfiguration.class);
+            Bridge bridge = getBridge();
+            if (bridge == null) {
+                logger.debug("Thing {} '{}' has no bridge", getThing().getUID(), getThing().getLabel());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "No poller bridge");
                 return;
             }
+            if (bridge.getHandler() == null) {
+                logger.warn("Bridge {} '{}' has no handler.", bridge.getUID(), bridge.getLabel());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                        "Bridge %s '%s' configuration incomplete or with errors", bridge.getUID(), bridge.getLabel()));
+                return;
+            }
+            if (bridge.getHandler() instanceof ModbusEndpointThingHandler) {
+                // Write-only thing, parent is endpoint
+                @SuppressWarnings("null")
+                @NonNull
+                ModbusEndpointThingHandler bridgeHandler = (@NonNull ModbusEndpointThingHandler) bridge.getHandler();
+                slaveId = bridgeHandler.getSlaveId();
+                slaveEndpoint = bridgeHandler.asSlaveEndpoint();
+                manager = bridgeHandler.getManagerRef().get();
+            } else {
+                @SuppressWarnings("null")
+                @NonNull
+                ModbusPollerThingHandler bridgeHandler = (@NonNull ModbusPollerThingHandler) bridge.getHandler();
+                pollTask = bridgeHandler.getPollTask();
+                if (pollTask == null) {
+                    logger.debug("Poller {} '{}' has no poll task -- configuration is changing?", bridge.getUID(),
+                            bridge.getLabel(), getThing().getUID(), getThing().getLabel());
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                            String.format("Poller %s '%s' has no poll task", bridge.getUID(), bridge.getLabel()));
+                    return;
+                }
+                slaveId = pollTask.getRequest().getUnitID();
+                slaveEndpoint = pollTask.getEndpoint();
+                manager = bridgeHandler.getManagerRef().get();
+                pollStart = pollTask.getRequest().getReference();
 
+            }
+            if (!validateAndParseReadParameters()) {
+                // status already updated to OFFLINE
+                return;
+            }
+            if (!validateAndParseWriteParameters()) {
+                // status already updated to OFFLINE
+                return;
+            }
             updateStatus(ThingStatus.ONLINE);
+        } catch (Throwable e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
+                    .format("Exception during initialization: %s (%s)", e.getMessage(), e.getClass().getSimpleName()));
         } finally {
             logger.trace("initialize() of thing {} '{}' finished", thing.getUID(), thing.getLabel());
         }
@@ -369,7 +361,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         return validateReadIndex(pollTask);
     }
 
-    private boolean validateAndPArseWriteParameters() {
+    private boolean validateAndParseWriteParameters() {
         boolean writeTypeMissing = StringUtils.isBlank(config.getWriteType());
         boolean writeStartMissing = StringUtils.isBlank(config.getWriteStart());
         boolean writeValueTypeMissing = StringUtils.isBlank(config.getWriteValueType());

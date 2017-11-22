@@ -199,8 +199,8 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
             config = getConfigAs(ModbusPollerConfiguration.class);
             registerPollTask();
         } catch (Exception e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-                    String.format("%s (%s)", e.getMessage(), e.getClass().getSimpleName()));
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
+                    .format("Exception during initialization: %s (%s)", e.getMessage(), e.getClass().getSimpleName()));
         }
     }
 
