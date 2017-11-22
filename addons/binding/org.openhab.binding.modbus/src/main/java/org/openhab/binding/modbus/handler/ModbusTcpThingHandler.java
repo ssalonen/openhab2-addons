@@ -42,7 +42,7 @@ public class ModbusTcpThingHandler
         poolConfiguration.setConnectMaxTries(config.getConnectMaxTries());
         poolConfiguration.setConnectTimeoutMillis(config.getConnectTimeoutMillis());
         poolConfiguration.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
-        poolConfiguration.setPassivateBorrowMinMillis(config.getTimeBetweenTransactionsMillis());
+        poolConfiguration.setInterTransactionDelayMillis(config.getTimeBetweenTransactionsMillis());
         poolConfiguration.setReconnectAfterMillis(config.getReconnectAfterMillis());
 
     }

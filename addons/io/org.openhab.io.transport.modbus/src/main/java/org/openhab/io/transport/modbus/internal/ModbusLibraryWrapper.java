@@ -186,10 +186,9 @@ public class ModbusLibraryWrapper {
                 return new ModbusUDPTransaction();
             }
         });
-        transaction.setRetryDelayMillis(ModbusManagerImpl.connectionFactory.getEndpointPoolConfiguration(endpoint)
-                .getPassivateBorrowMinMillis());
         // We disable modbus library retries and handle in the Manager implementation
         transaction.setRetries(0);
+        transaction.setRetryDelayMillis(0);
         if (transaction instanceof ModbusSerialTransaction) {
             ((ModbusSerialTransaction) transaction).setSerialConnection((SerialConnection) connection.get());
         } else if (transaction instanceof ModbusUDPTransaction) {
