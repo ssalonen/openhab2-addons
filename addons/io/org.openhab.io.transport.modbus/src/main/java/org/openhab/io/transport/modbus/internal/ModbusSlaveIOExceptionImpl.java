@@ -8,6 +8,8 @@
  */
 package org.openhab.io.transport.modbus.internal;
 
+import java.io.IOException;
+
 import org.openhab.io.transport.modbus.ModbusSlaveIOException;
 
 import net.wimpi.modbus.ModbusIOException;
@@ -21,14 +23,19 @@ import net.wimpi.modbus.ModbusIOException;
 public class ModbusSlaveIOExceptionImpl extends ModbusSlaveIOException {
 
     private static final long serialVersionUID = -8910463902857643468L;
-    private ModbusIOException error;
+    private Exception error;
 
     public ModbusSlaveIOExceptionImpl(ModbusIOException e) {
         this.error = e;
     }
 
+    public ModbusSlaveIOExceptionImpl(IOException e) {
+        this.error = e;
+    }
+
     @Override
     public String toString() {
-        return String.format("ModbusSlaveIOException(EOF=%s, message='%s')", error.isEOF(), error.getMessage());
+        return String.format("ModbusSlaveIOException(%s, EOF=%s, message='%s')", error.getClass().getSimpleName(),
+                error instanceof ModbusIOException ? ((ModbusIOException) error).isEOF() : "?", error.getMessage());
     }
 }

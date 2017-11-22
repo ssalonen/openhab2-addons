@@ -520,8 +520,14 @@ public class ModbusManagerImpl implements ModbusManager {
                     operation.accept(operationId, task, connection.get());
                     lastError.set(null);
                     break;
-                } catch (ModbusIOException e) {
-                    lastError.set(new ModbusSlaveIOExceptionImpl(e));
+                } catch (ModbusIOException | IOException e) {
+                    if (e instanceof ModbusIOException) {
+                        lastError.set(new ModbusSlaveIOExceptionImpl((ModbusIOException) e));
+                    } else if (e instanceof IOException) {
+                        lastError.set(new ModbusSlaveIOExceptionImpl((IOException) e));
+                    } else {
+                        throw new IllegalStateException(e);
+                    }
                     // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
                     // broken pipe on write)
                     if (willRetry) {
