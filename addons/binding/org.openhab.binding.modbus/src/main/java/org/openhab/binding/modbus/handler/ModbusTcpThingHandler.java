@@ -53,7 +53,7 @@ public class ModbusTcpThingHandler
     @Override
     protected String formatConflictingParameterError(EndpointPoolConfiguration otherPoolConfig) {
         return String.format(
-                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s: %s) {} are different from some other things parameter: {}. Ensure that all endpoints pointing to tcp slave '%s:%s' have same parameters.",
+                "Endpoint '%s' has conflicting parameters: parameters of this thing (%s '%s') %s are different from some other things parameter: %s. Ensure that all endpoints pointing to tcp slave '%s:%s' have same parameters.",
                 endpoint, thing.getUID(), this.thing.getLabel(), this.poolConfiguration, otherPoolConfig,
                 this.endpoint.getAddress(), this.endpoint.getPort());
     }

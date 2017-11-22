@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -68,6 +69,7 @@ import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openhab.binding.modbus.handler.ModbusDataThingHandler;
 import org.openhab.binding.modbus.handler.ModbusPollerThingHandlerImpl;
+import org.openhab.binding.modbus.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
@@ -211,7 +213,7 @@ public class ModbusDataHandlerTest {
     }
 
     @SuppressWarnings("null")
-    private Bridge createPoller(String readwriteId, String pollerId, PollTask task) {
+    private Bridge createPollerMock(String pollerId, PollTask task) {
 
         final Bridge poller;
         ThingUID thingUID = new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_POLLER, pollerId);
@@ -231,6 +233,23 @@ public class ModbusDataHandlerTest {
         poller.setHandler(handler);
         registerThingToMockRegistry(poller);
         return poller;
+    }
+
+    private Bridge createTcpMock() {
+        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+        Bridge tcpBridge = ModbusPollerThingHandlerTest.createTcpThingBuilder("tcp1").build();
+        ModbusTcpThingHandler tcpThingHandler = Mockito.mock(ModbusTcpThingHandler.class);
+        tcpBridge.setStatusInfo(new ThingStatusInfo(ThingStatus.ONLINE, ThingStatusDetail.NONE, ""));
+        tcpBridge.setHandler(tcpThingHandler);
+        registerThingToMockRegistry(tcpBridge);
+        Supplier<ModbusManager> managerRef = () -> manager;
+        doReturn(managerRef).when(tcpThingHandler).getManagerRef();
+        doReturn(0).when(tcpThingHandler).getSlaveId();
+        doReturn(endpoint).when(tcpThingHandler).asSlaveEndpoint();
+        tcpThingHandler.initialize();
+
+        assertThat(tcpBridge.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+        return tcpBridge;
     }
 
     private ModbusDataThingHandler createDataHandler(String id, Bridge bridge,
@@ -330,7 +349,7 @@ public class ModbusDataHandlerTest {
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
-        Bridge pollerThing = createPoller("data1", "poller1", task);
+        Bridge pollerThing = createPollerMock("poller1", task);
 
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", start);
@@ -460,7 +479,7 @@ public class ModbusDataHandlerTest {
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
-        Bridge poller = createPoller("readwrite1", "poller1", task);
+        Bridge poller = createPollerMock("poller1", task);
 
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", start);
@@ -529,7 +548,7 @@ public class ModbusDataHandlerTest {
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
-        Bridge poller = createPoller("readwrite1", "poller1", task);
+        Bridge poller = createPollerMock("poller1", task);
 
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", "");
@@ -815,7 +834,7 @@ public class ModbusDataHandlerTest {
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
-        Bridge poller = createPoller("readwrite1", "poller1", task);
+        Bridge poller = createPollerMock("poller1", task);
 
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", "1");
@@ -865,7 +884,7 @@ public class ModbusDataHandlerTest {
         doReturn(endpoint).when(task).getEndpoint();
         doReturn(request).when(task).getRequest();
 
-        Bridge poller = createPoller("readwrite1", "poller1", task);
+        Bridge poller = createPollerMock("poller1", task);
 
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", "0");
@@ -883,96 +902,262 @@ public class ModbusDataHandlerTest {
         verify(manager).submitOneTimePoll(task);
     }
 
+    /**
+     *
+     * @param pollerFunctionCode poller function code. Use null if you want to have data thing direct child of endpoint
+     *            thing
+     * @param config thing config
+     * @param statusConsumer assertion method for data thingstatus
+     */
+    private void testInitGeneric(ModbusReadFunctionCode pollerFunctionCode, Configuration config,
+            Consumer<ThingStatusInfo> statusConsumer) {
+
+        int pollLength = 3;
+
+        Bridge parent;
+        if (pollerFunctionCode == null) {
+            parent = createTcpMock();
+        } else {
+            ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+
+            // Minimally mocked request
+            ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
+            doReturn(pollLength).when(request).getDataLength();
+            doReturn(pollerFunctionCode).when(request).getFunctionCode();
+
+            PollTask task = Mockito.mock(PollTask.class);
+            doReturn(endpoint).when(task).getEndpoint();
+            doReturn(request).when(task).getRequest();
+
+            parent = createPollerMock("poller1", task);
+        }
+
+        String thingId = "read1";
+
+        ModbusDataThingHandler dataHandler = createDataHandler(thingId, parent,
+                builder -> builder.withConfiguration(config), bundleContext);
+
+        statusConsumer.accept(dataHandler.getThing().getStatusInfo());
+    }
+
     @Test
     public void testReadOnlyData() {
-        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
-
-        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
-
-        int pollLength = 3;
-
-        // Minimally mocked request
-        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
-        doReturn(pollLength).when(request).getDataLength();
-        doReturn(functionCode).when(request).getFunctionCode();
-
-        PollTask task = Mockito.mock(PollTask.class);
-        doReturn(endpoint).when(task).getEndpoint();
-        doReturn(request).when(task).getRequest();
-
-        Bridge poller = createPoller("readwrite1", "poller1", task);
-
         Configuration dataConfig = new Configuration();
         dataConfig.put("readStart", "0");
-        dataConfig.put("readTransform", "default");
         dataConfig.put("readValueType", "bit");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
 
-        String thingId = "read1";
+    /**
+     * readValueType=bit should be assumed with coils, so it's ok to skip it
+     */
+    @Test
+    public void testReadOnlyDataMissingValueTypeWithCoils() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0");
+        // missing value type
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
 
-        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
-                builder -> builder.withConfiguration(dataConfig), bundleContext);
-        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    @Test
+    public void testReadOnlyDataInvalidValueType() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0");
+        dataConfig.put("readValueType", "foobar");
+        testInitGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    /**
+     * We do not assume value type with registers, not ok to skip it
+     */
+    @Test
+    public void testReadOnlyDataMissingValueTypeWithRegisters() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0");
+        testInitGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+
     }
 
     @Test
     public void testWriteOnlyData() {
-        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
-
-        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
-
-        int pollLength = 3;
-
-        // Minimally mocked request
-        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
-        doReturn(pollLength).when(request).getDataLength();
-        doReturn(functionCode).when(request).getFunctionCode();
-
-        PollTask task = Mockito.mock(PollTask.class);
-        doReturn(endpoint).when(task).getEndpoint();
-        doReturn(request).when(task).getRequest();
-
-        Bridge poller = createPoller("readwrite1", "poller1", task);
-
         Configuration dataConfig = new Configuration();
         dataConfig.put("writeStart", "0");
         dataConfig.put("writeValueType", "bit");
         dataConfig.put("writeType", "coil");
-
-        String thingId = "read1";
-
-        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
-                builder -> builder.withConfiguration(dataConfig), bundleContext);
-        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
     }
 
     @Test
-    public void testWriteOnlyData() {
-        ModbusReadFunctionCode functionCode = ModbusReadFunctionCode.READ_COILS;
+    public void testWriteHoldingInt16Data() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "int16");
+        dataConfig.put("writeType", "holding");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
 
-        ModbusSlaveEndpoint endpoint = new ModbusTCPSlaveEndpoint("thisishost", 502);
+    @Test
+    public void testWriteHoldingInt8Data() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "int8");
+        dataConfig.put("writeType", "holding");
+        testInitGeneric(null, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
 
-        int pollLength = 3;
+    @Test
+    public void testWriteHoldingBitData() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "bit");
+        dataConfig.put("writeType", "holding");
+        testInitGeneric(null, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
 
-        // Minimally mocked request
-        ModbusReadRequestBlueprint request = Mockito.mock(ModbusReadRequestBlueprint.class);
-        doReturn(pollLength).when(request).getDataLength();
-        doReturn(functionCode).when(request).getFunctionCode();
-
-        PollTask task = Mockito.mock(PollTask.class);
-        doReturn(endpoint).when(task).getEndpoint();
-        doReturn(request).when(task).getRequest();
-
-        Bridge poller = createPoller("readwrite1", "poller1", task);
-
+    @Test
+    public void testWriteOnlyDataChildOfEndpoint() {
         Configuration dataConfig = new Configuration();
         dataConfig.put("writeStart", "0");
         dataConfig.put("writeValueType", "bit");
         dataConfig.put("writeType", "coil");
+        testInitGeneric(null, dataConfig, status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
 
-        String thingId = "read1";
+    @Test
+    public void testWriteOnlyDataMissingOneParameter() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeValueType", "bit");
+        // missing writeType --> error
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
 
-        ModbusDataThingHandler dataHandler = createDataHandler(thingId, poller,
-                builder -> builder.withConfiguration(dataConfig), bundleContext);
-        assertThat(dataHandler.getThing().getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    /**
+     * OK to omit writeValueType with coils since bit is assumed
+     */
+    @Test
+    public void testWriteOnlyDataMissingValueTypeWithCoilParameter() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeType", "coil");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
+
+    @Test
+    public void testWriteOnlyIllegalValueType() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeType", "coil");
+        dataConfig.put("writeValueType", "foobar");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testWriteInvalidType() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0");
+        dataConfig.put("writeType", "foobar");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testNoReadNorWrite() {
+        Configuration dataConfig = new Configuration();
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testWriteCoilBadStart() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0.4");
+        dataConfig.put("writeType", "coil");
+        testInitGeneric(null, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testWriteHoldingBadStart() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("writeStart", "0.4");
+        dataConfig.put("writeType", "holding");
+        testInitGeneric(null, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testReadHoldingBadStart() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0.0");
+        dataConfig.put("readValueType", "int16");
+        testInitGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testReadHoldingBadStart2() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0.0");
+        dataConfig.put("readValueType", "bit");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testReadHoldingOKStart() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0.0");
+        dataConfig.put("readType", "holding");
+        dataConfig.put("readValueType", "bit");
+        testInitGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, dataConfig,
+                status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
+
+    @Test
+    public void testReadValueTypeIllegal() {
+        Configuration dataConfig = new Configuration();
+        dataConfig.put("readStart", "0.0");
+        dataConfig.put("readType", "holding");
+        dataConfig.put("readValueType", "foobar");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
     }
 }

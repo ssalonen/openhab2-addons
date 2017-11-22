@@ -278,6 +278,10 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 // status already updated to OFFLINE
                 return;
             }
+            if (!validateMustReadOrWrite()) {
+                // status already updated to OFFLINE
+                return;
+            }
             updateStatus(ThingStatus.ONLINE);
         } catch (Throwable e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
@@ -293,12 +297,27 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 && statusInfo.getStatusDetail() == ThingStatusDetail.CONFIGURATION_ERROR;
     }
 
+    private boolean validateMustReadOrWrite() {
+        if (!isReadEnabled && !isWriteEnabled) {
+            logger.error("Thing {} should try to read or write data!", getThing().getUID(), config.getReadStart(),
+                    config.getReadValueType());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
+                    .format("Not reading or writing anything!", config.getReadStart(), config.getReadValueType()));
+            return false;
+        }
+        return true;
+    }
+
     private boolean validateAndParseReadParameters() {
+        ModbusReadFunctionCode functionCode = pollTask == null ? null : pollTask.getRequest().getFunctionCode();
+        boolean readingDiscreteOrCoil = functionCode == ModbusReadFunctionCode.READ_COILS
+                || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES;
         boolean readStartMissing = StringUtils.isBlank(config.getReadStart());
         boolean readValueTypeMissing = StringUtils.isBlank(config.getReadValueType());
 
+        // we assume readValueType=bit by default if it is missing
         boolean allMissingOrAllPresent = (readStartMissing && readValueTypeMissing)
-                || (!readStartMissing && !readValueTypeMissing);
+                || (!readStartMissing && (!readValueTypeMissing || readingDiscreteOrCoil));
         if (!allMissingOrAllPresent) {
             logger.error("Thing {} readStart={}, and readValueType={} should be all present or all missing!",
                     getThing().getUID(), config.getReadStart(), config.getReadValueType());
@@ -309,10 +328,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         } else if (!readStartMissing) {
             // all read values are present
             isReadEnabled = true;
-            ModbusReadFunctionCode functionCode = pollTask.getRequest().getFunctionCode();
-            boolean readingDiscreteOrCoil = functionCode == ModbusReadFunctionCode.READ_COILS
-                    || functionCode == ModbusReadFunctionCode.READ_INPUT_DISCRETES;
-
             if (readingDiscreteOrCoil && readValueTypeMissing) {
                 readValueType = ModbusConstants.ValueType.BIT;
             } else {
@@ -332,7 +347,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                         "Thing {} invalid readValueType: Only readValueType='{}' (or undefined) supported with coils or discrete inputs. Value type was: {}",
                         getThing().getUID(), ModbusConstants.ValueType.BIT, config.getReadValueType());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
-                        "Only readValueType='%s' (or undefined) supported with coils or discrete inputs. Value type was: {}",
+                        "Only readValueType='%s' (or undefined) supported with coils or discrete inputs. Value type was: %s",
                         ModbusConstants.ValueType.BIT, config.getReadValueType()));
                 return false;
             }
@@ -366,8 +381,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         boolean writeStartMissing = StringUtils.isBlank(config.getWriteStart());
         boolean writeValueTypeMissing = StringUtils.isBlank(config.getWriteValueType());
 
+        boolean writingCoil = WRITE_TYPE_COIL.equals(config.getWriteType());
         boolean allMissingOrAllPresent = (writeTypeMissing && writeStartMissing && writeValueTypeMissing)
-                || (!writeTypeMissing && !writeStartMissing && !writeValueTypeMissing);
+                || (!writeTypeMissing && !writeStartMissing && (!writeValueTypeMissing || writingCoil));
         if (!allMissingOrAllPresent) {
             logger.error(
                     "Thing {} writeType={}, writeStart={}, and writeValueType={} should be all present or all missing!",
@@ -388,7 +404,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                                 config.getWriteType(), WRITE_TYPE_HOLDING, WRITE_TYPE_COIL));
                 return false;
             }
-            if (WRITE_TYPE_COIL.equals(config.getWriteType()) && writeValueTypeMissing) {
+            if (writingCoil && writeValueTypeMissing) {
                 writeValueType = ModbusConstants.ValueType.BIT;
             } else {
                 try {
@@ -402,17 +418,26 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 }
             }
 
-            if (WRITE_TYPE_COIL.equals(config.getWriteType())
-                    && !ModbusConstants.ValueType.BIT.equals(writeValueType)) {
+            if (writingCoil && !ModbusConstants.ValueType.BIT.equals(writeValueType)) {
                 logger.error(
                         "Thing {} invalid writeValueType: Only writeValueType='{}' (or undefined) supported with coils. Value type was: {}",
                         getThing().getUID(), ModbusConstants.ValueType.BIT, config.getWriteValueType());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         String.format(
-                                "Only writeValueType='%s' (or undefined) supported with coils. Value type was: {}",
+                                "Only writeValueType='%s' (or undefined) supported with coils. Value type was: %s",
                                 ModbusConstants.ValueType.BIT, config.getWriteType()));
                 return false;
+            } else if (!writingCoil && writeValueType.getBits() < 16) {
+                // trying to write holding registers with < 16 bit value types. Not supports
+                logger.error(
+                        "Thing {} invalid writeValueType: Only writeValueType with larger or equal to 16 bits are supported holding registers. Value type was: {}",
+                        getThing().getUID(), config.getWriteValueType());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                        "Only writeValueType with larger or equal to 16 bits are supported holding registers. Value type was: %s",
+                        config.getWriteType()));
+                return false;
             }
+
             try {
                 writeStart = Integer.parseInt(config.getWriteStart().trim());
             } catch (IllegalArgumentException e) {

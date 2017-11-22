@@ -69,12 +69,12 @@ public class ModbusPollerThingHandlerTest {
     @Mock
     private ThingHandlerCallback thingCallback;
 
-    private static BridgeBuilder createTcpThingBuilder(String id) {
+    public static BridgeBuilder createTcpThingBuilder(String id) {
         return BridgeBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_TCP,
                 new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_TCP, id)).withLabel("label for " + id);
     }
 
-    private static BridgeBuilder createPollerThingBuilder(String id) {
+    public static BridgeBuilder createPollerThingBuilder(String id) {
         return BridgeBuilder.create(ModbusBindingConstants.THING_TYPE_MODBUS_POLLER,
                 new ThingUID(ModbusBindingConstants.THING_TYPE_MODBUS_POLLER, id)).withLabel("label for " + id);
     }
