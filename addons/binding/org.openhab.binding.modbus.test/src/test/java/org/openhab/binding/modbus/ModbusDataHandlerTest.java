@@ -1160,4 +1160,36 @@ public class ModbusDataHandlerTest {
             assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
         });
     }
+
+    @Test
+    public void testWriteOnlyTransform() {
+        Configuration dataConfig = new Configuration();
+        // no need to have start, JSON output of transformation defines everything
+        dataConfig.put("writeTransform", "JS(myJsonTransform.js)");
+        testInitGeneric(null, dataConfig, status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+    }
+
+    @Test
+    public void testWriteTransformAndStart() {
+        Configuration dataConfig = new Configuration();
+        // It's illegal to have start and transform. Just have transform or have all
+        dataConfig.put("writeStart", "3");
+        dataConfig.put("writeTransform", "JS(myJsonTransform.js)");
+        testInitGeneric(ModbusReadFunctionCode.READ_COILS, dataConfig, status -> {
+            assertThat(status.getStatus(), is(equalTo(ThingStatus.OFFLINE)));
+            assertThat(status.getStatusDetail(), is(equalTo(ThingStatusDetail.CONFIGURATION_ERROR)));
+        });
+    }
+
+    @Test
+    public void testWriteTransformAndNecessary() {
+        Configuration dataConfig = new Configuration();
+        // It's illegal to have start and transform. Just have transform or have all
+        dataConfig.put("writeStart", "3");
+        dataConfig.put("writeType", "holding");
+        dataConfig.put("writeValueType", "int16");
+        dataConfig.put("writeTransform", "JS(myJsonTransform.js)");
+        testInitGeneric(null, dataConfig, status -> assertThat(status.getStatus(), is(equalTo(ThingStatus.ONLINE))));
+
+    }
 }

@@ -349,7 +349,7 @@ Two write requests would be sent to the Modbus slave
 1. FC16 (write multiple holding register), with start address 5412, having three registers of data (1, 0, and 5).
 1. FC06 (write single holding register), with start address 555, and single register of data (3). Write is tried maximum of 10 times in case some of the writes fail. 
 
-The JSON transformation output can be useful when you need full control how the write goes, for example in case where the write address depends on the incoming command.
+The JSON transformation output can be useful when you need full control how the write goes, for example in case where the write address depends on the incoming command. Actually, you can omit specifying `writeStart`, `writeValueType` and `writeType` with JSON transformation output altogether.
 
 Empty JSON array (`[]`) can be used to suppress all writes. 
 
@@ -649,8 +649,10 @@ The logic of processing commands are summarized in the table
 ```xtend
 Bridge modbus:tcp:localhostTCPRollerShutter [ host="127.0.0.1", port=502 ] {
     Bridge poller holding [ start=0, length=3, refresh=1000, type="holding" ] {
-        Thing data rollershutterData [ readStart="0", readValueType="int16",  writeTransform="JS(rollershutter.js)", writeType="holding" ]
-
+        // Since we are using advanced transformation outputting JSON, 
+        // other write parameters (writeValueType, writeStart, writeType) can be omitted
+        Thing data rollershutterData [ readStart="0", readValueType="int16", writeTransform="JS(rollershutter.js)" ]
+        
         // For diagnostics
         Thing data rollershutterDebug0 [ readStart="0", readValueType="int16", writeStart="0", writeValueType="int16", writeType="holding" ]
         Thing data rollershutterDebug1 [ readStart="1", readValueType="int16" ]

@@ -355,11 +355,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             isReadEnabled = false;
         }
 
-        if (StringUtils.isBlank(config.getReadStart())) {
-            readIndex = Optional.empty();
-            readSubIndex = Optional.empty();
-            readValueType = null;
-        } else {
+        if (isReadEnabled) {
             String[] readParts = config.getReadStart().split("\\.", 2);
             try {
                 readIndex = Optional.of(Integer.parseInt(readParts[0]));
@@ -380,23 +376,31 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         boolean writeTypeMissing = StringUtils.isBlank(config.getWriteType());
         boolean writeStartMissing = StringUtils.isBlank(config.getWriteStart());
         boolean writeValueTypeMissing = StringUtils.isBlank(config.getWriteValueType());
+        boolean writeTransformationMissing = StringUtils.isBlank(config.getWriteTransform());
+        writeTransformation = new Transformation(config.getWriteTransform());
 
         boolean writingCoil = WRITE_TYPE_COIL.equals(config.getWriteType());
-        boolean allMissingOrAllPresent = (writeTypeMissing && writeStartMissing && writeValueTypeMissing)
-                || (!writeTypeMissing && !writeStartMissing && (!writeValueTypeMissing || writingCoil));
-        if (!allMissingOrAllPresent) {
+        // When only transformation and type is given, we assume that transformation might output JSON with all the
+        // necessary details (start, type, and raw data) for write
+        boolean transformationOnly = (writeTypeMissing && writeStartMissing && writeValueTypeMissing
+                && !writeTransformationMissing);
+        boolean allMissingOrAllPresentOrOnlyTransformPlusTypePresent = (writeTypeMissing && writeStartMissing
+                && writeValueTypeMissing)
+                || (!writeTypeMissing && !writeStartMissing && (!writeValueTypeMissing || writingCoil))
+                || transformationOnly;
+        if (!allMissingOrAllPresentOrOnlyTransformPlusTypePresent) {
             logger.error(
-                    "Thing {} writeType={}, writeStart={}, and writeValueType={} should be all present or all missing!",
+                    "Thing {} writeType={}, writeStart={}, and writeValueType={} should be all present, or all missing! Alternatively, you can provide just writeTransformation, and use transformation returning JSON.",
                     getThing().getUID(), config.getWriteType(), config.getWriteStart(), config.getWriteValueType());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    String.format(
-                            "writeType=%s, writeStart=%s, and writeValueType=%s should be all present or all missing!",
-                            config.getWriteType(), config.getWriteStart(), config.getWriteValueType()));
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String.format(
+                    "writeType=%s, writeStart=%s, and writeValueType=%s should be all present, or all missing! Alternatively, you can provide just writeTransformation, and use transformation returning JSON.",
+                    config.getWriteType(), config.getWriteStart(), config.getWriteValueType()));
             return false;
-        } else if (!writeTypeMissing) {
+        } else if (!writeTypeMissing || transformationOnly) {
             isWriteEnabled = true;
             // all write values are present
-            if (!WRITE_TYPE_HOLDING.equals(config.getWriteType()) && !WRITE_TYPE_COIL.equals(config.getWriteType())) {
+            if (!transformationOnly && !WRITE_TYPE_HOLDING.equals(config.getWriteType())
+                    && !WRITE_TYPE_COIL.equals(config.getWriteType())) {
                 logger.error("Thing {} writeType={} is invalid. Expecting {} or {}!", getThing().getUID(),
                         config.getWriteType(), WRITE_TYPE_HOLDING, WRITE_TYPE_COIL);
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
@@ -404,7 +408,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                                 config.getWriteType(), WRITE_TYPE_HOLDING, WRITE_TYPE_COIL));
                 return false;
             }
-            if (writingCoil && writeValueTypeMissing) {
+            if (transformationOnly) {
+                writeValueType = ModbusConstants.ValueType.INT16;
+            } else if (writingCoil && writeValueTypeMissing) {
                 writeValueType = ModbusConstants.ValueType.BIT;
             } else {
                 try {
@@ -439,7 +445,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             }
 
             try {
-                writeStart = Integer.parseInt(config.getWriteStart().trim());
+                if (!transformationOnly) {
+                    writeStart = Integer.parseInt(config.getWriteStart().trim());
+                }
             } catch (IllegalArgumentException e) {
                 logger.error("Thing {} invalid writeStart: {}", getThing().getUID(), config.getWriteStart());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
@@ -449,7 +457,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         } else {
             isWriteEnabled = false;
         }
-        writeTransformation = new Transformation(config.getWriteTransform());
 
         return true;
     }
