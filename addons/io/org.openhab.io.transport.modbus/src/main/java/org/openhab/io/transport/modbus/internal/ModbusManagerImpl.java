@@ -8,6 +8,7 @@
  */
 package org.openhab.io.transport.modbus.internal;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Map;
@@ -26,6 +27,7 @@ import org.apache.commons.pool2.SwallowedExceptionListener;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.smarthome.core.common.QueueingThreadPoolExecutor;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
@@ -124,7 +126,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * @author Sami Salonen
      *
      */
-    private class PollExecutor implements ModbusOperation<PollTask> {
+    private class PollOperation implements ModbusOperation<PollTask> {
         @Override
         public void accept(String operationId, PollTask task, ModbusSlaveConnection connection)
                 throws ModbusException, ModbusTransportException {
@@ -160,7 +162,7 @@ public class ModbusManagerImpl implements ModbusManager {
      * @author Sami Salonen
      *
      */
-    private class WriteExecutor implements ModbusOperation<WriteTask> {
+    private class WriteOperation implements ModbusOperation<WriteTask> {
         @Override
         public void accept(String operationId, WriteTask task, ModbusSlaveConnection connection)
                 throws ModbusException, ModbusTransportException {
@@ -216,6 +218,22 @@ public class ModbusManagerImpl implements ModbusManager {
      */
     private static final String MODBUS_POLLER_CALLBACK_THREAD_POOL_NAME = "modbusManagerCallbackThreadPool";
 
+    /**
+     * Log message with WARN level if the task queues exceed this limit.
+     *
+     * If the queues grow too large, it might be an issue with consumer of the ModbusManager.
+     *
+     * You can generate large queue by spamming ModbusManager with one-off read or writes (submitOnTimePoll or
+     * submitOneTimeWrite).
+     *
+     * Note that there is no issue registering many regular polls, those do not "queue" the same way.
+     *
+     * Presumably slow callbacks can increase queue size with callbackThreadPool
+     */
+    private static final long WARN_QUEUE_SIZE = 500;
+    private static final long MONITOR_QUEUE_INTERVAL_MILLIS = 30000;
+    private long lastQueueMonitorLog = -1;
+
     private static final GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
 
     static {
@@ -241,6 +259,9 @@ public class ModbusManagerImpl implements ModbusManager {
         // disable JMX
         generalPoolConfig.setJmxEnabled(false);
     }
+
+    private final PollOperation pollOperation = new PollOperation();
+    private final WriteOperation writeOperation = new WriteOperation();
 
     /**
      * We use connection pool to ensure that only single transaction is ongoing per each endpoint. This is especially
@@ -451,6 +472,7 @@ public class ModbusManagerImpl implements ModbusManager {
             logger.trace("Deactivated manager - aborting operation.");
             return;
         }
+        logTaskQueueInfo();
         R request = task.getRequest();
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
         WeakReference<C> callback = task.getCallback();
@@ -632,7 +654,7 @@ public class ModbusManagerImpl implements ModbusManager {
             logger.debug("Will now execute one-off poll task {}, waited in thread pool for {}", task,
                     millisInThreadPoolWaiting);
             try {
-                executeOperation(task, true, new PollExecutor());
+                executeOperation(task, true, pollOperation);
             } catch (Throwable e) {
                 logger.error("Unexpected crash when executing task {}", task, e);
             }
@@ -657,7 +679,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 logger.debug("Executing scheduled ({}ms) poll task {}. Current millis: {}", pollPeriodMillis, task,
                         started);
                 try {
-                    executeOperation(task, false, new PollExecutor());
+                    executeOperation(task, false, pollOperation);
                 } catch (Throwable e) {
                     logger.error("Unexpected crash when executing task {}", task, e);
                 }
@@ -725,7 +747,7 @@ public class ModbusManagerImpl implements ModbusManager {
             long millisInThreadPoolWaiting = System.currentTimeMillis() - scheduleTime;
             logger.debug("Will now execute one-off write task {}, waited in thread pool for {}", task,
                     millisInThreadPoolWaiting);
-            executeOperation(task, true, new WriteExecutor());
+            executeOperation(task, true, writeOperation);
         }, 0L, TimeUnit.MILLISECONDS);
         return future;
     }
@@ -792,21 +814,8 @@ public class ModbusManagerImpl implements ModbusManager {
                 throw new IllegalStateException("Thread pool(s) shut down! Aborting activation of ModbusMangerImpl");
             }
         }
-        monitorFuture = scheduledThreadPoolExecutor.scheduleWithFixedDelay(() -> {
-            logger.trace("<POLL MONITOR>");
-            logger.trace("POLL MONITOR: Queue size: {}, remaining space {}. Active threads {}",
-                    scheduledThreadPoolExecutor.getQueue().size(),
-                    scheduledThreadPoolExecutor.getQueue().remainingCapacity(),
-                    scheduledThreadPoolExecutor.getActiveCount());
-            this.scheduledPollTasks.forEach((task, future) -> {
-                logger.trace(
-                        "POLL MONITOR: FC: {}, start {}, length {}, done: {}, canceled: {}, delay: {}. Full task {}",
-                        task.getRequest().getFunctionCode(), task.getRequest().getReference(),
-                        task.getRequest().getDataLength(), future.isDone(), future.isCancelled(),
-                        future.getDelay(TimeUnit.MILLISECONDS), task);
-            });
-            logger.trace("</POLL MONITOR>");
-        }, 0, 3000, TimeUnit.MILLISECONDS);
+        monitorFuture = scheduledThreadPoolExecutor.scheduleWithFixedDelay(this::logTaskQueueInfo, 0,
+                MONITOR_QUEUE_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     protected void deactivate() {
@@ -835,6 +844,47 @@ public class ModbusManagerImpl implements ModbusManager {
             connectionFactory = null;
             logger.info("Modbus manager deactivated");
         }
+    }
+
+    private void logTaskQueueInfo() {
+        if (scheduledThreadPoolExecutor == null || callbackThreadPool == null) {
+            return;
+        }
+        // Avoid excessive spamming with queue monitor when many tasks are executed
+        if (System.currentTimeMillis() - lastQueueMonitorLog < MONITOR_QUEUE_INTERVAL_MILLIS) {
+            return;
+        }
+        lastQueueMonitorLog = System.currentTimeMillis();
+        logger.trace("<POLL MONITOR>");
+        logger.trace("POLL MONITOR: scheduledThreadPoolExecutor queue size: {}, remaining space {}. Active threads {}",
+                scheduledThreadPoolExecutor.getQueue().size(),
+                scheduledThreadPoolExecutor.getQueue().remainingCapacity(),
+                scheduledThreadPoolExecutor.getActiveCount());
+        this.scheduledPollTasks.forEach((task, future) -> {
+            logger.trace(
+                    "POLL MONITOR: scheduled poll task. FC: {}, start {}, length {}, done: {}, canceled: {}, delay: {}. Full task {}",
+                    task.getRequest().getFunctionCode(), task.getRequest().getReference(),
+                    task.getRequest().getDataLength(), future.isDone(), future.isCancelled(),
+                    future.getDelay(TimeUnit.MILLISECONDS), task);
+        });
+        if (scheduledThreadPoolExecutor.getQueue().size() >= WARN_QUEUE_SIZE) {
+            logger.warn(
+                    "Many ({}) tasks queued in scheduledThreadPoolExecutor! This might be sign of bad design or bug in the binding code.",
+                    scheduledThreadPoolExecutor.getQueue().size());
+        }
+        if (callbackThreadPool instanceof QueueingThreadPoolExecutor) {
+            QueueingThreadPoolExecutor callbackPool = ((QueueingThreadPoolExecutor) callbackThreadPool);
+            logger.trace("POLL MONITOR: callbackThreadPool queue size: {}, remaining space {}. Active threads {}",
+                    callbackPool.getQueue().size(), callbackPool.getQueue().remainingCapacity(),
+                    callbackPool.getActiveCount());
+            if (callbackPool.getQueue().size() >= WARN_QUEUE_SIZE) {
+                logger.warn(
+                        "Many ({}) tasks queued in callbackThreadPool! This might be sign of bad design or bug in the binding code.",
+                        callbackPool.getQueue().size());
+            }
+        }
+
+        logger.trace("</POLL MONITOR>");
     }
 
 }
