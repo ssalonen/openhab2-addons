@@ -67,18 +67,30 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
 
         @Override
         public void onRegisters(ModbusReadRequestBlueprint request, ModbusRegisterArray registers) {
+            // Ignore all incoming data and errors if configuration is not correct
+            if (hasConfigurationError()) {
+                return;
+            }
             resetCommunicationError();
             forEachAllChildCallbacks(callback -> callback.onRegisters(request, registers));
         }
 
         @Override
         public void onBits(ModbusReadRequestBlueprint request, BitArray coils) {
+            // Ignore all incoming data and errors if configuration is not correct
+            if (hasConfigurationError()) {
+                return;
+            }
             resetCommunicationError();
             forEachAllChildCallbacks(callback -> callback.onBits(request, coils));
         }
 
         @Override
         public void onError(ModbusReadRequestBlueprint request, Exception error) {
+            // Ignore all incoming data and errors if configuration is not correct
+            if (hasConfigurationError()) {
+                return;
+            }
             forEachAllChildCallbacks(callback -> callback.onError(request, error));
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
@@ -198,7 +210,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         try {
             config = getConfigAs(ModbusPollerConfiguration.class);
             registerPollTask();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, String
                     .format("Exception during initialization: %s (%s)", e.getMessage(), e.getClass().getSimpleName()));
         }
@@ -264,6 +276,12 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
             managerRef.get().registerRegularPoll(pollTask, config.getRefresh(), 0);
             updateStatus(ThingStatus.ONLINE);
         }
+    }
+
+    private boolean hasConfigurationError() {
+        ThingStatusInfo statusInfo = getThing().getStatusInfo();
+        return statusInfo.getStatus() == ThingStatus.OFFLINE
+                && statusInfo.getStatusDetail() == ThingStatusDetail.CONFIGURATION_ERROR;
     }
 
     /**
