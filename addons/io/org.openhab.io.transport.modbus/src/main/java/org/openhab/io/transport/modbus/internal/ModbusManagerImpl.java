@@ -478,6 +478,10 @@ public class ModbusManagerImpl implements ModbusManager {
                     // logged already, callback called as well
                     return;
                 }
+                if (Thread.interrupted()) {
+                    logger.warn("Thread interrupted. Aborting operation [operation ID {}]", operationId);
+                    return;
+                }
                 // Check poll task is still registered (this is all asynchronous)
                 if (!oneOffTask && task instanceof PollTask) {
                     verifyTaskIsRegistered((PollTask) task);
