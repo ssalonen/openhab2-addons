@@ -45,4 +45,25 @@ public interface BitArray extends Iterable<Boolean> {
         return IntStream.range(0, size()).mapToObj(i -> getBit(i)).iterator();
     }
 
+    default public boolean sizeAndValuesEquals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (obj == this) {
+            return true;
+        }
+        if (!(obj instanceof BitArray)) {
+            return false;
+        }
+        BitArray other = (BitArray) obj;
+        if (this.size() != other.size()) {
+            return false;
+        }
+        for (int i = 0; i < this.size(); i++) {
+            if (this.getBit(i) != other.getBit(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

@@ -63,4 +63,9 @@ public class BitArrayWrappingBitVector implements BitArray {
                 .append(",bitsSize=").append(safeSize).append(")").toString();
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        return sizeAndValuesEquals(obj);
+    }
+
 }

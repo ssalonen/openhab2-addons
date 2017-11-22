@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.openhab.io.transport.modbus.BitArrayImpl;
 import org.openhab.io.transport.modbus.ModbusRegister;
 import org.openhab.io.transport.modbus.ModbusRegisterArrayImpl;
 import org.openhab.io.transport.modbus.ModbusRegisterImpl;
@@ -21,14 +22,11 @@ import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprintImpl;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
-import org.openhab.io.transport.modbus.internal.BitArrayWrappingBitVector;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import net.wimpi.modbus.util.BitVector;
 
 /**
  * Utilities for converting JSON to {@link ModbusWriteRequestBlueprint}
@@ -158,12 +156,11 @@ public final class WriteRequestJsonUtilities {
                 if (valuesElem.size() == 0) {
                     throw new IllegalArgumentException("Must provide at least one coil");
                 }
-                BitVector bits = new BitVector(valuesElem.size());
+                BitArrayImpl bits = new BitArrayImpl(valuesElem.size());
                 for (int i = 0; i < valuesElem.size(); i++) {
                     bits.setBit(i, valuesElem.get(i).getAsInt() != 0);
                 }
-                return new ModbusWriteCoilRequestBlueprintImpl(unitId, address,
-                        new BitArrayWrappingBitVector(bits, valuesElem.size()), !writeSingle.get(), maxTries);
+                return new ModbusWriteCoilRequestBlueprintImpl(unitId, address, bits, !writeSingle.get(), maxTries);
             case WRITE_SINGLE_REGISTER:
                 writeSingle.set(true);
                 if (valuesElem.size() != 1) {
