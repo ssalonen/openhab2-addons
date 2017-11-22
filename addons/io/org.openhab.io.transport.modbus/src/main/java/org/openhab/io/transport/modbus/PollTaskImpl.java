@@ -8,8 +8,6 @@
  */
 package org.openhab.io.transport.modbus;
 
-import java.lang.ref.WeakReference;
-
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
@@ -37,14 +35,14 @@ public class PollTaskImpl implements PollTask {
 
     private ModbusSlaveEndpoint endpoint;
     private ModbusReadRequestBlueprintImpl request;
-    private WeakReference<ModbusReadCallback> callback;
+    private ModbusReadCallback callback;
 
     public PollTaskImpl(ModbusSlaveEndpoint endpoint, ModbusReadRequestBlueprintImpl request,
             ModbusReadCallback callback) {
         super();
         this.endpoint = endpoint;
         this.request = request;
-        this.callback = new WeakReference<>(callback);
+        this.callback = callback;
     }
 
     /**
@@ -67,7 +65,7 @@ public class PollTaskImpl implements PollTask {
      * {@inheritDoc}
      */
     @Override
-    public WeakReference<ModbusReadCallback> getCallback() {
+    public ModbusReadCallback getCallback() {
         return callback;
     }
 

@@ -8,8 +8,6 @@
  */
 package org.openhab.io.transport.modbus;
 
-import java.lang.ref.WeakReference;
-
 import org.apache.commons.lang.builder.StandardToStringStyle;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.openhab.io.transport.modbus.ModbusManager.WriteTask;
@@ -30,14 +28,14 @@ public class WriteTaskImpl implements WriteTask {
 
     private ModbusSlaveEndpoint endpoint;
     private ModbusWriteRequestBlueprint request;
-    private WeakReference<ModbusWriteCallback> callback;
+    private ModbusWriteCallback callback;
 
     public WriteTaskImpl(ModbusSlaveEndpoint endpoint, ModbusWriteRequestBlueprint request,
             ModbusWriteCallback callback) {
         super();
         this.endpoint = endpoint;
         this.request = request;
-        this.callback = new WeakReference<>(callback);
+        this.callback = callback;
     }
 
     /**
@@ -60,7 +58,7 @@ public class WriteTaskImpl implements WriteTask {
      * {@inheritDoc}
      */
     @Override
-    public WeakReference<ModbusWriteCallback> getCallback() {
+    public ModbusWriteCallback getCallback() {
         return callback;
     }
 

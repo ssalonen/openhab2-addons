@@ -13,7 +13,6 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -276,7 +275,7 @@ public class ModbusPollerThingHandlerTest {
         thingHandler.initialize();
 
         // verify registration
-        final AtomicReference<WeakReference<ModbusReadCallback>> callbackRef = new AtomicReference<>();
+        final AtomicReference<ModbusReadCallback> callbackRef = new AtomicReference<>();
         verify(modbusManager).registerRegularPoll(argThat(new TypeSafeMatcher<PollTask>() {
 
             @Override

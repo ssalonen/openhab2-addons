@@ -8,7 +8,6 @@
  */
 package org.openhab.io.transport.modbus;
 
-import java.lang.ref.WeakReference;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 
@@ -51,7 +50,7 @@ public interface ModbusManager {
          *
          * @return
          */
-        WeakReference<C> getCallback();
+        C getCallback();
 
         int getMaxTries();
     }

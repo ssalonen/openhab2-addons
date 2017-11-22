@@ -9,7 +9,6 @@
 package org.openhab.io.transport.modbus.internal;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -132,7 +131,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 throws ModbusException, ModbusTransportException {
             ModbusSlaveEndpoint endpoint = task.getEndpoint();
             ModbusReadRequestBlueprint request = task.getRequest();
-            WeakReference<ModbusReadCallback> callback = task.getCallback();
+            ModbusReadCallback callback = task.getCallback();
 
             Optional<ModbusSlaveConnection> optionalConnection = Optional.of(connection);
             ModbusTransaction transaction = ModbusLibraryWrapper.createTransactionForEndpoint(endpoint,
@@ -149,10 +148,11 @@ public class ModbusManagerImpl implements ModbusManager {
             logger.trace("Response for read request (FC={}, transaction ID={}): {} [operation ID {}]",
                     response.getFunctionCode(), response.getTransactionID(), response.getHexMessage(), operationId);
             checkTransactionId(response, libRequest, task, operationId);
-            callbackThreadPool.execute(() -> {
-                Optional.ofNullable(callback.get())
-                        .ifPresent(cb -> ModbusLibraryWrapper.invokeCallbackWithResponse(request, cb, response));
-            });
+            if (callback != null) {
+                callbackThreadPool.execute(() -> {
+                    ModbusLibraryWrapper.invokeCallbackWithResponse(request, callback, response);
+                });
+            }
         }
     }
 
@@ -168,7 +168,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 throws ModbusException, ModbusTransportException {
             ModbusSlaveEndpoint endpoint = task.getEndpoint();
             ModbusWriteRequestBlueprint request = task.getRequest();
-            WeakReference<ModbusWriteCallback> callback = task.getCallback();
+            ModbusWriteCallback callback = task.getCallback();
 
             Optional<ModbusSlaveConnection> optionalConnection = Optional.of(connection);
             ModbusTransaction transaction = ModbusLibraryWrapper.createTransactionForEndpoint(endpoint,
@@ -187,8 +187,12 @@ public class ModbusManagerImpl implements ModbusManager {
                     response.getFunctionCode(), response.getTransactionID(), response.getHexMessage(), operationId);
 
             checkTransactionId(response, libRequest, task, operationId);
-            Optional.ofNullable(callback.get())
-                    .ifPresent(cb -> invokeCallbackWithResponse(request, cb, new ModbusResponseImpl(response)));
+            if (callback != null) {
+                callbackThreadPool.execute(() -> {
+                    invokeCallbackWithResponse(request, callback, new ModbusResponseImpl(response));
+                });
+            }
+
         }
     }
 
@@ -351,7 +355,7 @@ public class ModbusManagerImpl implements ModbusManager {
     }
 
     private void invalidate(ModbusSlaveEndpoint endpoint, Optional<ModbusSlaveConnection> connection) {
-        if (!connection.isPresent()) {
+        if (connectionPool == null) {
             return;
         }
         connection.ifPresent(con -> {
@@ -365,6 +369,9 @@ public class ModbusManagerImpl implements ModbusManager {
     }
 
     private void returnConnection(ModbusSlaveEndpoint endpoint, Optional<ModbusSlaveConnection> connection) {
+        if (connectionPool == null) {
+            return;
+        }
         connection.ifPresent(con -> {
             try {
                 connectionPool.returnObject(endpoint, con);
@@ -395,7 +402,7 @@ public class ModbusManagerImpl implements ModbusManager {
                 task, oneOffTask, connectionPool.getNumIdle(task.getEndpoint()),
                 connectionPool.getNumActive(task.getEndpoint()), operationId);
         long connectionBorrowStart = System.currentTimeMillis();
-        ModbusCallback callback = task.getCallback().get();
+        ModbusCallback callback = task.getCallback();
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
 
         ModbusRequestBlueprint request = task.getRequest();
@@ -410,10 +417,11 @@ public class ModbusManagerImpl implements ModbusManager {
         if (!connection.isPresent()) {
             logger.warn("Could not connect to endpoint {} -- aborting request {} [operation ID {}]", endpoint, request,
                     operationId);
-            callbackThreadPool.execute(() -> {
-                Optional.ofNullable(callback)
-                        .ifPresent(cb -> invokeCallbackWithError(request, cb, new ModbusConnectionException(endpoint)));
-            });
+            if (callback != null) {
+                callbackThreadPool.execute(() -> {
+                    invokeCallbackWithError(request, callback, new ModbusConnectionException(endpoint));
+                });
+            }
         }
         return connection;
     }
@@ -483,7 +491,7 @@ public class ModbusManagerImpl implements ModbusManager {
         logTaskQueueInfo();
         R request = task.getRequest();
         ModbusSlaveEndpoint endpoint = task.getEndpoint();
-        WeakReference<C> callback = task.getCallback();
+        C callback = task.getCallback();
         int maxTries = task.getMaxTries();
         AtomicReference<Exception> lastError = new AtomicReference<>();
         long retryDelay = connectionFactory.getEndpointPoolConfiguration(endpoint).getInterTransactionDelayMillis();
@@ -629,10 +637,11 @@ public class ModbusManagerImpl implements ModbusManager {
             }
             if (lastError.get() != null) {
                 // All retries failed with some error
-                callbackThreadPool.execute(() -> {
-                    Optional.ofNullable(callback.get())
-                            .ifPresent(cb -> invokeCallbackWithError(request, cb, lastError.get()));
-                });
+                if (callback != null) {
+                    callbackThreadPool.execute(() -> {
+                        invokeCallbackWithError(request, callback, lastError.get());
+                    });
+                }
             }
         } catch (PollTaskUnregistered e) {
             logger.warn("Poll task was unregistered -- not executing/proceeding with the poll: {} [operation ID {}]",
