@@ -23,5 +23,6 @@ Import-Package: com.google.gson,
 Bundle-DocURL: http://www.openhab.org
 Service-Component: OSGI-INF/*.xml
 Bundle-ClassPath: .,
- lib/commons-pool2-2.4.3.jar
+ lib/commons-pool2-2.4.3.jar,
+ lib/jamod-1.2.3.OH-SNAPSHOT.jar
 Bundle-ActivationPolicy: lazy
