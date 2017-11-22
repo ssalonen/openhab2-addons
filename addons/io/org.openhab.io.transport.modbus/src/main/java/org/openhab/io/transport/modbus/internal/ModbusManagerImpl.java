@@ -420,6 +420,7 @@ public class ModbusManagerImpl implements ModbusManager {
 
     private <R> void invokeCallbackWithError(ModbusRequestBlueprint request, ModbusCallback callback, Exception error) {
         try {
+            logger.trace("Calling write response callback {} for request {}. Error was {}", callback, request, error);
             if (request instanceof ModbusReadRequestBlueprint) {
                 ((ModbusReadCallback) callback).onError((ModbusReadRequestBlueprint) request, error);
             } else if (request instanceof ModbusWriteRequestBlueprint) {
@@ -431,15 +432,22 @@ public class ModbusManagerImpl implements ModbusManager {
         } catch (Exception e) {
             logger.error("Unhandled exception in callback: {} {} with request {}", e.getClass().getName(),
                     e.getMessage(), request, e);
+        } finally {
+            logger.trace("Called write response callback {} for request {}. Error was {}", callback, request, error);
         }
     }
 
     private void invokeCallbackWithResponse(ModbusWriteRequestBlueprint request, ModbusWriteCallback callback,
             org.openhab.io.transport.modbus.ModbusResponse response) {
         try {
+            logger.trace("Calling write response callback {} for request {}. Response was {}", callback, request,
+                    response);
             callback.onWriteResponse(request, response);
         } catch (Exception e) {
             logger.error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+        } finally {
+            logger.trace("Called write response callback {} for request {}. Response was {}", callback, request,
+                    response);
         }
     }
 
@@ -600,11 +608,11 @@ public class ModbusManagerImpl implements ModbusManager {
                     if (willRetry) {
                         logger.warn(
                                 "Try {} out of {} failed when executing request ({}). Will try again soon. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
-                                tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
+                                tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId, e);
                     } else {
                         logger.error(
                                 "Last try {} failed when executing request ({}). Aborting. Error was unexpected error, so reseting the connection. Error details: {} {} [operation ID {}]",
-                                tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
+                                tryIndex, request, e.getClass().getName(), e.getMessage(), operationId, e);
                     }
                     // Invalidate connection, and empty (so that new connection is acquired before new retry)
                     invalidate(endpoint, connection);

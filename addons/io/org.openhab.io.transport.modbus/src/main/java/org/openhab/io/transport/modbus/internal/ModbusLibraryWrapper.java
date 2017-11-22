@@ -66,7 +66,7 @@ import net.wimpi.modbus.util.BitVector;
 public class ModbusLibraryWrapper {
 
     private static Logger getLogger() {
-        return LoggerFactory.getLogger(ModbusManagerImpl.class);
+        return LoggerFactory.getLogger(ModbusLibraryWrapper.class);
     }
 
     /**
@@ -259,6 +259,8 @@ public class ModbusLibraryWrapper {
     public static void invokeCallbackWithResponse(ModbusReadRequestBlueprint message, ModbusReadCallback callback,
             ModbusResponse response) {
         try {
+            getLogger().trace("Calling read response callback {} for request {}. Response was {}", callback, message,
+                    response);
             // jamod library seems to be a bit buggy when it comes number of coils in the response, so we use
             // minimum(request, response). The underlying reason is that BitVector.createBitVector initializes the
             // vector
@@ -284,6 +286,9 @@ public class ModbusLibraryWrapper {
 
         } catch (Exception e) {
             getLogger().error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
+        } finally {
+            getLogger().trace("Called read response callback {} for request {}. Response was {}", callback, message,
+                    response);
         }
     }
 
