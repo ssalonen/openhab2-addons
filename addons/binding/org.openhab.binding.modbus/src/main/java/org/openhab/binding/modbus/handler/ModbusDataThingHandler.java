@@ -78,22 +78,22 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private Logger logger = LoggerFactory.getLogger(ModbusDataThingHandler.class);
     private volatile ModbusDataConfiguration config;
 
-    private static final Map<String, List<Class<? extends State>>> channelIdToAcceptedDataTypes = new HashMap<>();
+    private static final Map<String, List<Class<? extends State>>> CHANNEL_ID_TO_ACCEPTED_TYPES = new HashMap<>();
 
     static {
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_SWITCH,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_SWITCH,
                 new SwitchItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_CONTACT,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_CONTACT,
                 new ContactItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_DATETIME,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_DATETIME,
                 new DateTimeItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_DIMMER,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_DIMMER,
                 new DimmerItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_NUMBER,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_NUMBER,
                 new NumberItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_STRING,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_STRING,
                 new StringItem("").getAcceptedDataTypes());
-        channelIdToAcceptedDataTypes.put(ModbusBindingConstants.CHANNEL_ROLLERSHUTTER,
+        CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_ROLLERSHUTTER,
                 new RollershutterItem("").getAcceptedDataTypes());
     }
 
@@ -213,7 +213,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         WriteTaskImpl writeTask = new WriteTaskImpl(slaveEndpoint, request, this);
         logger.trace("Submitting write task: {}", writeTask);
         manager.submitOneTimeWrite(writeTask);
-
     }
 
     @SuppressWarnings("null")
@@ -277,7 +276,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 slaveEndpoint = pollTask.getEndpoint();
                 manager = bridgeHandler.getManagerRef().get();
                 pollStart = pollTask.getRequest().getReference();
-
             }
             if (!validateAndParseReadParameters()) {
                 // status already updated to OFFLINE
@@ -624,7 +622,6 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     String.format("Error with read: %s: %s", error.getClass().getName(), error.getMessage()));
         }
-
     }
 
     @Override
@@ -666,9 +663,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
 
     private Map<ChannelUID, State> processUpdatedValue(DecimalType numericState, boolean boolValue) {
         Map<ChannelUID, State> states = new HashMap<>();
-        channelIdToAcceptedDataTypes.keySet().stream().forEach(channelId -> {
+        CHANNEL_ID_TO_ACCEPTED_TYPES.keySet().stream().forEach(channelId -> {
             ChannelUID channelUID = new ChannelUID(getThing().getUID(), channelId);
-            List<Class<? extends State>> acceptedDataTypes = channelIdToAcceptedDataTypes.get(channelId);
+            List<Class<? extends State>> acceptedDataTypes = CHANNEL_ID_TO_ACCEPTED_TYPES.get(channelId);
             if (acceptedDataTypes.isEmpty()) {
                 return;
             }

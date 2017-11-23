@@ -44,7 +44,6 @@ public class ModbusTcpThingHandler
         poolConfiguration.setInterConnectDelayMillis(config.getTimeBetweenReconnectMillis());
         poolConfiguration.setInterTransactionDelayMillis(config.getTimeBetweenTransactionsMillis());
         poolConfiguration.setReconnectAfterMillis(config.getReconnectAfterMillis());
-
     }
 
     /**

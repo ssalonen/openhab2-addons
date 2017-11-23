@@ -283,7 +283,6 @@ public class ModbusLibraryWrapper {
                 throw new IllegalArgumentException(
                         String.format("Unexpected function code %s", message.getFunctionCode()));
             }
-
         } catch (Exception e) {
             getLogger().error("Unhandled exception in callback: {} {}", e.getClass().getName(), e.getMessage(), e);
         } finally {

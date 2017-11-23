@@ -171,7 +171,7 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-
+        // No channels, no commands
     }
 
     /**

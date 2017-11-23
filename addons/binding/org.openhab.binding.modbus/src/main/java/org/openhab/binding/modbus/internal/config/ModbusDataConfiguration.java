@@ -10,7 +10,7 @@ package org.openhab.binding.modbus.internal.config;
 
 /**
  * Configuration for data thing
- * 
+ *
  * @author Sami Salonen
  *
  */

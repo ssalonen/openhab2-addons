@@ -48,7 +48,6 @@ public class ModbusSerialThingHandler
         endpoint = new ModbusSerialSlaveEndpoint(config.getPort(), config.getBaud(), config.getFlowControlIn(),
                 config.getFlowControlOut(), config.getDataBits(), config.getStopBits(), config.getParity(),
                 config.getEncoding(), config.isEcho(), config.getReceiveTimeoutMillis());
-
     }
 
     /**

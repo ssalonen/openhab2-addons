@@ -53,7 +53,6 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
 
     @Override
     protected ThingHandler createHandler(Thing thing) {
-
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
@@ -82,5 +81,4 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
     public void unsetManager(ModbusManager manager) {
         this.manager = null;
     }
-
 }
