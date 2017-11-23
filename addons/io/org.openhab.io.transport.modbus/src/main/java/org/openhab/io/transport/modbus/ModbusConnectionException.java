@@ -27,7 +27,6 @@ public class ModbusConnectionException extends ModbusTransportException {
      */
     public ModbusConnectionException(ModbusSlaveEndpoint endpoint) {
         this.endpoint = endpoint;
-
     }
 
     /**

@@ -285,7 +285,6 @@ public class ModbusSlaveConnectionFactoryImpl
                                 waited, config.getInterConnectDelayMillis(), config.getInterTransactionDelayMillis(),
                                 obj.getObject(), endpoint);
                     }
-
                 }
                 connection.connect();
                 long curTime = System.currentTimeMillis();

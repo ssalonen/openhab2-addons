@@ -105,7 +105,6 @@ public class ModbusBitUtilities {
             }
             case UINT16:
                 return new DecimalType(registers.getRegister(index).toUnsignedShort());
-
             case INT32: {
                 ByteBuffer buff = ByteBuffer.allocate(4);
                 buff.put(registers.getRegister(index).getBytes());

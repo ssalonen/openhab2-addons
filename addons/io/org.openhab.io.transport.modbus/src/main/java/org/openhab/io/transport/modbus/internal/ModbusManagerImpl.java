@@ -192,7 +192,6 @@ public class ModbusManagerImpl implements ModbusManager {
                     invokeCallbackWithResponse(request, callback, new ModbusResponseImpl(response));
                 });
             }
-
         }
     }
 
@@ -236,36 +235,36 @@ public class ModbusManagerImpl implements ModbusManager {
      */
     private static final long WARN_QUEUE_SIZE = 500;
     private static final long MONITOR_QUEUE_INTERVAL_MILLIS = 30000;
-    private long lastQueueMonitorLog = -1;
-
-    private static final GenericKeyedObjectPoolConfig generalPoolConfig = new GenericKeyedObjectPoolConfig();
+    private static final GenericKeyedObjectPoolConfig GENERAL_POOL_CONFIG = new GenericKeyedObjectPoolConfig();
 
     static {
         // When the pool is exhausted, multiple calling threads may be simultaneously blocked waiting for instances to
         // become available. As of pool 1.5, a "fairness" algorithm has been implemented to ensure that threads receive
         // available instances in request arrival order.
-        generalPoolConfig.setFairness(true);
+        GENERAL_POOL_CONFIG.setFairness(true);
         // Limit one connection per endpoint (i.e. same ip:port pair or same serial device).
         // If there are multiple read/write requests to process at the same time, block until previous one finishes
-        generalPoolConfig.setBlockWhenExhausted(true);
-        generalPoolConfig.setMaxTotalPerKey(1);
+        GENERAL_POOL_CONFIG.setBlockWhenExhausted(true);
+        GENERAL_POOL_CONFIG.setMaxTotalPerKey(1);
 
         // block infinitely when exhausted
-        generalPoolConfig.setMaxWaitMillis(-1);
+        GENERAL_POOL_CONFIG.setMaxWaitMillis(-1);
 
         // Connections are "tested" on return. Effectively, disconnected connections are destroyed when returning on
         // pool
         // Note that we do not test on borrow -- that would mean blocking situation when connection cannot be
         // established.
         // Instead, borrowing connection from pool can return unconnected connection.
-        generalPoolConfig.setTestOnReturn(true);
+        GENERAL_POOL_CONFIG.setTestOnReturn(true);
 
         // disable JMX
-        generalPoolConfig.setJmxEnabled(false);
+        GENERAL_POOL_CONFIG.setJmxEnabled(false);
     }
 
     private final PollOperation pollOperation = new PollOperation();
     private final WriteOperation writeOperation = new WriteOperation();
+
+    private volatile long lastQueueMonitorLog = -1;
 
     /**
      * We use connection pool to ensure that only single transaction is ongoing per each endpoint. This is especially
@@ -324,14 +323,13 @@ public class ModbusManagerImpl implements ModbusManager {
         });
 
         GenericKeyedObjectPool<ModbusSlaveEndpoint, ModbusSlaveConnection> genericKeyedObjectPool = new GenericKeyedObjectPool<>(
-                connectionFactory, generalPoolConfig);
+                connectionFactory, GENERAL_POOL_CONFIG);
         genericKeyedObjectPool.setSwallowedExceptionListener(new SwallowedExceptionListener() {
 
             @Override
             public void onSwallowException(Exception e) {
                 LoggerFactory.getLogger(ModbusManagerImpl.class)
                         .error("Connection pool swallowed unexpected exception: {}", e.getMessage());
-
             }
         });
         connectionPool = genericKeyedObjectPool;
@@ -564,14 +562,25 @@ public class ModbusManagerImpl implements ModbusManager {
                     operation.accept(operationId, task, connection.get());
                     lastError.set(null);
                     break;
-                } catch (ModbusIOException | IOException e) {
-                    if (e instanceof ModbusIOException) {
-                        lastError.set(new ModbusSlaveIOExceptionImpl((ModbusIOException) e));
-                    } else if (e instanceof IOException) {
-                        lastError.set(new ModbusSlaveIOExceptionImpl((IOException) e));
+                } catch (IOException e) {
+                    lastError.set(new ModbusSlaveIOExceptionImpl(e));
+                    // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
+                    // broken pipe on write)
+                    if (willRetry) {
+                        logger.warn(
+                                "Try {} out of {} failed when executing request ({}). Will try again soon. Error was I/O error, so reseting the connection. Error details: {} {} [operation ID {}]",
+                                tryIndex, maxTries, request, e.getClass().getName(), e.getMessage(), operationId);
                     } else {
-                        throw new IllegalStateException(e);
+                        logger.error(
+                                "Last try {} failed when executing request ({}). Aborting. Error was I/O error, so reseting the connection. Error details: {} {} [operation ID {}]",
+                                tryIndex, request, e.getClass().getName(), e.getMessage(), operationId);
                     }
+                    // Invalidate connection, and empty (so that new connection is acquired before new retry)
+                    invalidate(endpoint, connection);
+                    connection = Optional.empty();
+                    continue;
+                } catch (ModbusIOException e) {
+                    lastError.set(new ModbusSlaveIOExceptionImpl(e));
                     // IO exception occurred, we re-establish new connection hoping it would fix the issue (e.g.
                     // broken pipe on write)
                     if (willRetry) {

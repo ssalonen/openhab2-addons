@@ -63,7 +63,7 @@ public class ModbusRegisterArrayImpl implements ModbusRegisterArray {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      */
     @Override
     public int size() {

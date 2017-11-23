@@ -31,21 +31,21 @@ public interface BitArray extends Iterable<Boolean> {
      *
      * @throws IndexOutOfBoundsException if the index is out of bounds.
      */
-    boolean getBit(int index);
+    public boolean getBit(int index);
 
     /**
      * Get number of bits stored in this instance
      *
      * @return
      */
-    int size();
+    public int size();
 
     @Override
-    default Iterator<Boolean> iterator() {
+    public default Iterator<Boolean> iterator() {
         return IntStream.range(0, size()).mapToObj(i -> getBit(i)).iterator();
     }
 
-    default public boolean sizeAndValuesEquals(Object obj) {
+    public default boolean sizeAndValuesEquals(Object obj) {
         if (obj == null) {
             return false;
         }

@@ -12,7 +12,7 @@ import net.wimpi.modbus.Modbus;
 
 /**
  * Base interface for Modbus write requests
- * 
+ *
  * @author Sami Salonen
  *
  */

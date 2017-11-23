@@ -38,24 +38,24 @@ public final class WriteRequestJsonUtilities {
     /**
      * Constant for the function code key in the JSON
      */
-    public final static String JSON_FUNCTION_CODE = "functionCode";
+    public static final String JSON_FUNCTION_CODE = "functionCode";
     /**
      * Constant for the write address key in the JSON
      */
-    public final static String JSON_ADDRESS = "address";
+    public static final String JSON_ADDRESS = "address";
     /**
      * Constant for the value key in the JSON
      */
-    public final static String JSON_VALUE = "value";
+    public static final String JSON_VALUE = "value";
     /**
      * Constant for the maxTries key in the JSON
      */
-    public final static String JSON_MAX_TRIES = "maxTries";
+    public static final String JSON_MAX_TRIES = "maxTries";
 
     /**
      * Default maxTries when it has not been specified
      */
-    public final static int DEFAULT_MAX_TRIES = 3;
+    public static final int DEFAULT_MAX_TRIES = 3;
 
     private final static JsonParser parser = new JsonParser();
 
