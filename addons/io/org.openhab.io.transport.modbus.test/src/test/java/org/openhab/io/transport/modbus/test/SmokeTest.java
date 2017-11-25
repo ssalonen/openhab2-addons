@@ -806,9 +806,8 @@ public class SmokeTest extends IntegrationTestSupport {
                     }
                 });
         long start = System.currentTimeMillis();
-        modbusManager.registerRegularPoll(task, 50, 0);
+        modbusManager.registerRegularPoll(task, 200, 0);
         callbackCalled.await(5, TimeUnit.SECONDS);
-        int countBeforeUnregister = expectedReceived.get();
         modbusManager.unregisterRegularPoll(task);
         int countAfterUnregister = expectedReceived.get();
 
@@ -823,8 +822,8 @@ public class SmokeTest extends IntegrationTestSupport {
         assertThat(errorCount.get(), is(equalTo(1))); // one error expected, when there is initally no data
 
         float averagePollPeriodMillis = ((float) (end - start)) / (responses - 1);
-        assertTrue(averagePollPeriodMillis > 45);
-        assertTrue(averagePollPeriodMillis < 100);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis > 190);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis < 250);
     }
 
     @SuppressWarnings("null")
