@@ -14,6 +14,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,7 +27,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.core.internal.items.ItemRegistryImpl;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
@@ -52,7 +52,6 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
-import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
@@ -94,14 +93,12 @@ import org.osgi.framework.InvalidSyntaxException;
 
 import com.google.common.collect.ImmutableMap;
 
-@SuppressWarnings("restriction")
 @RunWith(MockitoJUnitRunner.class)
 public class ModbusDataHandlerTest {
 
     private class ItemChannelLinkRegistryTestImpl extends ItemChannelLinkRegistry {
         public ItemChannelLinkRegistryTestImpl() {
             super();
-            this.setItemRegistry(itemRegistry);
             this.setThingRegistry(thingRegistry);
         }
 
@@ -133,7 +130,6 @@ public class ModbusDataHandlerTest {
     @Mock
     private ModbusManager manager;
 
-    private ItemRegistryImpl itemRegistry = new ItemRegistryImpl();
     private ItemChannelLinkRegistryTestImpl linkRegistry = new ItemChannelLinkRegistryTestImpl();
 
     Map<ChannelUID, List<State>> stateUpdates = new HashMap<>();
@@ -154,8 +150,14 @@ public class ModbusDataHandlerTest {
         // update bridge with the new child thing
         if (thing.getBridgeUID() != null) {
             ThingUID bridgeUID = thing.getBridgeUID();
-            things.stream().filter(t -> t.getUID().equals(bridgeUID)).findFirst()
-                    .ifPresent(t -> ((BridgeImpl) t).addThing(thing));
+            things.stream().filter(t -> t.getUID().equals(bridgeUID)).findFirst().ifPresent(t -> {
+                try {
+                    t.getClass().getMethod("addThing", Thing.class).invoke(t, thing);
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                        | NoSuchMethodException | SecurityException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 

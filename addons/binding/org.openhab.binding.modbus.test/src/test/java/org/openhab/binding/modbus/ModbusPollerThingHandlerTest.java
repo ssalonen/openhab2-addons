@@ -14,6 +14,7 @@ import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,7 +32,6 @@ import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
-import org.eclipse.smarthome.core.thing.internal.BridgeImpl;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -49,7 +49,6 @@ import org.openhab.io.transport.modbus.ModbusManager.PollTask;
 import org.openhab.io.transport.modbus.ModbusReadCallback;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 
-@SuppressWarnings("restriction")
 @RunWith(MockitoJUnitRunner.class)
 public class ModbusPollerThingHandlerTest {
 
@@ -83,8 +82,14 @@ public class ModbusPollerThingHandlerTest {
         // update bridge with the new child thing
         if (thing.getBridgeUID() != null) {
             ThingUID bridgeUID = thing.getBridgeUID();
-            things.stream().filter(t -> t.getUID().equals(bridgeUID)).findFirst()
-                    .ifPresent(t -> ((BridgeImpl) t).addThing(thing));
+            things.stream().filter(t -> t.getUID().equals(bridgeUID)).findFirst().ifPresent(t -> {
+                try {
+                    t.getClass().getMethod("addThing", Thing.class).invoke(t, thing);
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                        | NoSuchMethodException | SecurityException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 
