@@ -28,26 +28,6 @@
 				<configuration>
 					<providerHint>junit47</providerHint>
 					<dependencies>
-						<dependency>
-							<type>eclipse-plugin</type>
-							<artifactId>org.eclipse.equinox.event</artifactId>
-							<version>0.0.0</version>
-						</dependency>
-						<dependency>
-							<type>eclipse-plugin</type>
-							<artifactId>org.eclipse.equinox.ds</artifactId>
-							<version>0.0.0</version>
-						</dependency>
-						<dependency>
-							<type>eclipse-plugin</type>
-							<artifactId>org.eclipse.smarthome.config.xml</artifactId>
-							<version>0.0.0</version>
-						</dependency>
-						<dependency>
-							<type>eclipse-plugin</type>
-							<artifactId>org.eclipse.smarthome.core.thing.xml</artifactId>
-							<version>0.0.0</version>
-						</dependency>
 						<!-- Required Bundles to enable LOGGING -->
 						<dependency>
 							<type>eclipse-plugin</type>
