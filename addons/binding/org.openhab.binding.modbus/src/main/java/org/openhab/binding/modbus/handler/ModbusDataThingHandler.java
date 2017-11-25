@@ -609,7 +609,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             logger.error("Thing {} '{}' had error on read: {} {}. Stack trace follows since this is unexpected error.",
                     getThing().getUID(), getThing().getLabel(), error.getClass().getName(), error.getMessage(), error);
         }
-        Map<ChannelUID, State> states = new HashMap<>();
+        Map<@NonNull ChannelUID, State> states = new HashMap<>();
         states.put(new ChannelUID(getThing().getUID(), ModbusBindingConstants.CHANNEL_LAST_READ_ERROR),
                 new DateTimeType());
 
@@ -662,7 +662,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     }
 
     private Map<ChannelUID, State> processUpdatedValue(DecimalType numericState, boolean boolValue) {
-        Map<ChannelUID, State> states = new HashMap<>();
+        Map<@NonNull ChannelUID, State> states = new HashMap<>();
         CHANNEL_ID_TO_ACCEPTED_TYPES.keySet().stream().forEach(channelId -> {
             ChannelUID channelUID = new ChannelUID(getThing().getUID(), channelId);
             List<Class<? extends State>> acceptedDataTypes = CHANNEL_ID_TO_ACCEPTED_TYPES.get(channelId);
@@ -720,7 +720,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         return states;
     }
 
-    private void tryUpdateState(ChannelUID uid, State state) {
+    private void tryUpdateState(@NonNull ChannelUID uid, State state) {
         try {
             updateState(uid, state);
         } catch (IllegalArgumentException e) {

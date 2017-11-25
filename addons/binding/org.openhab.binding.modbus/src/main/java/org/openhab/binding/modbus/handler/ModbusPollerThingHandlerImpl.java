@@ -138,14 +138,14 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
     private static class ModbusPollerReadRequest extends ModbusReadRequestBlueprintImpl {
 
         private static ModbusReadFunctionCode getFunctionCode(String type) {
-            ModbusReadFunctionCode functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(type);
-            if (functionCode == null) {
+            if (!ModbusBindingConstants.READ_FUNCTION_CODES.containsKey(type)) {
                 Object[] acceptedTypes = ModbusBindingConstants.READ_FUNCTION_CODES.keySet().toArray();
                 Arrays.sort(acceptedTypes);
                 throw new IllegalArgumentException(
                         String.format("No function code found for type='%s'. Was expecting one of: %s", type,
                                 StringUtils.join(acceptedTypes, ", ")));
             }
+            ModbusReadFunctionCode functionCode = ModbusBindingConstants.READ_FUNCTION_CODES.get(type);
             return functionCode;
         }
 

@@ -11,6 +11,7 @@ package org.openhab.binding.modbus;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 
@@ -20,6 +21,7 @@ import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
  *
  * @author Sami Salonen - Initial contribution
  */
+@NonNullByDefault
 public class ModbusBindingConstants {
 
     public static final String BINDING_ID = "modbus";
