@@ -30,7 +30,15 @@ abstract class AbstractRequestComparer<T extends ModbusWriteRequestBlueprint> ex
 
     @Override
     public void describeTo(Description description) {
-        description.appendText("should return correct values");
+        description.appendText("should return request with");
+        description.appendText(" unitID=");
+        description.appendValue(expectedUnitId);
+        description.appendText(" address=");
+        description.appendValue(expectedAddress);
+        description.appendText(" functionCode=");
+        description.appendValue(expectedFunctionCode);
+        description.appendText(" maxTries=");
+        description.appendValue(expectedMaxTries);
     }
 
     @SuppressWarnings("null")

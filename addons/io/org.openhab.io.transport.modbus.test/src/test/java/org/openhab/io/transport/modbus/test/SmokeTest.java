@@ -641,8 +641,8 @@ public class SmokeTest extends IntegrationTestSupport {
         assertThat(unexpectedCount.get(), is(equalTo(0)));
 
         float averagePollPeriodMillis = ((float) (end - start)) / (responses - 1);
-        assertTrue(averagePollPeriodMillis > 45);
-        assertTrue(averagePollPeriodMillis < 100);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis > 45);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis < 100);
     }
 
     /**
@@ -700,8 +700,8 @@ public class SmokeTest extends IntegrationTestSupport {
         assertThat(unexpectedCount.get(), is(equalTo(0)));
 
         float averagePollPeriodMillis = ((float) (end - start)) / (responses - 1);
-        assertTrue(averagePollPeriodMillis > 145);
-        assertTrue(averagePollPeriodMillis < 190);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis > 145);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis < 190);
     }
 
     @Test
@@ -758,8 +758,8 @@ public class SmokeTest extends IntegrationTestSupport {
         assertThat(unexpectedCount.get(), is(equalTo(0)));
 
         float averagePollPeriodMillis = ((float) (end - start)) / (responses - 1);
-        assertTrue(averagePollPeriodMillis > 145);
-        assertTrue(averagePollPeriodMillis < 190);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis > 145);
+        assertTrue(String.valueOf(averagePollPeriodMillis), averagePollPeriodMillis < 190);
 
         // Sleep for half a second, well enough time for some more polls
         Thread.sleep(500);

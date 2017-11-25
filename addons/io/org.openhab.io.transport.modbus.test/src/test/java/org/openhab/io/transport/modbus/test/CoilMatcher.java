@@ -8,9 +8,11 @@
  */
 package org.openhab.io.transport.modbus.test;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.StreamSupport;
 
+import org.hamcrest.Description;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
 
@@ -22,6 +24,13 @@ class CoilMatcher extends AbstractRequestComparer<ModbusWriteCoilRequestBlueprin
             ModbusWriteFunctionCode expectedFunctionCode, Boolean... expectedCoils) {
         super(expectedUnitId, expectedAddress, expectedFunctionCode, expectedMaxTries);
         this.expectedCoils = expectedCoils;
+    }
+
+    @Override
+    public void describeTo(Description description) {
+        super.describeTo(description);
+        description.appendText(" coils=");
+        description.appendValue(Arrays.toString(expectedCoils));
     }
 
     @Override
