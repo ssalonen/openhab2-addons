@@ -31,30 +31,15 @@ public class ModbusWriteCoilRequestBlueprintImpl implements ModbusWriteCoilReque
      * @author salski
      *
      */
-    private static class SingleBitArray implements BitArray {
-
-        private boolean bit;
+    private static class SingleBitArray extends BitArrayImpl {
 
         public SingleBitArray(boolean bit) {
-            this.bit = bit;
-        }
-
-        @Override
-        public boolean getBit(int index) {
-            if (index != 0) {
-                throw new IndexOutOfBoundsException();
-            }
-            return bit;
-        }
-
-        @Override
-        public int size() {
-            return 1;
+            super(bit);
         }
 
         @Override
         public String toString() {
-            return "SingleBitArray(" + String.valueOf(bit) + ")";
+            return "SingleBitArray(" + String.valueOf(getBit(0)) + ")";
         }
 
     }
