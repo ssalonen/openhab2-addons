@@ -81,9 +81,7 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
      */
     @Override
     public void dispose() {
-        if (managerRef != null) {
-            managerRef.get().removeListener(this);
-        }
+        managerRef.get().removeListener(this);
     }
 
     /**
