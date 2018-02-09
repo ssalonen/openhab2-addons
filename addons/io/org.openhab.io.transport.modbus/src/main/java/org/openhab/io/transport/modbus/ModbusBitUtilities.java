@@ -17,6 +17,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
+import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.Command;
 
 /**
@@ -146,6 +147,48 @@ public class ModbusBitUtilities {
             default:
                 throw new IllegalArgumentException(type.getConfigValue());
         }
+    }
+
+    /**
+     * Read data from registers and convert the result to StringType
+     *
+     *
+     * @param registers
+     *            list of registers, each register represent 16bit of data
+     * @param index
+     *            zero based item index. Registers are handles as 16bit registers
+     * @param length
+     *            length of string in 8bit characters
+     *
+     * @return string representation queried value
+     * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
+     *
+     */
+    public static StringType extractStringFromRegisters(ModbusRegisterArray registers, int index, int length) {
+        if (index * 2 + length > registers.size() * 2) {
+            throw new IllegalArgumentException(
+                    String.format("Index=%d with length=%d is out-of-bounds given registers of size %d", index, length,
+                            registers.size()));
+        }
+        if (index < 0) {
+            throw new IllegalArgumentException("Negative index are values not supported");
+        }
+        if (length < 0) {
+            throw new IllegalArgumentException("Negative string lenght is not supported");
+        }
+        StringBuffer buff = new StringBuffer(length);
+
+        int src = index;
+        for (int dest = 0; dest < length; dest++) {
+
+            if (dest % 2 == 0) {
+                buff.append((char) ((registers.getRegister(src).getValue() >> 8)));
+            } else {
+                buff.append((char) (registers.getRegister(src).getValue() & 0xff));
+                src++;
+            }
+        }
+        return new StringType(buff.toString());
     }
 
     /**
