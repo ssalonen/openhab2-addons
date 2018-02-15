@@ -185,16 +185,22 @@ public class ModbusBitUtilities {
         byte[] buff = new byte[length];
 
         int src = index;
-        for (int dest = 0; dest < length; dest++) {
+        int dest;
+        for (dest = 0; dest < length; dest++) {
 
+            byte chr;
             if (dest % 2 == 0) {
-                buff[dest] = (byte) ((registers.getRegister(src).getValue() >> 8));
+                chr = (byte) ((registers.getRegister(src).getValue() >> 8));
             } else {
-                buff[dest] = (byte) (registers.getRegister(src).getValue() & 0xff);
+                chr = (byte) (registers.getRegister(src).getValue() & 0xff);
                 src++;
             }
+            if (chr == 0) {
+                break;
+            }
+            buff[dest] = chr;
         }
-        return new StringType(new String(buff, charset));
+        return new StringType(new String(buff, 0, dest, charset));
     }
 
     /**
