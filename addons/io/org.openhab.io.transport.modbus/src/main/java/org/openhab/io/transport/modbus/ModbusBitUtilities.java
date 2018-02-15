@@ -11,6 +11,7 @@ package org.openhab.io.transport.modbus;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.util.Optional;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -161,12 +162,15 @@ public class ModbusBitUtilities {
      *            this parameter defines the starting register.
      * @param length
      *            length of string in 8bit characters.
+     * @param charset
+     *            the character set used to construct the string.
      *
      * @return string representation queried value
      * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
      *
      */
-    public static StringType extractStringFromRegisters(ModbusRegisterArray registers, int index, int length) {
+    public static StringType extractStringFromRegisters(ModbusRegisterArray registers, int index, int length,
+            Charset charset) {
         if (index * 2 + length > registers.size() * 2) {
             throw new IllegalArgumentException(
                     String.format("Index=%d with length=%d is out-of-bounds given registers of size %d", index, length,
@@ -178,19 +182,19 @@ public class ModbusBitUtilities {
         if (length < 0) {
             throw new IllegalArgumentException("Negative string length is not supported");
         }
-        StringBuffer buff = new StringBuffer(length);
+        byte[] buff = new byte[length];
 
         int src = index;
         for (int dest = 0; dest < length; dest++) {
 
             if (dest % 2 == 0) {
-                buff.append((char) ((registers.getRegister(src).getValue() >> 8)));
+                buff[dest] = (byte) ((registers.getRegister(src).getValue() >> 8));
             } else {
-                buff.append((char) (registers.getRegister(src).getValue() & 0xff));
+                buff[dest] = (byte) (registers.getRegister(src).getValue() & 0xff);
                 src++;
             }
         }
-        return new StringType(buff.toString());
+        return new StringType(new String(buff, charset));
     }
 
     /**
