@@ -151,14 +151,16 @@ public class ModbusBitUtilities {
 
     /**
      * Read data from registers and convert the result to StringType
-     *
+     * Strings should start the the first byte of a register, but could
+     * have an odd number of characters.
      *
      * @param registers
      *            list of registers, each register represent 16bit of data
      * @param index
-     *            zero based item index. Registers are handles as 16bit registers
+     *            zero based register index. Registers are handled as 16bit registers,
+     *            this parameter defines the starting register.
      * @param length
-     *            length of string in 8bit characters
+     *            length of string in 8bit characters.
      *
      * @return string representation queried value
      * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
@@ -171,10 +173,10 @@ public class ModbusBitUtilities {
                             registers.size()));
         }
         if (index < 0) {
-            throw new IllegalArgumentException("Negative index are values not supported");
+            throw new IllegalArgumentException("Negative index values are not supported");
         }
         if (length < 0) {
-            throw new IllegalArgumentException("Negative string lenght is not supported");
+            throw new IllegalArgumentException("Negative string length is not supported");
         }
         StringBuffer buff = new StringBuffer(length);
 
