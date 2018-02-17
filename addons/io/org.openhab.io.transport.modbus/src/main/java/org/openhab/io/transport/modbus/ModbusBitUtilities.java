@@ -154,6 +154,9 @@ public class ModbusBitUtilities {
      * Read data from registers and convert the result to StringType
      * Strings should start the the first byte of a register, but could
      * have an odd number of characters.
+     * Raw byte array values are converted using the charset parameter
+     * and a maximum of length bytes are read. However reading stops at the first
+     * NUL byte encountered.
      *
      * @param registers
      *            list of registers, each register represent 16bit of data
@@ -161,7 +164,7 @@ public class ModbusBitUtilities {
      *            zero based register index. Registers are handled as 16bit registers,
      *            this parameter defines the starting register.
      * @param length
-     *            length of string in 8bit characters.
+     *            maximum length of string in 8bit characters.
      * @param charset
      *            the character set used to construct the string.
      *
