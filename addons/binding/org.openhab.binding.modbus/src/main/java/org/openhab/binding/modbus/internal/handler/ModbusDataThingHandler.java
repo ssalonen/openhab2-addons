@@ -48,6 +48,7 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
+import org.openhab.binding.modbus.internal.LazyThingStatusUpdater;
 import org.openhab.binding.modbus.internal.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.ModbusConfigurationException;
 import org.openhab.binding.modbus.internal.Transformation;
@@ -108,6 +109,8 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         CHANNEL_ID_TO_ACCEPTED_TYPES.put(ModbusBindingConstants.CHANNEL_ROLLERSHUTTER,
                 new RollershutterItem("").getAcceptedDataTypes());
     }
+    private static final ThingStatusInfo ONLINE_STATUS = new ThingStatusInfo(ThingStatus.ONLINE, ThingStatusDetail.NONE,
+            null);
 
     //
     // If you change the below default/initial values, please update the corresponding values in dispose()
@@ -133,8 +136,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private volatile Map<String, ChannelUID> channelUIDCache = new ConcurrentHashMap<>(
             CHANNEL_ID_TO_ACCEPTED_TYPES.size());
 
-    private static final ThingStatusInfo ONLINE_STATUS = new ThingStatusInfo(ThingStatus.ONLINE, ThingStatusDetail.NONE,
-            null);
+    private volatile LazyThingStatusUpdater lazyStatusUpdater = new LazyThingStatusUpdater();
 
     public ModbusDataThingHandler(Thing thing) {
         super(thing);
@@ -319,6 +321,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         // Initialize the thing. If done set status to ONLINE to indicate proper working.
         // Long running initialization should be done asynchronously in background.
         try {
+            lazyStatusUpdater.invalidate();
             logger.trace("initialize() of thing {} '{}' starting", thing.getUID(), thing.getLabel());
             config = getConfigAs(ModbusDataConfiguration.class);
             Bridge bridge = getBridge();
@@ -394,6 +397,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         childOfEndpoint = false;
         pollerHandler = null;
         channelUIDCache = new ConcurrentHashMap<>(CHANNEL_ID_TO_ACCEPTED_TYPES.size());
+        lazyStatusUpdater = new LazyThingStatusUpdater();
     }
 
     @Override
@@ -709,6 +713,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 tryUpdateState(uid, state);
             });
 
+            lazyStatusUpdater.invalidate();
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     String.format("Error (%s) with read. Request: %s. Description: %s. Message: %s",
                             error.getClass().getSimpleName(), request, error.toString(), error.getMessage()));
@@ -746,6 +751,7 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 tryUpdateState(uid, state);
             });
 
+            lazyStatusUpdater.invalidate();
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     String.format("Error (%s) with write. Request: %s. Description: %s. Message: %s",
                             error.getClass().getSimpleName(), request, error.toString(), error.getMessage()));
@@ -760,7 +766,8 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
             return;
         }
         logger.debug("Successful write, matching request {}", request);
-        updateStatus(ThingStatus.ONLINE);
+
+        updateOnline();
         if (isLinked(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS)) {
             updateState(ModbusBindingConstants.CHANNEL_LAST_WRITE_SUCCESS, new DateTimeType());
         }
@@ -829,17 +836,24 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
         }
 
         synchronized (this) {
-            // Optimization, re-use ONLINE_STATUS
-            ThingHandlerCallback callback = this.getCallback();
-            if (callback != null) {
-                callback.statusUpdated(this.thing, ONLINE_STATUS);
-            }
+            updateOnline();
             // Update channels
             states.forEach((uid, state) -> {
                 tryUpdateState(uid, state);
             });
         }
         return states;
+    }
+
+    private void updateOnline() {
+        synchronized (this) {
+            lazyStatusUpdater.statusUpdated(ThingStatus.ONLINE, () -> {
+                ThingHandlerCallback callback = this.getCallback();
+                if (callback != null) {
+                    callback.statusUpdated(this.thing, ONLINE_STATUS);
+                }
+            });
+        }
     }
 
     private ChannelUID getChannelUID(String channelId) {
