@@ -43,6 +43,7 @@ import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.BridgeHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
@@ -50,6 +51,9 @@ import org.openhab.binding.modbus.internal.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.ModbusConfigurationException;
 import org.openhab.binding.modbus.internal.Transformation;
 import org.openhab.binding.modbus.internal.config.ModbusDataConfiguration;
+import org.openhab.io.transport.modbus.BasicModbusWriteCoilRequestBlueprint;
+import org.openhab.io.transport.modbus.BasicModbusWriteRegisterRequestBlueprint;
+import org.openhab.io.transport.modbus.BasicWriteTask;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 import org.openhab.io.transport.modbus.ModbusConnectionException;
@@ -63,11 +67,8 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusResponse;
 import org.openhab.io.transport.modbus.ModbusTransportException;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
-import org.openhab.io.transport.modbus.BasicModbusWriteCoilRequestBlueprint;
-import org.openhab.io.transport.modbus.BasicModbusWriteRegisterRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.PollTask;
-import org.openhab.io.transport.modbus.BasicWriteTask;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.json.WriteRequestJsonUtilities;
 import org.slf4j.Logger;
@@ -129,6 +130,9 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
     private volatile boolean transformationOnlyInWrite;
     private volatile boolean childOfEndpoint;
     private volatile @Nullable ModbusPollerThingHandler pollerHandler;
+
+    private static final ThingStatusInfo ONLINE_STATUS = new ThingStatusInfo(ThingStatus.ONLINE, ThingStatusDetail.NONE,
+            null);
 
     public ModbusDataThingHandler(Thing thing) {
         super(thing);
@@ -817,7 +821,11 @@ public class ModbusDataThingHandler extends BaseThingHandler implements ModbusRe
                 new DateTimeType());
 
         synchronized (this) {
-            updateStatus(ThingStatus.ONLINE);
+            // Optimization, re-use ONLINE_STATUS
+            ThingHandlerCallback callback = this.getCallback();
+            if (callback != null) {
+                callback.statusUpdated(this.thing, ONLINE_STATUS);
+            }
             // Update channels
             states.forEach((uid, state) -> {
                 tryUpdateState(uid, state);
