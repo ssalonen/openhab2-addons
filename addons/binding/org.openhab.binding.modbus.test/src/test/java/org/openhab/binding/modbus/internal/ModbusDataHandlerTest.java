@@ -83,11 +83,12 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.openhab.binding.modbus.internal.ModbusBindingConstants;
 import org.openhab.binding.modbus.internal.handler.ModbusDataThingHandler;
 import org.openhab.binding.modbus.internal.handler.ModbusPollerThingHandler;
 import org.openhab.binding.modbus.internal.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.internal.handler.ModbusTcpThingHandler;
+import org.openhab.io.transport.modbus.BasicModbusRegister;
+import org.openhab.io.transport.modbus.BasicModbusRegisterArray;
 import org.openhab.io.transport.modbus.BitArray;
 import org.openhab.io.transport.modbus.ModbusConstants;
 import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
@@ -96,8 +97,6 @@ import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegister;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.BasicModbusRegisterArray;
-import org.openhab.io.transport.modbus.BasicModbusRegister;
 import org.openhab.io.transport.modbus.ModbusResponse;
 import org.openhab.io.transport.modbus.ModbusWriteCoilRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusWriteFunctionCode;
@@ -219,6 +218,36 @@ public class ModbusDataHandlerTest extends JavaTest {
         @Override
         public ItemBuilder newItemBuilder(String itemType, String itemName) {
             throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean addTag(String itemName, String tag) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public boolean addTags(String itemName, Collection<String> tags) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public boolean removeTag(String itemName, String tag) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public boolean removeTags(String itemName, Collection<String> tags) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public boolean removeTags(String itemName) {
+            // TODO Auto-generated method stub
+            return false;
         }
 
     };
@@ -709,8 +738,8 @@ public class ModbusDataHandlerTest extends JavaTest {
     @Test
     public void testOnRegistersInt16StaticTransformation() {
         ModbusDataThingHandler dataHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
-                "0", "-3", ModbusConstants.ValueType.INT16, null,
-                new BasicModbusRegisterArray(new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
+                "0", "-3", ModbusConstants.ValueType.INT16, null, new BasicModbusRegisterArray(
+                        new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
                 null);
 
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS,
@@ -746,7 +775,8 @@ public class ModbusDataHandlerTest extends JavaTest {
         });
         ModbusDataThingHandler dataHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 "0", "MULTIPLY(10)", ModbusConstants.ValueType.INT16, null,
-                new BasicModbusRegisterArray(new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
+                new BasicModbusRegisterArray(
+                        new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
                 null, bundleContext);
 
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS,
@@ -776,7 +806,8 @@ public class ModbusDataHandlerTest extends JavaTest {
         });
         ModbusDataThingHandler dataHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 "0", "MULTIPLY(10)", ModbusConstants.ValueType.INT16, null,
-                new BasicModbusRegisterArray(new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
+                new BasicModbusRegisterArray(
+                        new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
                 null, bundleContext,
                 // Not linking items and channels
                 false);
@@ -806,7 +837,8 @@ public class ModbusDataHandlerTest extends JavaTest {
         });
         ModbusDataThingHandler dataHandler = testReadHandlingGeneric(ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS,
                 "0", "ONOFF(10)", ModbusConstants.ValueType.INT16, null,
-                new BasicModbusRegisterArray(new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
+                new BasicModbusRegisterArray(
+                        new ModbusRegister[] { new BasicModbusRegister((byte) 0xff, (byte) 0xfd) }),
                 null, bundleContext);
 
         assertSingleStateUpdate(dataHandler, ModbusBindingConstants.CHANNEL_LAST_READ_SUCCESS,
