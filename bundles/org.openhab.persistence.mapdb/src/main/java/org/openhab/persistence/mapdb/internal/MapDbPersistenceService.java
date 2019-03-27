@@ -28,15 +28,15 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.persistence.FilterCriteria;
-import org.eclipse.smarthome.core.persistence.HistoricItem;
-import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
-import org.eclipse.smarthome.core.persistence.PersistenceService;
-import org.eclipse.smarthome.core.persistence.QueryablePersistenceService;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.openhab.core.persistence.FilterCriteria;
+import org.openhab.core.persistence.HistoricItem;
+import org.openhab.core.persistence.PersistenceItemInfo;
+import org.openhab.core.persistence.PersistenceService;
+import org.openhab.core.persistence.QueryablePersistenceService;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,10 +56,10 @@ import com.google.gson.GsonBuilder;
 @Component(service = { PersistenceService.class, QueryablePersistenceService.class })
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
-    private static final String SERVICE_NAME = "mapdb";
-
-    private static final String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
-
+    private static final String SERVICE_ID = "mapdb";
+    private static final String SERVICE_LABEL = "MapDB";
+    private static final String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence"
+            + File.separator + "mapdb";
     private static final String DB_FILE_NAME = "storage.mapdb";
 
     private final Logger logger = LoggerFactory.getLogger(MapDbPersistenceService.class);
@@ -73,8 +73,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     @NonNullByDefault({})
     private Map<String, String> map;
 
-    private transient Gson mapper = new GsonBuilder()
-            .registerTypeHierarchyAdapter(State.class, new StateTypeAdapter())
+    private transient Gson mapper = new GsonBuilder().registerTypeHierarchyAdapter(State.class, new StateTypeAdapter())
             .create();
 
     public void activate() {
@@ -107,20 +106,18 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     @Override
     public String getId() {
-        return SERVICE_NAME;
+        return SERVICE_ID;
     }
 
     @Override
     public String getLabel(@Nullable Locale locale) {
-        return SERVICE_NAME;
+        return SERVICE_LABEL;
     }
 
     @Override
     public Set<PersistenceItemInfo> getItemInfo() {
-        return map.values().stream()
-                .map(this::deserialize)
-                .flatMap(MapDbPersistenceService::streamOptional)
-                .collect(Collectors.<PersistenceItemInfo>toSet());
+        return map.values().stream().map(this::deserialize).flatMap(MapDbPersistenceService::streamOptional)
+                .collect(Collectors.<PersistenceItemInfo> toSet());
     }
 
     @Override
@@ -169,7 +166,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     private Optional<MapDbItem> deserialize(String json) {
-        MapDbItem item = mapper.<MapDbItem>fromJson(json, MapDbItem.class);
+        MapDbItem item = mapper.<MapDbItem> fromJson(json, MapDbItem.class);
         if (item == null || !item.isValid()) {
             logger.warn("Deserialized invalid item: {}", item);
             return Optional.empty();

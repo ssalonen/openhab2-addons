@@ -86,7 +86,14 @@
     <module>org.openhab.extensionservice.marketplace</module>
     <module>org.openhab.extensionservice.marketplace.automation</module>
     <module>org.openhab.io.mqttembeddedbroker</module>
+    <module>org.openhab.persistence.exec</module>
+    <module>org.openhab.persistence.influxdb</module>
+    <module>org.openhab.persistence.jdbc</module>
+    <module>org.openhab.persistence.jpa</module>
     <module>org.openhab.persistence.mapdb</module>
+    <module>org.openhab.persistence.mongodb</module>
+    <module>org.openhab.persistence.mysql</module>
+    <module>org.openhab.persistence.rrd4j</module>
     <module>org.openhab.transform.exec</module>
     <module>org.openhab.transform.jsonpath</module>
     <module>org.openhab.transform.map</module>

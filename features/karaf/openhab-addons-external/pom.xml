@@ -43,6 +43,15 @@
                   <type>cfg</type>
                   <classifier>openhabcloud</classifier>
                 </artifact>
+                <artifact><file>src/main/resources/conf/dynamodb.cfg</file><type>cfg</type><classifier>dynamodb</classifier></artifact>
+                <artifact><file>src/main/resources/conf/gcal-persistence.cfg</file><type>cfg</type><classifier>gcal-persistence</classifier></artifact>
+                <artifact><file>src/main/resources/conf/influxdb.cfg</file><type>cfg</type><classifier>influxdb</classifier></artifact>
+                <artifact><file>src/main/resources/conf/jdbc.cfg</file><type>cfg</type><classifier>jdbc</classifier></artifact>
+                <artifact><file>src/main/resources/conf/jpa.cfg</file><type>cfg</type><classifier>jpa</classifier></artifact>
+                <artifact><file>src/main/resources/conf/mapdb.cfg</file><type>cfg</type><classifier>mapdb</classifier></artifact>
+                <artifact><file>src/main/resources/conf/mqtt-persistence.cfg</file><type>cfg</type><classifier>mqtt-persistence</classifier></artifact>
+                <artifact><file>src/main/resources/conf/mysql.cfg</file><type>cfg</type><classifier>mysql</classifier></artifact>
+                <artifact><file>src/main/resources/conf/rrd4j.cfg</file><type>cfg</type><classifier>rrd4j</classifier></artifact>
                 <artifact>
                   <file>src/main/resources/lib/libLeap.dylib</file>
                   <type>lib</type>
