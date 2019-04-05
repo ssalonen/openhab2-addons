@@ -55,8 +55,9 @@ import org.slf4j.LoggerFactory;
 public class CurrentWeatherHandler extends AbstractWeatherHandler {
 
     private final Logger logger = LoggerFactory.getLogger(CurrentWeatherHandler.class);
-    private static long OBSERVATION_LOOK_BACK_SECONDS = TimeUnit.MINUTES.toSeconds(30);
-    private static int STEP_MINUTES = 10;
+    private static final long OBSERVATION_LOOK_BACK_SECONDS = TimeUnit.MINUTES.toSeconds(30);
+    private static final int STEP_MINUTES = 10;
+    private static final int POLL_INTERVAL_SECONDS = 120;
 
     public static final Unit<Length> MILLIMETRE = MetricPrefix.MILLI(METRE);
     public static final Unit<Length> CENTIMETRE = MetricPrefix.CENTI(METRE);
@@ -80,13 +81,14 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
         addMapping(CHANNEL_SNOW_DEPTH, PARAM_SNOW_DEPTH, CENTIMETRE);
         addMapping(CHANNEL_VISIBILITY, PARAM_VISIBILITY, METRE);
         addMapping(CHANNEL_CLOUDS, PARAM_CLOUDS, null);
-        addMapping(CHANNEL_PRESENT_WEATHER, PARAM_PRESENT_WEATHER, null);
+        addMapping(CHANNEL_OBSERVATION_PRESENT_WEATHER, PARAM_PRESENT_WEATHER, null);
     }
 
     private @NonNullByDefault({}) String fmsisid;
 
     public CurrentWeatherHandler(Thing thing) {
         super(thing);
+        pollIntervalSeconds = POLL_INTERVAL_SECONDS;
     }
 
     @Override

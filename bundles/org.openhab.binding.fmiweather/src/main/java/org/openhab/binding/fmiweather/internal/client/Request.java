@@ -66,6 +66,12 @@ public class Request {
         return urlBuilder.toString();
     }
 
+    /**
+     * Convert epoch value (representing UTC time) to ISO formatted date time
+     * 
+     * @param epoch
+     * @return
+     */
     private String epochToIsoDateTime(long epoch) {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond(epoch), ZoneId.of("Z"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));

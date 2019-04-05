@@ -44,14 +44,14 @@ public class BindingConstants {
     public static final String CHANNEL_SNOW_DEPTH = "snow-depth";
     public static final String CHANNEL_VISIBILITY = "visibility";
     public static final String CHANNEL_CLOUDS = "clouds";
-    public static final String CHANNEL_PRESENT_WEATHER = "present-weather";
+    public static final String CHANNEL_OBSERVATION_PRESENT_WEATHER = "present-weather";
 
     public static final String CHANNEL_TOTAL_CLOUD_COVER = "total-cloud-cover";
     public static final String CHANNEL_PRECIPITATION_INTENSITY = "precipitation-intensity";
-    public static final String CHANNEL_WEATHER_ID = "weather-id";
+    public static final String CHANNEL_FORECAST_WEATHER_ID = "weather-id";
 
     // Configuration properties
-    public static final String FMSISID = "fmsisid";
+    public static final String FMSISID = "fmisid";
     public static final String LOCATION = "location";
 
 }

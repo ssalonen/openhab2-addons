@@ -52,7 +52,11 @@ import org.xml.sax.SAXException;
  *
  * Subject to license terms https://en.ilmatieteenlaitos.fi/open-data
  *
- * TODO: thread safety notice
+ *
+ * All weather stations:
+ * https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations&networkid=121&
+ * Networkid parameter isexplained in entries of
+ * https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations
  *
  * @author Sami Salonen
  *
@@ -60,19 +64,11 @@ import org.xml.sax.SAXException;
 @NonNullByDefault
 public class Client {
 
-    // "Weather" tab from https://en.ilmatieteenlaitos.fi/observation-stations
-    // Stations that produce at least three weather observations per day
-    // public static final String STATIONS_URL =
-    // "https://en.ilmatieteenlaitos.fi/observation-stations?p_p_id=stationlistingportlet_WAR_fmiwwwweatherportlets&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&p_p_col_id=column-4&p_p_col_count=1&_stationlistingportlet_WAR_fmiwwwweatherportlets_stationGroup=WEATHER#station-listing";
-
-    // All weather stations
-    // https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations&networkid=121&
-    // networkd ids are explained in entries of
-    // https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations
-    public static final String STATIONS_URL = "https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations&networkid=121&";
-
     private final Logger logger = LoggerFactory.getLogger(Client.class);
-    private static Map<String, String> NAMESPACES = new HashMap<>();
+
+    public static final String WEATHER_STATIONS_URL = "https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations&networkid=121&";
+
+    private static final Map<String, String> NAMESPACES = new HashMap<>();
     static {
         NAMESPACES.put("target", "http://xml.fmi.fi/namespace/om/atmosphericfeatures/1.0");
         NAMESPACES.put("gml", "http://www.opengis.net/gml/3.2");
@@ -84,10 +80,7 @@ public class Client {
         NAMESPACES.put("wfs", "http://www.opengis.net/wfs/2.0");
         NAMESPACES.put("ef", "http://inspire.ec.europa.eu/schemas/ef/4.0");
     }
-
-    private DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-    private DocumentBuilder documentBuilder;
-    private NamespaceContext ctx = new NamespaceContext() {
+    private static final NamespaceContext NAMESPACE_CONTEXT = new NamespaceContext() {
         @Override
         public String getNamespaceURI(@Nullable String prefix) {
             return NAMESPACES.get(prefix);
@@ -105,6 +98,9 @@ public class Client {
         }
     };
 
+    private DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+    private DocumentBuilder documentBuilder;
+
     public Client() {
         documentBuilderFactory.setNamespaceAware(true);
         try {
@@ -114,6 +110,14 @@ public class Client {
         }
     }
 
+    /**
+     * Query request and return the data
+     *
+     * @param request       request to process
+     * @param timeoutMillis timeout for the http call
+     * @return data corresponding to the query
+     * @throws FMIResponseException on all I/O or XML errors
+     */
     public FMIResponse query(Request request, int timeoutMillis) throws FMIResponseException {
         try {
             String url = request.toUrl();
@@ -129,11 +133,18 @@ public class Client {
         }
     }
 
-    public Set<Location> queryStations(int timeoutMillis) throws FMIResponseException {
+    /**
+     * Query all weather stations
+     *
+     * @param timeoutMillis timeout for the http call
+     * @return locations representing stations
+     * @throws FMIResponseException on all I/O or XML errors
+     */
+    public Set<Location> queryWeatherStations(int timeoutMillis) throws FMIResponseException {
         try {
-            String response = HttpUtil.executeUrl("GET", STATIONS_URL, timeoutMillis);
+            String response = HttpUtil.executeUrl("GET", WEATHER_STATIONS_URL, timeoutMillis);
             if (response == null) {
-                throw new FMIResponseException(String.format("HTTP error with %s", STATIONS_URL));
+                throw new FMIResponseException(String.format("HTTP error with %s", WEATHER_STATIONS_URL));
             }
             return parseStations(response);
         } catch (XPathExpressionException | SAXException | IOException e) {
@@ -146,7 +157,7 @@ public class Client {
         Document document = documentBuilder.parse(new InputSource(new StringReader(response)));
 
         XPath xPath = XPathFactory.newInstance().newXPath();
-        xPath.setNamespaceContext(ctx);
+        xPath.setNamespaceContext(NAMESPACE_CONTEXT);
 
         boolean isExceptionReport = ((Node) xPath.compile("/ows:ExceptionReport").evaluate(document,
                 XPathConstants.NODE)) != null;
@@ -183,7 +194,7 @@ public class Client {
     }
 
     /**
-     * '
+     * Parse FMI multipointcoverage formatted xml response
      *
      * @param response
      * @return
@@ -197,7 +208,7 @@ public class Client {
         Document document = documentBuilder.parse(new InputSource(new StringReader(response)));
 
         XPath xPath = XPathFactory.newInstance().newXPath();
-        xPath.setNamespaceContext(ctx);
+        xPath.setNamespaceContext(NAMESPACE_CONTEXT);
 
         boolean isExceptionReport = ((Node) xPath.compile("/ows:ExceptionReport").evaluate(document,
                 XPathConstants.NODE)) != null;
@@ -285,6 +296,17 @@ public class Client {
         return builder.build();
     }
 
+    /**
+     * Find representative latitude and longitude matching given xlink href attribute value
+     *
+     * @param xPath      xpath object used for query
+     * @param entryIndex index of the location, for logging only on errors
+     * @param document   document object
+     * @param href       xlink href attribute value. Should start with #
+     * @return latitude and longitude values as array
+     * @throws FMIResponseException     parsing errors or when entry is not found
+     * @throws XPathExpressionException
+     */
     private BigDecimal[] findLatLon(XPath xPath, int entryIndex, Document document, String href)
             throws FMIResponseException, XPathExpressionException {
         if (!href.startsWith("#")) {
@@ -297,6 +319,13 @@ public class Client {
         return parseLatLon(pointLatLon);
     }
 
+    /**
+     * Parse string reprsenting latitude longitude string separated by space
+     *
+     * @param pointLatLon latitude longitude string separated by space
+     * @return latitude and longitude values as array
+     * @throws FMIResponseException on parsing errors
+     */
     private BigDecimal[] parseLatLon(String pointLatLon) throws FMIResponseException {
         String[] latlon = pointLatLon.split(" ");
         BigDecimal lat, lon;
@@ -318,6 +347,14 @@ public class Client {
         return values;
     }
 
+    /**
+     * Asserts that length of values is exactly 1, and returns it
+     *
+     * @param errorDescription error description for FMIResponseException
+     * @param values
+     * @return
+     * @throws FMIResponseException when length of values != 1
+     */
     private String takeFirstOrError(String errorDescription, String[] values) throws FMIResponseException {
         if (values.length != 1) {
             throw new FMIResponseException(String.format("No unique match found: %s", errorDescription));
@@ -325,6 +362,12 @@ public class Client {
         return values[0];
     }
 
+    /**
+     * Convert string to BigDecimal. "NaN" string is converted to null
+     *
+     * @param value
+     * @return null when value is "NaN". Otherwise BigDecimal representing the string
+     */
     private @Nullable BigDecimal toBigDecimalOrNullIfNaN(String value) {
         if ("NaN".equals(value)) {
             return null;
@@ -343,14 +386,16 @@ public class Client {
      * pos2_lat, pos2_lon, time2
      * ..etc..
      *
-     * - lat, lon should be in correct order and match position entries
-     * - time should
+     * - lat, lon should be in correct order and match position entries ("locations")
+     * - time should values should be exactly same for each point (above time1, time2, ...), and match given timestamps
+     * ("timestampsEpoch")
      *
      *
      * @param locations                previously discovered locations
-     * @param timestampsEpoch
-     * @param latLonTimeTripletEntries
-     * @throws FMIResponseException
+     * @param timestampsEpoch          expected timestamps
+     * @param latLonTimeTripletEntries flat array of strings representing the array, [row1_cell1, row1_cell2,
+     *                                     row2_cell1, ...]
+     * @throws FMIResponseException when value ordering is not matching the expected
      */
     private void validatePositionEntries(Location[] locations, long[] timestampsEpoch,
             String[] latLonTimeTripletEntries) throws FMIResponseException {

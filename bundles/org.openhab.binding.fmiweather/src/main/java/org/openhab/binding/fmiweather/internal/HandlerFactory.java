@@ -26,7 +26,6 @@ import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.annotations.Component;
-import org.slf4j.LoggerFactory;
 
 /**
  * The {@link HandlerFactory} is responsible for creating things and thing
@@ -55,7 +54,6 @@ public class HandlerFactory extends BaseThingHandlerFactory {
         } else if (THING_TYPE_FORECAST.equals(thingTypeUID)) {
             return new ForecastWeatherHandler(thing);
         }
-        LoggerFactory.getLogger(HandlerFactory.class).error("FMI: cannot create handler for thing {}", thing);
 
         return null;
     }

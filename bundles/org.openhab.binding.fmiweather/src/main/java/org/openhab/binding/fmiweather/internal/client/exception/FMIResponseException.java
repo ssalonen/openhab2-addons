@@ -14,6 +14,12 @@ package org.openhab.binding.fmiweather.internal.client.exception;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
+/**
+ * Base class for FMI exceptions
+ *
+ * @author Sami Salonen
+ *
+ */
 @NonNullByDefault
 public class FMIResponseException extends Exception {
 

@@ -52,12 +52,12 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 public class ForecastWeatherHandler extends AbstractWeatherHandler {
 
-    private static final String FORECAST_NOW = "forecastNow";
     private final Logger logger = LoggerFactory.getLogger(ForecastWeatherHandler.class);
+
+    private static final String GROUP_FORECAST_NOW = "forecastNow";
     private static int QUERY_RESOLUTION_MINUTES = 20; // The channel group hours should be divisible by this
     // Hirlam horizon is 54h https://ilmatieteenlaitos.fi/avoin-data-avattavat-aineistot (in Finnish)
     private static int FORECAST_HORIZON_HOURS = 54; // should be divisible by QUERY_RESOLUTION_MINUTES
-
     private static final Map<String, Map.Entry<String, @Nullable Unit<?>>> CHANNEL_TO_FORECAST_FIELD_NAME_AND_UNIT = new HashMap<>(
             9);
 
@@ -75,7 +75,7 @@ public class ForecastWeatherHandler extends AbstractWeatherHandler {
         addMapping(CHANNEL_PRESSURE, PARAM_PRESSURE, MILLIBAR);
         addMapping(CHANNEL_PRECIPITATION_INTENSITY, PARAM_PRECIPITATION_1H, MILLIMETRE_PER_HOUR);
         addMapping(CHANNEL_TOTAL_CLOUD_COVER, PARAM_TOTAL_CLOUD_COVER, PERCENT);
-        addMapping(CHANNEL_WEATHER_ID, PARAM_WEATHER_SYMBOL, null);
+        addMapping(CHANNEL_FORECAST_WEATHER_ID, PARAM_WEATHER_SYMBOL, null);
     }
 
     private @NonNullByDefault({}) LatLon location;
@@ -83,7 +83,7 @@ public class ForecastWeatherHandler extends AbstractWeatherHandler {
     public ForecastWeatherHandler(Thing thing) {
         super(thing);
         // Override poll interval to slower value
-        POLL_INTERVAL_SECONDS = (int) TimeUnit.MINUTES.toSeconds(QUERY_RESOLUTION_MINUTES);
+        pollIntervalSeconds = (int) TimeUnit.MINUTES.toSeconds(QUERY_RESOLUTION_MINUTES);
     }
 
     @Override
@@ -180,7 +180,7 @@ public class ForecastWeatherHandler extends AbstractWeatherHandler {
         if (groupId == null) {
             throw new IllegalStateException("All channels should be in group!");
         }
-        if (FORECAST_NOW.equals(groupId)) {
+        if (GROUP_FORECAST_NOW.equals(groupId)) {
             return 0;
         } else {
             return Integer.valueOf(groupId.substring(groupId.length() - 2));

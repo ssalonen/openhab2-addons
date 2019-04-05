@@ -16,6 +16,12 @@ import java.util.Arrays;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
+/**
+ * Specialized Exception class for ExceptionReport responses from the FMI API
+ *
+ * @author Sami Salonen
+ *
+ */
 @NonNullByDefault
 public class FMIExceptionReportException extends FMIResponseException {
 

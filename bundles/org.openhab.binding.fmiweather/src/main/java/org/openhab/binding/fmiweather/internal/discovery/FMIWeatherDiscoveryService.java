@@ -75,7 +75,7 @@ public class FMIWeatherDiscoveryService extends AbstractDiscoveryService {
 
     private ExpiringCache<Set<Location>> stationsCache = new ExpiringCache<>(STATIONS_CACHE_MILLIS, () -> {
         try {
-            return new Client().queryStations(STATIONS_TIMEOUT_MILLIS);
+            return new Client().queryWeatherStations(STATIONS_TIMEOUT_MILLIS);
         } catch (FMIResponseException e) {
             logger.error("Error when querying stations", e);
         }

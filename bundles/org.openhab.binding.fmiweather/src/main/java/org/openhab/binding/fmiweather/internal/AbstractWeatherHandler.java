@@ -57,12 +57,12 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     protected static final String PROP_REGION = "region";
 
     protected static int TIMEOUT_MILLIS = 30_000;
-    protected static int POLL_INTERVAL_SECONDS = 120;
     private final Logger logger = LoggerFactory.getLogger(AbstractWeatherHandler.class);
 
     protected @NonNullByDefault({}) Client client;
     private @Nullable ScheduledFuture<?> future;
     protected @Nullable FMIResponse response;
+    protected int pollIntervalSeconds = 120;
 
     public AbstractWeatherHandler(Thing thing) {
         super(thing);
@@ -80,7 +80,7 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     public void initialize() {
         client = new Client();
         updateStatus(ThingStatus.UNKNOWN);
-        future = scheduler.scheduleWithFixedDelay(this::update, 0, POLL_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        future = scheduler.scheduleWithFixedDelay(this::update, 0, pollIntervalSeconds, TimeUnit.SECONDS);
 
     }
 
