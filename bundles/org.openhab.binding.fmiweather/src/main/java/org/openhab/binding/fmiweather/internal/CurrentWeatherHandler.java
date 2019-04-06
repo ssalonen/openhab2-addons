@@ -57,7 +57,7 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
     private final Logger logger = LoggerFactory.getLogger(CurrentWeatherHandler.class);
     private static final long OBSERVATION_LOOK_BACK_SECONDS = TimeUnit.MINUTES.toSeconds(30);
     private static final int STEP_MINUTES = 10;
-    private static final int POLL_INTERVAL_SECONDS = 120;
+    private static final int POLL_INTERVAL_SECONDS = 600;
 
     public static final Unit<Length> MILLIMETRE = MetricPrefix.MILLI(METRE);
     public static final Unit<Length> CENTIMETRE = MetricPrefix.CENTI(METRE);
