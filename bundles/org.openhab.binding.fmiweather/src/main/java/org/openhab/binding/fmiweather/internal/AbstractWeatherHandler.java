@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -55,6 +56,7 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     protected static final String PROP_LATITUDE = "latitude";
     protected static final String PROP_NAME = "name";
     protected static final String PROP_REGION = "region";
+    private static final long REFRESH_THROTTLE_MILLIS = 10_000;
 
     protected static int TIMEOUT_MILLIS = 30_000;
     private final Logger logger = LoggerFactory.getLogger(AbstractWeatherHandler.class);
@@ -64,6 +66,9 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     protected @Nullable FMIResponse response;
     protected int pollIntervalSeconds = 120;
 
+    private volatile long lastRefreshMillis = 0;
+    private volatile @Nullable Future<?> updateChannelsFuture;
+
     public AbstractWeatherHandler(Thing thing) {
         super(thing);
     }
@@ -71,8 +76,16 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (RefreshType.REFRESH == command) {
-            logger.debug("REFRESH received. Updating channels from last response if possible");
-            updateChannels();
+            synchronized (this) {
+                Future<?> localUpdateChannelsFuture = updateChannelsFuture;
+                if (localUpdateChannelsFuture == null || localUpdateChannelsFuture.isDone()) {
+                    submitUpdateChannelsThrottled();
+                } else {
+                    logger.trace("REFRESH received. Previous refresh ongoing, will wait for it to complete in {} ms",
+                            lastRefreshMillis + REFRESH_THROTTLE_MILLIS - System.currentTimeMillis());
+                }
+            }
+
         }
     }
 
@@ -82,6 +95,24 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         updateStatus(ThingStatus.UNKNOWN);
         future = scheduler.scheduleWithFixedDelay(this::update, 0, pollIntervalSeconds, TimeUnit.SECONDS);
 
+    }
+
+    /**
+     * Call updateChannels asynchronously, possibly in a delayed fashion to throttle updates. This protects against a
+     * situation where many channels receive REFRESH command, e.g. when openHAB is requesting tp update channels
+     */
+    private synchronized void submitUpdateChannelsThrottled() {
+        long now = System.currentTimeMillis();
+        long nextRefresh = lastRefreshMillis + REFRESH_THROTTLE_MILLIS;
+        lastRefreshMillis = now;
+        if (now > nextRefresh) {
+            logger.trace("REFRESH received. Updating channels");
+            updateChannelsFuture = scheduler.submit(this::updateChannels);
+        } else {
+            long delayMillis = nextRefresh - now;
+            logger.trace("REFRESH received. Delaying by {} ms to avoid throttle excessive REFRESH", delayMillis);
+            updateChannelsFuture = scheduler.schedule(this::updateChannels, delayMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     abstract protected void update();
@@ -95,6 +126,12 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         if (future != null) {
             future.cancel(true);
             future = null;
+        }
+        synchronized (this) {
+            if (updateChannelsFuture != null) {
+                updateChannelsFuture.cancel(true);
+                updateChannelsFuture = null;
+            }
         }
     }
 
