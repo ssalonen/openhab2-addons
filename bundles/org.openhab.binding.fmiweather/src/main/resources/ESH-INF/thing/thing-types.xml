@@ -14,9 +14,9 @@
 		</channel-groups>
 
 		<config-description>
-			<parameter name="fmsisid" type="text" required="true">
-				<label>FMSISID of the weather station</label>
-				<description><![CDATA[FMSISID of the weather station
+			<parameter name="fmisid" type="text" required="true">
+				<label>FMISID of the weather station</label>
+				<description><![CDATA[Station ID (FMISID) of the weather observation station
 				<br />
 				<br />See https://en.ilmatieteenlaitos.fi/observation-stations for a list of observation stations]]></description>
 			</parameter>

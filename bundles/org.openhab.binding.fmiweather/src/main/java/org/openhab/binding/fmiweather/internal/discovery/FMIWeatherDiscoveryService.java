@@ -191,7 +191,7 @@ public class FMIWeatherDiscoveryService extends AbstractDiscoveryService {
             }
         }).forEach(station -> {
             Map<String, Object> properties = new HashMap<>();
-            properties.put(BindingConstants.FMSISID, station.id);
+            properties.put(BindingConstants.FMISID, station.id);
             DiscoveryResult discoveryResult = DiscoveryResultBuilder
                     .create(new ThingUID(THING_TYPE_OBSERVATION,
                             cleanId(String.format("station_%s_%s", station.id, station.name))))

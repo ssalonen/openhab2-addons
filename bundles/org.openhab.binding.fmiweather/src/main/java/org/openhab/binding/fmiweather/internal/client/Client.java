@@ -168,7 +168,7 @@ public class Client {
             throw new FMIExceptionReportException(exceptionCode.getNodeValue(), exceptionText);
         }
 
-        String[] fmsisids = queryNodeValues(
+        String[] fmisids = queryNodeValues(
                 xPath.compile(
                         "/wfs:FeatureCollection/wfs:member/ef:EnvironmentalMonitoringFacility/gml:identifier/text()"),
                 document);
@@ -179,16 +179,16 @@ public class Client {
                 "/wfs:FeatureCollection/wfs:member/ef:EnvironmentalMonitoringFacility/ef:representativePoint/gml:Point/gml:pos/text()"),
                 document);
 
-        if (fmsisids.length != names.length || fmsisids.length != representativePoints.length) {
+        if (fmisids.length != names.length || fmisids.length != representativePoints.length) {
             throw new FMIResponseException(String.format(
-                    "Could not all properties of locations: fmsisids: %d, names: %d, representativePoints: %d",
-                    fmsisids.length, names.length, representativePoints.length));
+                    "Could not all properties of locations: fmisids: %d, names: %d, representativePoints: %d",
+                    fmisids.length, names.length, representativePoints.length));
         }
 
         Set<Location> locations = new HashSet<>(representativePoints.length);
         for (int i = 0; i < representativePoints.length; i++) {
             BigDecimal[] latlon = parseLatLon(representativePoints[i]);
-            locations.add(new Location(names[i], fmsisids[i], latlon[0], latlon[1]));
+            locations.add(new Location(names[i], fmisids[i], latlon[0], latlon[1]));
         }
         return locations;
     }

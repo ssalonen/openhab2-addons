@@ -51,7 +51,7 @@ public class BindingConstants {
     public static final String CHANNEL_FORECAST_WEATHER_ID = "weather-id";
 
     // Configuration properties
-    public static final String FMSISID = "fmisid";
+    public static final String FMISID = "fmisid";
     public static final String LOCATION = "location";
 
 }

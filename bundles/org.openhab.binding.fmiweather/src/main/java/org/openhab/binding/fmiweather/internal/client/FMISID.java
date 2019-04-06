@@ -28,14 +28,14 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 @NonNullByDefault
 public class FMISID implements QueryParameter {
 
-    private String fmsisid;
+    private String fmisid;
 
-    public FMISID(String fmsisid) {
-        this.fmsisid = fmsisid;
+    public FMISID(String fmisid) {
+        this.fmisid = fmisid;
     }
 
     @Override
     public List<Map.Entry<String, String>> toRequestParameters() {
-        return Collections.singletonList(new AbstractMap.SimpleImmutableEntry<>("fmisid", fmsisid));
+        return Collections.singletonList(new AbstractMap.SimpleImmutableEntry<>("fmisid", fmisid));
     }
 }

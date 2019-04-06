@@ -84,7 +84,7 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
         addMapping(CHANNEL_OBSERVATION_PRESENT_WEATHER, PARAM_PRESENT_WEATHER, null);
     }
 
-    private @NonNullByDefault({}) String fmsisid;
+    private @NonNullByDefault({}) String fmisid;
 
     public CurrentWeatherHandler(Thing thing) {
         super(thing);
@@ -93,7 +93,7 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
 
     @Override
     public void initialize() {
-        fmsisid = getConfig().get(BindingConstants.FMSISID).toString();
+        fmisid = getConfig().get(BindingConstants.FMISID).toString();
         super.initialize();
     }
 
@@ -101,7 +101,7 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
     protected void update() {
         try {
             long now = Instant.now().getEpochSecond();
-            response = client.query(new ObservationRequest(new FMISID(fmsisid),
+            response = client.query(new ObservationRequest(new FMISID(fmisid),
                     floorToEvenMinutes(now - OBSERVATION_LOOK_BACK_SECONDS, STEP_MINUTES),
                     ceilToEvenMinutes(now, STEP_MINUTES), STEP_MINUTES), TIMEOUT_MILLIS);
         } catch (FMIResponseException e) {

@@ -72,7 +72,7 @@ public class FMIResponseParsingSinglePlaceTest extends AbstractFMIResponseParsin
     @Test
     public void testGetDataWithInvalidArguments() throws Throwable {
         Location loc = observationsResponse1.getLocations().stream().findAny().get();
-        // Invalid parameter or location (fmsisid)
+        // Invalid parameter or location (fmisid)
         assertThat(observationsResponse1.getData(loc, "foobar"), is(Optional.empty()));
         assertThat(observationsResponse1.getData(
                 new Location("Porvoo Emäsalo", "9999999", new BigDecimal("60.20382"), new BigDecimal("25.62546")),
