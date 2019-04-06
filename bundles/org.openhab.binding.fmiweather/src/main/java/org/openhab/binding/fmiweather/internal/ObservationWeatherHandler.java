@@ -46,15 +46,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link CurrentWeatherHandler} is responsible for handling commands, which are
+ * The {@link ObservationWeatherHandler} is responsible for handling commands, which are
  * sent to one of the channels.
  *
  * @author Sami Salonen - Initial contribution
  */
 @NonNullByDefault
-public class CurrentWeatherHandler extends AbstractWeatherHandler {
+public class ObservationWeatherHandler extends AbstractWeatherHandler {
 
-    private final Logger logger = LoggerFactory.getLogger(CurrentWeatherHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(ObservationWeatherHandler.class);
     private static final long OBSERVATION_LOOK_BACK_SECONDS = TimeUnit.MINUTES.toSeconds(30);
     private static final int STEP_MINUTES = 10;
     private static final int POLL_INTERVAL_SECONDS = 600;
@@ -86,7 +86,7 @@ public class CurrentWeatherHandler extends AbstractWeatherHandler {
 
     private @NonNullByDefault({}) String fmisid;
 
-    public CurrentWeatherHandler(Thing thing) {
+    public ObservationWeatherHandler(Thing thing) {
         super(thing);
         pollIntervalSeconds = POLL_INTERVAL_SECONDS;
     }

@@ -50,7 +50,7 @@ public class HandlerFactory extends BaseThingHandlerFactory {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
         if (THING_TYPE_OBSERVATION.equals(thingTypeUID)) {
-            return new CurrentWeatherHandler(thing);
+            return new ObservationWeatherHandler(thing);
         } else if (THING_TYPE_FORECAST.equals(thingTypeUID)) {
             return new ForecastWeatherHandler(thing);
         }
