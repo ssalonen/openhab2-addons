@@ -3,12 +3,14 @@
 This binding integrates to [the Finnish Meteorological Institute (FMI) Open Data API](https://en.ilmatieteenlaitos.fi/open-data). 
 
 Binding provides access to weather observations from FMI weather stations and [HIRLAM weather forecast model](https://en.ilmatieteenlaitos.fi/weather-forecast-models) forecasts.
+Forecast covers all of Europe, see previous link for more information.
 
 ![example of things](doc/images/fmi-example-things.png)
 
 ## License
 
-Finnish Meteorological Institute's open data service uses the Creative Commons Attribution 4.0 International license (CC BY 4.0). By using the binding, you agree to license terms as explained in [FMI website](https://en.ilmatieteenlaitos.fi/open-data-licence).
+Finnish Meteorological Institute's open data service uses the Creative Commons Attribution 4.0 International license (CC BY 4.0).
+By using the binding, you agree to license terms as explained in [FMI website](https://en.ilmatieteenlaitos.fi/open-data-licence).
 
 ## Supported Things
 
@@ -118,7 +120,28 @@ Thing fmiweather:forecast:forecast_Paris "Paris Forecast" [location="48.864716, 
 
 `observation.items`:
 
-Example of items for `observation` thing with id `station_Helsinki_Kumpula`.
+<!-- 
+# Generated mostly with following ugly python snippet.
+# fmiweather:observation:station_Helsinki_Kumpula here is thing with all channels linked
+
+fname = '/path/to/org.eclipse.smarthome.core.thing.Thing.json'
+import json
+with open(fname) as f: j = json.load(f)
+observation = j['fmiweather:observation:station_Helsinki_Kumpula']
+for channel in observation['value']['channels']:
+    channel_id = ':'.join(channel['uid']['segments'])
+    label = channel['label']    
+    item_type = channel['acceptedItemType']
+    unit = '%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS' if item_type == 'DateTime' else '%.1f %unit%'
+    channel_name = channel['uid']['segments'][-1].split('#')[1]
+    item_name = 'Helsinki'
+    for item_name_part in channel_name.split('-'):
+        item_name += item_name_part[0].upper()
+        item_name += item_name_part[1:]
+    
+    print(('{item_type} {item_name} ' +
+     '"{label} [{unit}]" {{ channel="{channel_id}" }}').format(**locals()))    
+-->
 
 ```
 DateTime HelsinkiObservationTime "Observation Time [%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS]" <time> { channel="fmiweather:observation:station_Helsinki_Kumpula:current#time" }
@@ -136,6 +159,47 @@ Number HelsinkiPresentWeatherCode "Prevailing weather [%d]" <sun_clouds> { chann
 ```
 
 `forecast.items`:
+
+<!-- 
+# Generated mostly with following ugly python snippet.
+# fmiweather:forecast:forecast_Paris here is thing with all channels linked
+
+fname = '/path/to/org.eclipse.smarthome.core.thing.Thing.json'
+import json
+with open(fname) as f: j = json.load(f)
+forecast = j['fmiweather:forecast:forecast_Paris']
+prev_group = 'None'
+for channel in forecast['value']['channels']:
+    group_name, channel_name = channel['uid']['segments'][-1].split('#')
+    channel_id = ':'.join(channel['uid']['segments'])    
+    label = channel['label'] + group_name.replace('forecast', ' ').replace('Hours', 'hour ')
+    
+    item_type = channel['acceptedItemType']
+    unit = '%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS' if item_type == 'DateTime' else '%.1f %unit%'
+    
+    item_name = 'Paris'
+    item_name += group_name[0].upper() + group_name[1:]
+    for item_name_part in channel_name.split('-'):
+        item_name += item_name_part[0].upper()
+        item_name += item_name_part[1:]        
+    
+    icon = ''
+    if icon == '': icon = '<wind>' if 'wind' in item_name.lower() else ''
+    if icon == '': icon = '<humidity>' if 'humidity' in item_name.lower() else ''
+    if icon == '': icon = '<pressure>' if 'pressure' in item_name.lower() else ''
+    if icon == '': icon = '<sun_clouds>' if 'weatherid' in item_name.lower() else ''
+    if icon == '': icon = '<time>' if 'time' in item_name.lower() else ''
+    if icon == '': icon = '<temperature>' if 'tempe' in item_name.lower() else ''
+    if icon == '': icon = '<rain>' if 'precipi' in item_name.lower() else ''
+    
+    if prev_group != group_name:
+        print('')
+    prev_group = group_name
+        
+    
+    print(('{item_type} {item_name} ' +
+     '"{label} [{unit}]" {icon} {{ channel="{channel_id}" }}').format(**locals()))       
+-->
 
 ```
 DateTime ParisForecastNowTime "Forecast Time Now [%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS]" <time> { channel="fmiweather:forecast:forecast_Paris:forecastNow#time" }
