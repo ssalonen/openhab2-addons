@@ -13,4 +13,11 @@
 
   <name>openHAB Add-ons :: Bundles :: DynamoDB Persistence</name>
 
+	<dependencies>
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-java-sdk-dynamodb</artifactId>
+				<version>1.11.213</version>
+			</dependency>
+	</dependencies>
 </project>
