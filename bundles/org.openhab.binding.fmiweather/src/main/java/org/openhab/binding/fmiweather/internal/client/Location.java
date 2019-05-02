@@ -36,9 +36,9 @@ public class Location {
 
     /**
      *
-     * @param name      name for the location
-     * @param id        string identifying this location uniquely. Typically FMISID or latitude-longitude pair
-     * @param latitude  latitude of the location
+     * @param name name for the location
+     * @param id string identifying this location uniquely. Typically FMISID or latitude-longitude pair
+     * @param latitude latitude of the location
      * @param longitude longitude of the location
      */
     public Location(String name, String id, BigDecimal latitude, BigDecimal longitude) {

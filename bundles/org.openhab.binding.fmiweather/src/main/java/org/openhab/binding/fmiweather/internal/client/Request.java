@@ -68,7 +68,7 @@ public class Request {
 
     /**
      * Convert epoch value (representing UTC time) to ISO formatted date time
-     * 
+     *
      * @param epoch
      * @return
      */

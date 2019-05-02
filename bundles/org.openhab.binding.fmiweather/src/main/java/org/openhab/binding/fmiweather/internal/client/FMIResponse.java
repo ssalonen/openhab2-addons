@@ -60,8 +60,7 @@ public class FMIResponse {
         }
 
         public FMIResponse build() {
-            Map<Location, Map<String, Data>> out = new HashMap<>(
-                    timestampsByLocationByParameter.size());
+            Map<Location, Map<String, Data>> out = new HashMap<>(timestampsByLocationByParameter.size());
 
             timestampsByLocationByParameter.entrySet().stream().forEach(entry -> {
                 Location location = entry.getKey();

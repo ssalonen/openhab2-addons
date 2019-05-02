@@ -169,9 +169,9 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     /**
      * Update QuantityType channel state
      *
-     * @param channelUID  channel UID
+     * @param channelUID channel UID
      * @param epochSecond value to update
-     * @param unit        unit associated with the value
+     * @param unit unit associated with the value
      */
     protected <T extends Quantity<T>> void updateEpochSecondStateIfLinked(ChannelUID channelUID, long epochSecond) {
         if (isLinked(channelUID)) {
@@ -186,8 +186,8 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
      * Updates UNDEF state when value is null
      *
      * @param channelUID channel UID
-     * @param value      value to update
-     * @param unit       unit associated with the value
+     * @param value value to update
+     * @param unit unit associated with the value
      */
     protected void updateStateIfLinked(ChannelUID channelUID, @Nullable BigDecimal value, @Nullable Unit<?> unit) {
         if (isLinked(channelUID)) {
@@ -204,9 +204,9 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
     /**
      * Unwrap optional value and log with ERROR if value is not present
      *
-     * @param optional            optional to unwrap
+     * @param optional optional to unwrap
      * @param messageIfNotPresent logging message
-     * @param args                arguments to logging
+     * @param args arguments to logging
      * @throws IllegalStateException when value is not present
      * @return unwrapped value of the optional
      */

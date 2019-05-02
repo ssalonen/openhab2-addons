@@ -38,8 +38,9 @@ public class ObservationRequest extends Request {
     public static final String PARAM_CLOUDS = "n_man";
     public static final String PARAM_PRESENT_WEATHER = "wawa";
 
-    public static final String[] PARAMETERS = new String[] { PARAM_TEMPERATURE, PARAM_HUMIDITY, PARAM_WIND_DIRECTION, PARAM_WIND_SPEED,
-            PARAM_WIND_GUST, PARAM_PRESSURE, PARAM_PRECIPITATION_AMOUNT, PARAM_SNOW_DEPTH, PARAM_VISIBILITY, PARAM_CLOUDS, PARAM_PRESENT_WEATHER };
+    public static final String[] PARAMETERS = new String[] { PARAM_TEMPERATURE, PARAM_HUMIDITY, PARAM_WIND_DIRECTION,
+            PARAM_WIND_SPEED, PARAM_WIND_GUST, PARAM_PRESSURE, PARAM_PRECIPITATION_AMOUNT, PARAM_SNOW_DEPTH,
+            PARAM_VISIBILITY, PARAM_CLOUDS, PARAM_PRESENT_WEATHER };
 
     public ObservationRequest(QueryParameter location, long startEpoch, long endEpoch, long timestepMinutes) {
         super(STORED_QUERY_ID, location, startEpoch, endEpoch, timestepMinutes, PARAMETERS);

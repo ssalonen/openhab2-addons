@@ -113,7 +113,7 @@ public class Client {
     /**
      * Query request and return the data
      *
-     * @param request       request to process
+     * @param request request to process
      * @param timeoutMillis timeout for the http call
      * @return data corresponding to the query
      * @throws FMIResponseException on all I/O or XML errors
@@ -299,12 +299,12 @@ public class Client {
     /**
      * Find representative latitude and longitude matching given xlink href attribute value
      *
-     * @param xPath      xpath object used for query
+     * @param xPath xpath object used for query
      * @param entryIndex index of the location, for logging only on errors
-     * @param document   document object
-     * @param href       xlink href attribute value. Should start with #
+     * @param document document object
+     * @param href xlink href attribute value. Should start with #
      * @return latitude and longitude values as array
-     * @throws FMIResponseException     parsing errors or when entry is not found
+     * @throws FMIResponseException parsing errors or when entry is not found
      * @throws XPathExpressionException
      */
     private BigDecimal[] findLatLon(XPath xPath, int entryIndex, Document document, String href)
@@ -391,10 +391,10 @@ public class Client {
      * ("timestampsEpoch")
      *
      *
-     * @param locations                previously discovered locations
-     * @param timestampsEpoch          expected timestamps
+     * @param locations previously discovered locations
+     * @param timestampsEpoch expected timestamps
      * @param latLonTimeTripletEntries flat array of strings representing the array, [row1_cell1, row1_cell2,
-     *                                     row2_cell1, ...]
+     *            row2_cell1, ...]
      * @throws FMIResponseException when value ordering is not matching the expected
      */
     private void validatePositionEntries(Location[] locations, long[] timestampsEpoch,
