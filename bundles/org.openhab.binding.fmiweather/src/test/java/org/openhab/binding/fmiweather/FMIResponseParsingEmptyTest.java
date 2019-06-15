@@ -15,7 +15,6 @@ package org.openhab.binding.fmiweather;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.Before;
@@ -37,7 +36,7 @@ public class FMIResponseParsingEmptyTest extends AbstractFMIResponseParsingTest 
     @Before
     public void setUp() throws Throwable {
         client = new Client();
-        observationsResponse = parseMultiPointCoverageXml(new String(Files.readAllBytes(observations)));
+        observationsResponse = parseMultiPointCoverageXml(readTestResourceUtf8(observations));
         assertNotNull(observationsResponse);
     }
 

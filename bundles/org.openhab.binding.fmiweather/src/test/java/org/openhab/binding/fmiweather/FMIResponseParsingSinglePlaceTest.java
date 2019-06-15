@@ -16,7 +16,6 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 import java.math.BigDecimal;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
@@ -47,9 +46,9 @@ public class FMIResponseParsingSinglePlaceTest extends AbstractFMIResponseParsin
 
     @Before
     public void setUp() throws Throwable {
-        observationsResponse1 = parseMultiPointCoverageXml(new String(Files.readAllBytes(observations1)));
+        observationsResponse1 = parseMultiPointCoverageXml(readTestResourceUtf8(observations1));
         observationsResponse1NaN = parseMultiPointCoverageXml(
-                new String(Files.readAllBytes(observations1)).replace("276.0", "NaN"));
+                readTestResourceUtf8(observations1).replace("276.0", "NaN"));
 
         assertNotNull(observationsResponse1);
     }

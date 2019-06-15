@@ -16,7 +16,6 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 import java.math.BigDecimal;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -36,7 +35,7 @@ public class ParsingStationsTest extends AbstractFMIResponseParsingTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testParseStations() throws Throwable {
-        Set<Location> stations = parseStations(new String(Files.readAllBytes(stations_xml)));
+        Set<Location> stations = parseStations(readTestResourceUtf8(stations_xml));
         assertNotNull(stations);
         assertThat(stations.size(), is(3));
         assertThat(stations,

@@ -16,7 +16,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.Test;
@@ -35,7 +34,7 @@ public class FMIResponseParsingExceptionReportTest extends AbstractFMIResponsePa
     @Test
     public void testErrorResponse() throws IOException, Throwable {
         try {
-            parseMultiPointCoverageXml(new String(Files.readAllBytes(error1)));
+            parseMultiPointCoverageXml(readTestResourceUtf8(error1));
         } catch (FMIResponseException e) {
             // OK
             assertThat(e.getMessage(), is(

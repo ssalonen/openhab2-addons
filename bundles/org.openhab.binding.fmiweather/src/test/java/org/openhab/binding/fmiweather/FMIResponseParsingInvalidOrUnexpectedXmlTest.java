@@ -13,7 +13,6 @@
 package org.openhab.binding.fmiweather;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.Test;
@@ -32,12 +31,12 @@ public class FMIResponseParsingInvalidOrUnexpectedXmlTest extends AbstractFMIRes
 
     @Test(expected = SAXParseException.class)
     public void testInvalidXml() throws IOException, Throwable {
-        parseMultiPointCoverageXml(new String(Files.readAllBytes(observations1)).replace("276.0", "<<"));
+        parseMultiPointCoverageXml(readTestResourceUtf8(observations1).replace("276.0", "<<"));
     }
 
     @Test(expected = FMIResponseException.class)
     public void testUnexpectedXml() throws IOException, Throwable {
-        parseMultiPointCoverageXml(new String(Files.readAllBytes(observations1)).replace("276.0", "<foo>4</foo>"));
+        parseMultiPointCoverageXml(readTestResourceUtf8(observations1).replace("276.0", "<foo>4</foo>"));
     }
 
 }

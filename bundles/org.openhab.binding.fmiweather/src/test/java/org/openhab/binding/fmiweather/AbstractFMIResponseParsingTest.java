@@ -14,9 +14,13 @@ package org.openhab.binding.fmiweather;
 
 import static org.junit.Assert.fail;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
@@ -33,6 +37,7 @@ import org.openhab.binding.fmiweather.internal.client.Location;
 public class AbstractFMIResponseParsingTest {
 
     protected Client client;
+    private Charset UTF8 = Charset.forName("UTF-8");
 
     @Before
     public void setUpClient() throws Throwable {
@@ -43,6 +48,26 @@ public class AbstractFMIResponseParsingTest {
         try {
             return Paths.get(getClass().getResource(filename).toURI());
         } catch (URISyntaxException e) {
+            fail(e.getMessage());
+            return null;
+        }
+    }
+
+    protected String readTestResourceUtf8(String filename) {
+        return readTestResourceUtf8(getTestResource(filename));
+    }
+
+    protected String readTestResourceUtf8(Path path) {
+        try {
+            BufferedReader reader = Files.newBufferedReader(path, UTF8);
+            StringBuilder content = new StringBuilder();
+            char[] buffer = new char[1024];
+            int read = -1;
+            while ((read = reader.read(buffer)) != -1) {
+                content.append(buffer, 0, read);
+            }
+            return content.toString();
+        } catch (IOException e) {
             fail(e.getMessage());
             return null;
         }
