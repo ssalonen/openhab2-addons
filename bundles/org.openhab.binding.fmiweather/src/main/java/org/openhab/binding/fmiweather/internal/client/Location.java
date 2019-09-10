@@ -71,5 +71,4 @@ public class Location {
         return new StringBuilder("Location(name=\"").append(name).append("\", id=\"").append(id).append("\", latitude=")
                 .append(latitude).append(", longitude=").append(longitude).append(")").toString();
     }
-
 }
