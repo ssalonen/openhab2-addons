@@ -37,7 +37,7 @@ import org.openhab.binding.fmiweather.internal.client.Location;
  */
 public final class CitiesOfFinland {
 
-    public static Set<Location> CITIES_OF_FINLAND = new HashSet<>();
+    public static final Set<Location> CITIES_OF_FINLAND = new HashSet<>();
     static {
         CITIES_OF_FINLAND
                 .add(new Location("Akaa", "61.16667,23.86667", new BigDecimal("61.16667"), new BigDecimal("23.86667")));
