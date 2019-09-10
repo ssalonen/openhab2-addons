@@ -58,7 +58,7 @@ import org.xml.sax.SAXException;
  * Networkid parameter isexplained in entries of
  * https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::ef::stations
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault
@@ -430,6 +430,5 @@ public class Client {
                 }
             }
         }
-
     }
 }

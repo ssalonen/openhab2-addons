@@ -17,7 +17,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * Request for weather observations
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

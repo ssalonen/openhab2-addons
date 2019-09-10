@@ -19,7 +19,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * Specialized Exception class for ExceptionReport responses from the FMI API
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

@@ -18,27 +18,25 @@ import java.util.Set;
 
 import org.openhab.binding.fmiweather.internal.client.Location;
 
+/**
+ * Cities of Finland
+ *
+ * Parsed from
+ * https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::cities::multipointcoverage
+ *
+ * Using piece of code similar to below:
+ *
+ * <pre>
+ * System.out.println(parseMultiPointCoverageXml(new String(
+ *         Files.readAllBytes(getTestResource("forecast_hirlam_surface_cities_multipointcoverage_response.xml"))))
+ *                 .getLocations());
+ * </pre>
+ *
+ *
+ * @author Sami Salonen - Initial contribution
+ */
 public final class CitiesOfFinland {
 
-    private CitiesOfFinland() {
-
-    }
-
-    /**
-     * Cities of Finland
-     *
-     * Parsed from
-     * https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::cities::multipointcoverage
-     *
-     * Using piece of code similar to below:
-     *
-     * <pre>
-     * System.out.println(parseMultiPointCoverageXml(new String(
-     *         Files.readAllBytes(getTestResource("forecast_hirlam_surface_cities_multipointcoverage_response.xml"))))
-     *                 .getLocations());
-     * </pre>
-     *
-     */
     public static Set<Location> CITIES_OF_FINLAND = new HashSet<>();
     static {
         CITIES_OF_FINLAND

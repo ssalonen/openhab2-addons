@@ -17,7 +17,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * Base class for FMI exceptions
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

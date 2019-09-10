@@ -23,7 +23,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * QueryParameter implementation for latlon
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

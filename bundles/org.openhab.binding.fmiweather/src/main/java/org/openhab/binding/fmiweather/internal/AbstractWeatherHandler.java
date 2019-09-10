@@ -85,7 +85,6 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
                             lastRefreshMillis + REFRESH_THROTTLE_MILLIS - System.currentTimeMillis());
                 }
             }
-
         }
     }
 
@@ -94,7 +93,6 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         client = new Client();
         updateStatus(ThingStatus.UNKNOWN);
         future = scheduler.scheduleWithFixedDelay(this::update, 0, pollIntervalSeconds, TimeUnit.SECONDS);
-
     }
 
     /**
@@ -115,9 +113,9 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         }
     }
 
-    abstract protected void update();
+    protected abstract void update();
 
-    abstract protected void updateChannels();
+    protected abstract void updateChannels();
 
     @Override
     public void dispose() {
@@ -151,7 +149,6 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
             return -1;
         }
         return data.values.length - 1;
-
     }
 
     protected long floorToEvenMinutes(long epochSeconds, int roundMinutes) {

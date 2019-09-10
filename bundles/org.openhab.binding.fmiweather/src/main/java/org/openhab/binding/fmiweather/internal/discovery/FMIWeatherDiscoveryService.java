@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory;
 /**
  * The {@link FMIDiscoveryService} creates things based on the configured location.
  *
- * @author Sami Salonen - Initial Contribution
+ * @author Sami Salonen - Initial contribution
  */
 @NonNullByDefault
 @Component(service = DiscoveryService.class, immediate = true, configurationPid = "discovery.fmiweather")

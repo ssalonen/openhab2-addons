@@ -20,7 +20,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * Interface for HTTP GET query parameters
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

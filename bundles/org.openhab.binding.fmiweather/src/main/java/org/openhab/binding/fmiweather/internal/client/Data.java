@@ -21,7 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
 /**
  * Simple class for numeric holding data
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault
@@ -56,5 +56,4 @@ public class Data {
         return new StringBuilder("ResponseDataValues(timestampsEpochSecs=").append(Arrays.toString(timestampsEpochSecs))
                 .append(", values=").append(Arrays.deepToString(values)).append(")").toString();
     }
-
 }

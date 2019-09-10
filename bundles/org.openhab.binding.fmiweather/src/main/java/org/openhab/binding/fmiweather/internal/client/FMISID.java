@@ -22,7 +22,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * QueryParameter implementation for fmisid (FMI Station ID) query parameter
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

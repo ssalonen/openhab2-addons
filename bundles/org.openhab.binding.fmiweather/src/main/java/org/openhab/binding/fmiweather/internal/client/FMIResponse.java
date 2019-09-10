@@ -26,7 +26,7 @@ import org.eclipse.jdt.annotation.Nullable;
 /**
  * Class representing response from the FMI weather service
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault
@@ -36,6 +36,7 @@ public class FMIResponse {
      * Builder class for FMIResponse
      *
      * @author Sami Salonen
+     *         uthor Sami Salonen - Initial contribution/
      *
      */
     public static class Builder {

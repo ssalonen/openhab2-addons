@@ -23,7 +23,7 @@ import org.eclipse.jdt.annotation.Nullable;
  *
  * Note: For simplicity, location implements object equality and hashCode using only id.
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault

@@ -22,7 +22,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 /**
  * Request class for FIM weather
  *
- * @author Sami Salonen
+ * @author Sami Salonen - Initial contribution
  *
  */
 @NonNullByDefault
@@ -76,5 +76,4 @@ public class Request {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond(epoch), ZoneId.of("Z"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
-
 }
