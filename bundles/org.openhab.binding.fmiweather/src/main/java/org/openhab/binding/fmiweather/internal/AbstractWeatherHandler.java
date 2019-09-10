@@ -211,7 +211,9 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         if (optional.isPresent()) {
             return optional.get();
         } else {
-            logger.error(messageIfNotPresent, args);
+            // logger.error(messageIfNotPresent, args) avoided due to static analyzer
+            String formattedMessage = String.format(messageIfNotPresent, args);
+            logger.error(formattedMessage);
             throw new IllegalStateException("unwrapping");
         }
     }
