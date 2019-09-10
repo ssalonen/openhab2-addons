@@ -213,7 +213,7 @@ public abstract class AbstractWeatherHandler extends BaseThingHandler {
         } else {
             // logger.error(messageIfNotPresent, args) avoided due to static analyzer
             String formattedMessage = String.format(messageIfNotPresent, args);
-            logger.error(formattedMessage);
+            logger.error("Unwrapping error: {}", formattedMessage);
             throw new IllegalStateException("unwrapping");
         }
     }
