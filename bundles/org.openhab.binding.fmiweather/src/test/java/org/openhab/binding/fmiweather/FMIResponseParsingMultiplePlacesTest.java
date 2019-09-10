@@ -23,13 +23,12 @@ import java.util.Set;
 import org.eclipse.jdt.annotation.NonNull;
 import org.junit.Before;
 import org.junit.Test;
-import org.openhab.binding.fmiweather.internal.client.Client;
 import org.openhab.binding.fmiweather.internal.client.Data;
 import org.openhab.binding.fmiweather.internal.client.FMIResponse;
 import org.openhab.binding.fmiweather.internal.client.Location;
 
 /**
- * Test cases for {@link Client.parseMultiPointCoverageXml} with a xml response having multiple places, parameters
+ * Test cases for Client.parseMultiPointCoverageXml with a xml response having multiple places, parameters
  * and timestamps
  *
  * @author Sami Salonen - Initial contribution

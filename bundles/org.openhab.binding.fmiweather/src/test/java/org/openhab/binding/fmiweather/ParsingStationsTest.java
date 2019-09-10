@@ -20,11 +20,10 @@ import java.nio.file.Path;
 import java.util.Set;
 
 import org.junit.Test;
-import org.openhab.binding.fmiweather.internal.client.Client;
 import org.openhab.binding.fmiweather.internal.client.Location;
 
 /**
- * Test cases for {@link Client.parseStations}
+ * Test cases for Client.parseStations
  *
  * @author Sami Salonen - Initial contribution
  */

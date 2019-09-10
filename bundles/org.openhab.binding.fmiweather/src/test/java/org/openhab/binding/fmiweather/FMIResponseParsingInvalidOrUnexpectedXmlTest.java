@@ -16,12 +16,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.junit.Test;
-import org.openhab.binding.fmiweather.internal.AbstractWeatherHandler;
 import org.openhab.binding.fmiweather.internal.client.exception.FMIResponseException;
 import org.xml.sax.SAXParseException;
 
 /**
- * Test cases for {@link AbstractWeatherHandler}. The tests provide mocks for supporting entities using Mockito.
+ * Test cases for AbstractWeatherHandler. The tests provide mocks for supporting entities using Mockito.
  *
  * @author Sami Salonen - Initial contribution
  */
