@@ -331,10 +331,12 @@ public class ModbusPollerThingHandlerImpl extends BaseBridgeHandler implements M
         if (pollTask == null || config == null) {
             return;
         }
-        logger.debug("Unregistering polling from ModbusManager");
-        @NonNull
-        PollTask task = (@NonNull PollTask) pollTask;
-        managerRef.get().unregisterRegularPoll(task);
+        if (config.getRefresh() > 0L) {
+            logger.debug("Unregistering polling from ModbusManager");
+            @NonNull
+            PollTask task = (@NonNull PollTask) pollTask;
+            managerRef.get().unregisterRegularPoll(task);
+        }
         pollTask = null;
         updateStatus(ThingStatus.OFFLINE);
     }

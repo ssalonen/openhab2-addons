@@ -15,7 +15,10 @@ package org.openhab.binding.modbus.internal;
 import static org.openhab.binding.modbus.internal.ModbusBindingConstantsInternal.*;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -25,11 +28,13 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
+import org.openhab.binding.modbus.handler.EndpointRegistry;
 import org.openhab.binding.modbus.internal.handler.ModbusDataThingHandler;
 import org.openhab.binding.modbus.internal.handler.ModbusPollerThingHandlerImpl;
 import org.openhab.binding.modbus.internal.handler.ModbusSerialThingHandler;
 import org.openhab.binding.modbus.internal.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.ModbusManager;
+import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -43,12 +48,14 @@ import org.slf4j.LoggerFactory;
  */
 @Component(service = ThingHandlerFactory.class, configurationPid = "binding.modbus")
 @NonNullByDefault
-public class ModbusHandlerFactory extends BaseThingHandlerFactory {
+public class ModbusHandlerFactory extends BaseThingHandlerFactory implements EndpointRegistry {
 
     private final Logger logger = LoggerFactory.getLogger(ModbusHandlerFactory.class);
 
     @NonNullByDefault({})
     private ModbusManager manager;
+
+    private volatile Map<ModbusSlaveEndpoint, AtomicInteger> endpointsCounts = new ConcurrentHashMap<>();
 
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = new HashSet<>();
     static {
@@ -68,10 +75,10 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
         if (thingTypeUID.equals(THING_TYPE_MODBUS_TCP)) {
             logger.debug("createHandler Modbus tcp");
-            return new ModbusTcpThingHandler((Bridge) thing, () -> manager);
+            return new ModbusTcpThingHandler((Bridge) thing, () -> manager, this);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_SERIAL)) {
             logger.debug("createHandler Modbus serial");
-            return new ModbusSerialThingHandler((Bridge) thing, () -> manager);
+            return new ModbusSerialThingHandler((Bridge) thing, () -> manager, this);
         } else if (thingTypeUID.equals(THING_TYPE_MODBUS_POLLER)) {
             logger.debug("createHandler Modbus poller");
             return new ModbusPollerThingHandlerImpl((Bridge) thing, () -> manager);
@@ -93,6 +100,26 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory {
 
     public void unsetModbusManager(ModbusManager manager) {
         this.manager = null;
+    }
+
+    @Override
+    public void register(ModbusSlaveEndpoint endpoint) {
+        int count = endpointsCounts.computeIfAbsent(endpoint, (key) -> new AtomicInteger()).incrementAndGet();
+        logger.debug("Registering {}, count is now {}", endpoint, count);
+    }
+
+    @Override
+    public void unregister(ModbusSlaveEndpoint endpoint) {
+        AtomicInteger endpointCounter = endpointsCounts.get(endpoint);
+        int count = endpointCounter.decrementAndGet();
+        logger.debug("Unregistering {}, count is now {}", endpoint, count);
+        if (count < 0) {
+            throw new IllegalStateException("Count is negative, double-unregister?");
+        } else if (count == 0) {
+            // All endpoint handlers closed, no need to keep connections open, close them
+            logger.info("Closing connections for {}", endpoint);
+            manager.closeConnections(endpoint);
+        }
     }
 
 }

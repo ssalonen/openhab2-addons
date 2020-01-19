@@ -23,6 +23,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerService;
 import org.openhab.binding.modbus.discovery.internal.ModbusEndpointDiscoveryService;
+import org.openhab.binding.modbus.handler.EndpointRegistry;
 import org.openhab.binding.modbus.internal.ModbusConfigurationException;
 import org.openhab.binding.modbus.internal.config.ModbusSerialConfiguration;
 import org.openhab.io.transport.modbus.ModbusManager;
@@ -38,8 +39,9 @@ import org.openhab.io.transport.modbus.endpoint.ModbusSerialSlaveEndpoint;
 public class ModbusSerialThingHandler
         extends AbstractModbusEndpointThingHandler<ModbusSerialSlaveEndpoint, ModbusSerialConfiguration> {
 
-    public ModbusSerialThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
-        super(bridge, managerRef);
+    public ModbusSerialThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef,
+            EndpointRegistry endpointRegistration) {
+        super(bridge, managerRef, endpointRegistration);
     }
 
     @Override

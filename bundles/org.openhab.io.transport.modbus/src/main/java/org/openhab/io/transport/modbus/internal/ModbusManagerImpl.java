@@ -821,6 +821,23 @@ public class ModbusManagerImpl implements ModbusManager {
         return this.scheduledPollTasks.keySet();
     }
 
+    @Override
+    public void closeConnections(ModbusSlaveEndpoint endpoint) {
+        assert connectionFactory != null;
+        // Make sure connections to this endpoint are closed when they are returned to pool (which
+        // is usually pretty soon as transactions should be relatively short-lived)
+        connectionFactory.disconnectOnReturn(endpoint, System.currentTimeMillis());
+        try {
+            // Close all idle connections as well (they will be reconnected if necessary on borrow)
+            if (connectionPool != null) {
+                connectionPool.clear(endpoint);
+            }
+        } catch (Exception e) {
+            logger.error("Could not clear endpoint {}. Stack trace follows", endpoint, e);
+        }
+
+    }
+
     @Activate
     protected void activate(Map<String, Object> configProperties) {
         synchronized (this) {

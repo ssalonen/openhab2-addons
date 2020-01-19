@@ -22,6 +22,7 @@ import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.openhab.binding.modbus.handler.EndpointRegistry;
 import org.openhab.binding.modbus.handler.ModbusEndpointThingHandler;
 import org.openhab.binding.modbus.internal.ModbusConfigurationException;
 import org.openhab.io.transport.modbus.ModbusManager;
@@ -51,10 +52,13 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Nullable
     protected volatile EndpointPoolConfiguration poolConfiguration;
     private final Logger logger = LoggerFactory.getLogger(AbstractModbusEndpointThingHandler.class);
+    private EndpointRegistry endpointRegistration;
 
-    public AbstractModbusEndpointThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef) {
+    public AbstractModbusEndpointThingHandler(Bridge bridge, Supplier<ModbusManager> managerRef,
+            EndpointRegistry endpointRegistration) {
         super(bridge);
         this.managerRef = managerRef;
+        this.endpointRegistration = endpointRegistration;
     }
 
     @Override
@@ -77,8 +81,10 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
                 if (endpoint == null) {
                     throw new IllegalArgumentException("endpoint null after configuration!");
                 }
-                managerRef.get().addListener(this);
-                managerRef.get().setEndpointPoolConfiguration(endpoint, poolConfiguration);
+                endpointRegistration.register(endpoint);
+                ModbusManager modbusManager = managerRef.get();
+                modbusManager.addListener(this);
+                modbusManager.setEndpointPoolConfiguration(endpoint, poolConfiguration);
                 updateStatus(ThingStatus.ONLINE);
             } catch (ModbusConfigurationException e) {
                 logger.debug("Exception during initialization", e);
@@ -93,6 +99,9 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Override
     public void dispose() {
         managerRef.get().removeListener(this);
+        if (endpoint != null) {
+            endpointRegistration.unregister(endpoint);
+        }
     }
 
     @Override

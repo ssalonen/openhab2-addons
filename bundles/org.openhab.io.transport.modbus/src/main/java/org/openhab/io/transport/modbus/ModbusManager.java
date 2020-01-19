@@ -104,4 +104,11 @@ public interface ModbusManager {
      */
     public Set<PollTask> getRegisteredRegularPolls();
 
+    /**
+     * Close all connections for this endpoint immediately.
+     *
+     * @param endpoint
+     */
+    public void closeConnections(ModbusSlaveEndpoint endpoint);
+
 }
