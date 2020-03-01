@@ -118,8 +118,13 @@ public class ModbusHandlerFactory extends BaseThingHandlerFactory implements End
         } else if (count == 0) {
             // All endpoint handlers closed, no need to keep connections open, close them
             logger.info("Closing connections for {}", endpoint);
-            manager.closeConnections(endpoint);
+            // manager.closeConnections(endpoint);
         }
+    }
+
+    @Override
+    public boolean isRegistered(ModbusSlaveEndpoint endpoint) {
+        return endpointsCounts.get(endpoint).get() > 0;
     }
 
 }

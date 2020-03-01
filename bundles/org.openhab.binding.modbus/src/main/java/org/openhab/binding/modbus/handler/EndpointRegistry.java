@@ -37,4 +37,12 @@ public interface EndpointRegistry {
      */
     public void unregister(ModbusSlaveEndpoint endpoint);
 
+    /**
+     * Tells whether endpoint is registered to be in use
+     *
+     * @param endpoint
+     * @return true when at least one registration is active for this endpoint
+     */
+    public boolean isRegistered(ModbusSlaveEndpoint endpoint);
+
 }

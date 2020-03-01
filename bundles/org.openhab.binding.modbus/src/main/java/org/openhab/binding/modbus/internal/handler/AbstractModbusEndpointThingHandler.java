@@ -99,6 +99,8 @@ public abstract class AbstractModbusEndpointThingHandler<E extends ModbusSlaveEn
     @Override
     public void dispose() {
         managerRef.get().removeListener(this);
+        @Nullable
+        E endpoint = this.endpoint;
         if (endpoint != null) {
             endpointRegistration.unregister(endpoint);
         }

@@ -13,7 +13,9 @@
 package org.openhab.binding.modbus.tests;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.verify;
 
 import java.util.Objects;
 
@@ -22,6 +24,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.builder.BridgeBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,6 +32,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.openhab.binding.modbus.internal.ModbusBindingConstantsInternal;
+import org.openhab.binding.modbus.internal.ModbusHandlerFactory;
 import org.openhab.binding.modbus.internal.handler.ModbusTcpThingHandler;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
@@ -147,5 +151,31 @@ public class ModbusTcpThingHandlerTest extends AbstractModbusOSGiTest {
         // Same endpoint and same parameters -> should not affect this thing
         thingHandler.onEndpointPoolConfigurationSet(new ModbusTCPSlaveEndpoint("thisishost", 44), poolConfiguration);
         assertThat(thing.getStatusInfo().getDescription(), thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+    }
+
+    @Test
+    public void testConnectionCloseOnDispose() {
+        Configuration thingConfig = new Configuration();
+        thingConfig.put("host", "thisishost");
+        thingConfig.put("port", 44);
+        thingConfig.put("reconnectAfterMillis", 100_000_000);
+
+        Bridge thing = createTcpThingBuilder("tcpendpoint").withConfiguration(thingConfig).build();
+        addThing(thing);
+        assertThat(thing.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+
+        ModbusTcpThingHandler thingHandler = (ModbusTcpThingHandler) thing.getHandler();
+        assert thingHandler != null;
+
+        ModbusSlaveEndpoint endpoint = thingHandler.asSlaveEndpoint();
+        Objects.requireNonNull(endpoint);
+
+        ModbusHandlerFactory modbusHandlerFactory = getService(ThingHandlerFactory.class, ModbusHandlerFactory.class);
+        assertThat("Could not get ModbusHandlerFactory", modbusHandlerFactory, is(notNullValue()));
+        assert modbusHandlerFactory != null;
+        assertThat(modbusHandlerFactory.isRegistered(endpoint), is(equalTo(true)));
+        disposeThing(thing);
+        assertThat(modbusHandlerFactory.isRegistered(endpoint), is(equalTo(false)));
+        verify(mockedModbusManager).closeConnections(endpoint);
     }
 }
