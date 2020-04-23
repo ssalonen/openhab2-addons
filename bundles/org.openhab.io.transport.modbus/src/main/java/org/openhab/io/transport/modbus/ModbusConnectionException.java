@@ -14,6 +14,7 @@ package org.openhab.io.transport.modbus;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
+import org.openhab.io.transport.modbus.exception.ModbusTransportException;
 
 /**
  * Exception for connection issues

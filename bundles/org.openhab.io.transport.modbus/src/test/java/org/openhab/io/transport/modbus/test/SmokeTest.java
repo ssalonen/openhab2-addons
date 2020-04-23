@@ -38,13 +38,13 @@ import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.openhab.io.transport.modbus.ModbusResponse;
-import org.openhab.io.transport.modbus.ModbusSlaveErrorResponseException;
-import org.openhab.io.transport.modbus.ModbusSlaveIOException;
 import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.endpoint.EndpointPoolConfiguration;
 import org.openhab.io.transport.modbus.endpoint.ModbusSlaveEndpoint;
 import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
+import org.openhab.io.transport.modbus.exception.ModbusSlaveErrorResponseException;
+import org.openhab.io.transport.modbus.exception.ModbusSlaveIOException;
 import org.openhab.io.transport.modbus.internal.BitArrayWrappingBitVector;
 import org.slf4j.LoggerFactory;
 
