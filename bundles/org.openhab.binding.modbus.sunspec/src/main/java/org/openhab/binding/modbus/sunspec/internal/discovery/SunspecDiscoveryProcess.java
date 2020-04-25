@@ -33,6 +33,7 @@ import org.openhab.binding.modbus.handler.ModbusEndpointThingHandler;
 import org.openhab.binding.modbus.sunspec.internal.dto.CommonModelBlock;
 import org.openhab.binding.modbus.sunspec.internal.dto.ModelBlock;
 import org.openhab.binding.modbus.sunspec.internal.parser.CommonModelParser;
+import org.openhab.io.transport.modbus.AsyncModbusReadResult;
 import org.openhab.io.transport.modbus.BasicModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.BasicPollTaskImpl;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
@@ -161,15 +162,7 @@ public class SunspecDiscoveryProcess {
                 SUNSPEC_ID_SIZE, // number or words to return
                 maxTries);
 
-        PollTask task = new BasicPollTaskImpl(endpoint, request, result -> {
-            if (result.hasError()) {
-                Exception error = (@NonNull Exception) result.getCause();
-                handleError(error);
-            } else {
-                ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
-                headerReceived(registers);
-            }
-        });
+        PollTask task = new BasicPollTaskImpl(endpoint, request, this::headerReceived);
 
         handler.getManagerRef().get().submitOneTimePoll(task);
     }
@@ -177,7 +170,12 @@ public class SunspecDiscoveryProcess {
     /**
      * We received the first two words, that should equal to SunS
      */
-    private void headerReceived(ModbusRegisterArray registers) {
+    private void headerReceived(AsyncModbusReadResult result) {
+        if (result.hasError()) {
+            handleError(result.getCause());
+            return;
+        }
+        ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
         logger.trace("Received response from device {}", registers.toString());
 
         Optional<DecimalType> id = ModbusBitUtilities.extractStateFromRegisters(registers, 0, ValueType.UINT32);
@@ -205,15 +203,7 @@ public class SunspecDiscoveryProcess {
                 MODEL_HEADER_SIZE, // number or words to return
                 maxTries);
 
-        PollTask task = new BasicPollTaskImpl(endpoint, request, result -> {
-            if (result.hasError()) {
-                Exception error = (@NonNull Exception) result.getCause();
-                handleError(error);
-            } else {
-                ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
-                modelBlockReceived(registers);
-            }
-        });
+        PollTask task = new BasicPollTaskImpl(endpoint, request, this::modelBlockReceived);
 
         handler.getManagerRef().get().submitOneTimePoll(task);
     }
@@ -221,7 +211,12 @@ public class SunspecDiscoveryProcess {
     /**
      * We received a model block header
      */
-    private void modelBlockReceived(ModbusRegisterArray registers) {
+    private void modelBlockReceived(AsyncModbusReadResult result) {
+        if (result.hasError()) {
+            handleError(result.getCause());
+            return;
+        }
+        ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
         logger.debug("Received response from device {}", registers.toString());
 
         Optional<DecimalType> moduleID = ModbusBitUtilities.extractStateFromRegisters(registers, 0, ValueType.UINT16);
@@ -267,15 +262,7 @@ public class SunspecDiscoveryProcess {
                 block.length, // number or words to return
                 maxTries);
 
-        PollTask task = new BasicPollTaskImpl(endpoint, request, result -> {
-            if (result.hasError()) {
-                Exception error = (@NonNull Exception) result.getCause();
-                handleError(error);
-            } else {
-                ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
-                parseCommonBlock(registers);
-            }
-        });
+        PollTask task = new BasicPollTaskImpl(endpoint, request, this::parseCommonBlock);
 
         handler.getManagerRef().get().submitOneTimePoll(task);
     }
@@ -286,7 +273,12 @@ public class SunspecDiscoveryProcess {
      *
      * @param registers
      */
-    private void parseCommonBlock(ModbusRegisterArray registers) {
+    private void parseCommonBlock(AsyncModbusReadResult result) {
+        if (result.hasError()) {
+            handleError(result.getCause());
+            return;
+        }
+        ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
         logger.trace("Got common block data: {}", registers);
         lastCommonBlock = commonBlockParser.parse(registers);
         lookForModelBlock(); // Continue parsing
@@ -341,9 +333,15 @@ public class SunspecDiscoveryProcess {
     /**
      * Handle errors received during communication
      */
-    private void handleError(Exception error) {
+    private void handleError(@Nullable Exception error) {
         String msg = "";
         String cls = "";
+
+        if (error == null) {
+            logger.debug("Unknown modbus error encountered");
+            parsingFinished();
+            return;
+        }
 
         if (blocksFound > 1 && error instanceof ModbusSlaveErrorResponseException) {
             int code = ((ModbusSlaveErrorResponseException) error).getExceptionCode();

@@ -342,8 +342,7 @@ public abstract class AbstractSunSpecHandler extends BaseThingHandler {
 
         pollTask = new BasicPollTaskImpl(myendpoint, request, result -> {
             if (result.hasError()) {
-                Exception error = (@NonNull Exception) result.getCause();
-                handleError(error);
+                handleError(result.getCause());
             } else {
                 ModbusRegisterArray registers = (@NonNull ModbusRegisterArray) result.getRegisters();
                 handlePolledData(registers);
