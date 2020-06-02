@@ -757,7 +757,6 @@ public class ModbusManagerImpl implements ModbusManager {
             for (ModbusManagerListener listener : listeners) {
                 listener.onEndpointPoolConfigurationSet(endpoint, configuration);
             }
-
         }
 
         @Override
@@ -906,7 +905,6 @@ public class ModbusManagerImpl implements ModbusManager {
         public ModbusSlaveEndpoint getEndpoint() {
             return endpoint;
         }
-
     }
 
     @Override
