@@ -41,7 +41,7 @@ public class DataListenerMock implements DataListener {
     @Override
     public void dataAvailable(ModbusDataProvider provider) {
         callCounter++;
-        currentData = provider.getData(listenerType);
+        currentData = provider.parse(listenerType);
         logger.info("Callback {} Data {}", callCounter, currentData);
     }
 

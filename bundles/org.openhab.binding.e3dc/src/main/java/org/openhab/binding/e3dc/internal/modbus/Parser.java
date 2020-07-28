@@ -26,11 +26,7 @@ import org.openhab.binding.e3dc.internal.dto.PowerBlock;
 import org.openhab.binding.e3dc.internal.dto.StringBlock;
 import org.openhab.binding.e3dc.internal.dto.WallboxArray;
 import org.openhab.binding.e3dc.internal.modbus.Data.DataType;
-import org.openhab.io.transport.modbus.AsyncModbusFailure;
 import org.openhab.io.transport.modbus.AsyncModbusReadResult;
-import org.openhab.io.transport.modbus.ModbusFailureCallback;
-import org.openhab.io.transport.modbus.ModbusReadCallback;
-import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegister;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 import org.slf4j.Logger;
@@ -42,9 +38,8 @@ import org.slf4j.LoggerFactory;
  * @author Bernd Weymann - Initial contribution
  */
 @NonNullByDefault
-public class ModbusCallback extends ModbusDataProvider
-        implements ModbusReadCallback, ModbusFailureCallback<ModbusReadRequestBlueprint> {
-    private final Logger logger = LoggerFactory.getLogger(ModbusCallback.class);
+public class Parser {
+    private final Logger logger = LoggerFactory.getLogger(Parser.class);
     private DataType callbackType;
     private byte[] bArray;
     private int size;
@@ -53,7 +48,7 @@ public class ModbusCallback extends ModbusDataProvider
     private long minDuration = Long.MAX_VALUE;
     private long avgDuration = 0;
 
-    public ModbusCallback(DataType type) {
+    public Parser(DataType type) {
         callbackType = type;
         if (type.equals(DataType.INFO)) {
             size = INFO_REG_SIZE * 2;
@@ -64,7 +59,6 @@ public class ModbusCallback extends ModbusDataProvider
         }
     }
 
-    @Override
     public void handle(AsyncModbusReadResult result) {
         byte[] newArray = new byte[size];
         long startTime = System.currentTimeMillis();
@@ -93,21 +87,14 @@ public class ModbusCallback extends ModbusDataProvider
         // DataConverter.logArray(newArray);
     }
 
-    @Override
-    public void handle(AsyncModbusFailure<ModbusReadRequestBlueprint> failure) {
-        logger.warn("E3DC Modbus {} Callback error! {}", callbackType, failure.getRequest().toString());
-    }
-
     public synchronized void setArray(byte[] b) {
         if (b.length != size) {
             logger.warn("Wrong byte size received. Should be {} but is {}. Data maybe corrupted!", size, b.length);
         }
         bArray = b.clone();
-        super.informAllListeners();
     }
 
-    @Override
-    public @Nullable Data getData(DataType type) {
+    public @Nullable Data parse(DataType type) {
         synchronized (bArray) {
             if (type.equals(DataType.INFO) && callbackType.equals(DataType.INFO)) {
                 return new InfoBlock(Arrays.copyOfRange(bArray, INFO_REG_START, INFO_REG_SIZE * 2));

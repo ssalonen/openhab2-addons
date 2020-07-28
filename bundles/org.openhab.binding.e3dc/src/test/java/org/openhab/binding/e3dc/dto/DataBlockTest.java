@@ -24,7 +24,7 @@ import org.openhab.binding.e3dc.internal.dto.StringBlock;
 import org.openhab.binding.e3dc.internal.dto.WallboxArray;
 import org.openhab.binding.e3dc.internal.dto.WallboxBlock;
 import org.openhab.binding.e3dc.internal.modbus.Data.DataType;
-import org.openhab.binding.e3dc.internal.modbus.ModbusCallback;
+import org.openhab.binding.e3dc.internal.modbus.Parser;
 
 /**
  * The {@link DataBlockTest} Test Data Transfer Objects of frequent Data Block
@@ -32,20 +32,20 @@ import org.openhab.binding.e3dc.internal.modbus.ModbusCallback;
  * @author Bernd Weymann - Initial contribution
  */
 public class DataBlockTest {
-    private ModbusCallback mc;
+    private Parser mc;
 
     @Before
     public void setup() {
         byte[] dataBlock = new byte[] { 0, -14, 0, 0, -2, -47, -1, -1, 2, 47, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 99, 99, 0, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
                 125, 2, 21, 0, 0, 0, 27, 0, 26, 0, 0, 0, 103, 0, -117, 0, 0 };
-        mc = new ModbusCallback(DataType.DATA);
+        mc = new Parser(DataType.DATA);
         mc.setArray(dataBlock);
     }
 
     @Test
     public void testValidPowerBlock() {
-        PowerBlock b = (PowerBlock) mc.getData(DataType.POWER);
+        PowerBlock b = (PowerBlock) mc.parse(DataType.POWER);
         assertNotNull(b);
         assertEquals("PV Supply", "242 W", b.pvPowerSupply.toString());
         assertEquals("Grid Supply", "14 W", b.gridPowerSupply.toString());
@@ -55,7 +55,7 @@ public class DataBlockTest {
 
     @Test
     public void testValidWallboxBlock() {
-        WallboxArray a = (WallboxArray) mc.getData(DataType.WALLBOX);
+        WallboxArray a = (WallboxArray) mc.parse(DataType.WALLBOX);
         assertNotNull(a);
         WallboxBlock b = a.getWallboxBlock(0);
         assertNotNull(b);
@@ -67,7 +67,7 @@ public class DataBlockTest {
 
     @Test
     public void testValidEmergency() {
-        EmergencyBlock b = (EmergencyBlock) mc.getData(DataType.EMERGENCY);
+        EmergencyBlock b = (EmergencyBlock) mc.parse(DataType.EMERGENCY);
         assertNotNull(b);
         assertEquals("EMS Status", EmergencyBlock.EP_NOT_SUPPORTED, b.epStatus.toFullString());
         assertEquals("Battery loading locked", OnOffType.OFF, b.batteryLoadingLocked);
@@ -81,7 +81,7 @@ public class DataBlockTest {
 
     @Test
     public void testValidStringDetailsStringBlock() {
-        StringBlock b = (StringBlock) mc.getData(DataType.STRINGS);
+        StringBlock b = (StringBlock) mc.parse(DataType.STRINGS);
         assertNotNull(b);
         assertEquals("String 1 V", 381, b.string1Volt.intValue());
         assertEquals("String 1 V", "V", b.string1Volt.getUnit().toString());
@@ -107,7 +107,7 @@ public class DataBlockTest {
 
     @Test
     public void testInvalidInfoblock() {
-        InfoBlock b = (InfoBlock) mc.getData(DataType.INFO);
+        InfoBlock b = (InfoBlock) mc.parse(DataType.INFO);
         assertNull(b);
     }
 }

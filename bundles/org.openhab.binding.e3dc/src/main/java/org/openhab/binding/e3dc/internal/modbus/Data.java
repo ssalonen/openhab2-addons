@@ -29,4 +29,5 @@ public interface Data {
         STRINGS,
         DATA // marks all types besides INFO
     }
+
 }

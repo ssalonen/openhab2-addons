@@ -12,33 +12,34 @@
  */
 package org.openhab.binding.e3dc.internal.handler;
 
+import static org.openhab.binding.e3dc.internal.E3DCBindingConstants.*;
 import static org.openhab.binding.e3dc.internal.modbus.E3DCModbusConstans.*;
+
+import java.util.Optional;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
-import org.openhab.binding.e3dc.internal.E3DCDeviceConfiguration;
+import org.openhab.binding.e3dc.internal.dto.EmergencyBlock;
+import org.openhab.binding.e3dc.internal.dto.PowerBlock;
 import org.openhab.binding.e3dc.internal.modbus.Data.DataType;
-import org.openhab.binding.e3dc.internal.modbus.DataListener;
-import org.openhab.binding.e3dc.internal.modbus.ModbusCallback;
-import org.openhab.binding.e3dc.internal.modbus.ModbusDataProvider;
+import org.openhab.binding.e3dc.internal.modbus.Parser;
+import org.openhab.binding.modbus.handler.EndpointNotInitializedException;
+import org.openhab.binding.modbus.handler.ModbusEndpointThingHandler;
 import org.openhab.io.transport.modbus.AsyncModbusFailure;
-import org.openhab.io.transport.modbus.AsyncModbusWriteResult;
+import org.openhab.io.transport.modbus.AsyncModbusReadResult;
 import org.openhab.io.transport.modbus.ModbusCommunicationInterface;
-import org.openhab.io.transport.modbus.ModbusFailureCallback;
-import org.openhab.io.transport.modbus.ModbusManager;
 import org.openhab.io.transport.modbus.ModbusReadFunctionCode;
 import org.openhab.io.transport.modbus.ModbusReadRequestBlueprint;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
-import org.openhab.io.transport.modbus.ModbusWriteCallback;
 import org.openhab.io.transport.modbus.ModbusWriteRegisterRequestBlueprint;
-import org.openhab.io.transport.modbus.ModbusWriteRequestBlueprint;
 import org.openhab.io.transport.modbus.PollTask;
-import org.openhab.io.transport.modbus.endpoint.ModbusTCPSlaveEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,25 +49,27 @@ import org.slf4j.LoggerFactory;
  * @author Bernd Weymann - Initial contribution
  */
 @NonNullByDefault
-public class E3DCDeviceThingHandler extends BaseBridgeHandler
-        implements DataListener, ModbusWriteCallback, ModbusFailureCallback<ModbusWriteRequestBlueprint> {
+public class E3DCDeviceThingHandler extends BaseBridgeHandler {
     private final Logger logger = LoggerFactory.getLogger(E3DCDeviceThingHandler.class);
-    private ModbusManager modbusManagerRef;
-    private final ModbusCallback modbusInfoCallback = new ModbusCallback(DataType.INFO);
-    private final ModbusCallback modbusDataCallback = new ModbusCallback(DataType.DATA);
+    private final Parser dataParser = new Parser(DataType.DATA);
+    private final Parser infoParser = new Parser(DataType.INFO);
     private ThingStatus myStatus = ThingStatus.UNKNOWN;
-    private @Nullable ModbusCommunicationInterface modbusCom;
     private @Nullable PollTask infoPoller;
     private @Nullable PollTask dataPoller;
-    private @Nullable E3DCDeviceConfiguration config;
 
-    public E3DCDeviceThingHandler(Bridge bridge, ModbusManager ref) {
+    /**
+     * Communication interface to the slave endpoint we're connecting to
+     */
+    protected volatile @Nullable ModbusCommunicationInterface comms = null;
+    private int slaveId;
+
+    public E3DCDeviceThingHandler(Bridge bridge) {
         super(bridge);
-        modbusManagerRef = ref;
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        // TODO: implement
     }
 
     @Override
@@ -74,59 +77,108 @@ public class E3DCDeviceThingHandler extends BaseBridgeHandler
         setStatus(ThingStatus.UNKNOWN);
         // Example for background initialization:
         scheduler.execute(() -> {
-            config = getConfigAs(E3DCDeviceConfiguration.class);
-            E3DCDeviceConfiguration localConfig = config;
-            if (localConfig != null && checkConfig(localConfig)) {
-                ModbusTCPSlaveEndpoint slaveEndpoint = new ModbusTCPSlaveEndpoint(localConfig.host, localConfig.port);
+            connectEndpoint();
+            ModbusCommunicationInterface localComms = comms;
+            if (localComms != null) {
 
-                ModbusCommunicationInterface localModbusCom = modbusManagerRef.newModbusCommunicationInterface(
-                        slaveEndpoint, modbusManagerRef.getEndpointPoolConfiguration(slaveEndpoint));
                 // register low speed info poller
-                ModbusReadRequestBlueprint infoRequest = new ModbusReadRequestBlueprint(localConfig.deviceid,
+                ModbusReadRequestBlueprint infoRequest = new ModbusReadRequestBlueprint(slaveId,
                         ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, INFO_REG_START, INFO_REG_SIZE, 3);
-                infoPoller = localModbusCom.registerRegularPoll(infoRequest, INFO_POLL_REFRESH_TIME_MS, 0,
-                        modbusInfoCallback, modbusInfoCallback);
+                infoPoller = localComms.registerRegularPoll(infoRequest, INFO_POLL_REFRESH_TIME_MS, 0,
+                        this::handleInfoResult, this::handleInfoFailure);
 
-                ModbusReadRequestBlueprint dataRequest = new ModbusReadRequestBlueprint(localConfig.deviceid,
+                ModbusReadRequestBlueprint dataRequest = new ModbusReadRequestBlueprint(slaveId,
                         ModbusReadFunctionCode.READ_MULTIPLE_REGISTERS, POWER_REG_START,
                         REGISTER_LENGTH - INFO_REG_SIZE, 3);
-                dataPoller = localModbusCom.registerRegularPoll(dataRequest, localConfig.refresh, 0, modbusDataCallback,
-                        modbusDataCallback);
-                modbusCom = localModbusCom;
-                // listen for data to get ONLINE
-                modbusDataCallback.addDataListener(this);
+                dataPoller = localComms.registerRegularPoll(dataRequest, DATA_POLL_REFRESH_TIME_MS_NOW_HARDCODED, 0,
+                        this::handleDataResult, this::handleDataFailure);
             } else {
-                setStatus(ThingStatus.OFFLINE);
+                // comms not available, status has been set
             }
         });
     }
 
-    @Override
-    public void dispose() {
-        modbusDataCallback.removeDataListener(this);
-        ModbusCommunicationInterface localCom = modbusCom;
-        if (localCom != null) {
-            PollTask localInfoPoller = infoPoller;
-            if (localInfoPoller != null) {
-                localCom.unregisterRegularPoll(localInfoPoller);
+    private void handleInfoResult(AsyncModbusReadResult result) {
+        turnOnline();
+        infoParser.handle(result);
+        // TODO: update channels
+    }
+
+    private void handleInfoFailure(AsyncModbusFailure<ModbusReadRequestBlueprint> result) {
+        // TODO: error handling
+    }
+
+    private void handleDataResult(AsyncModbusReadResult result) {
+        turnOnline();
+        dataParser.handle(result);
+        // Update channels in emergency group
+        {
+            EmergencyBlock block = (EmergencyBlock) dataParser.parse(DataType.EMERGENCY);
+            String group = "emergency";
+            if (block != null) {
+                updateState(channelUID(group, EMERGENCY_POWER_STATUS), block.epStatus);
+                updateState(channelUID(group, BATTERY_LOADING_LOCKED), block.batteryLoadingLocked);
+                updateState(channelUID(group, BATTERY_UNLOADING_LOCKED), block.batterUnLoadingLocked);
+                updateState(channelUID(group, EMERGENCY_POWER_POSSIBLE), block.epPossible);
+                updateState(channelUID(group, WEATHER_PREDICTION_LOADING), block.weatherPredictedLoading);
+                updateState(channelUID(group, REGULATION_STATUS), block.regulationStatus);
+                updateState(channelUID(group, LOADING_LOCK_TIME), block.loadingLockTime);
+                updateState(channelUID(group, UNLOADING_LOCKTIME), block.unloadingLockTime);
+            } else {
+                logger.debug("Unable to get {} from provider {}", DataType.EMERGENCY, dataParser.toString());
             }
-            PollTask localDataPoller = dataPoller;
-            if (localDataPoller != null) {
-                localCom.unregisterRegularPoll(localDataPoller);
+        }
+
+        // Update channels in power group
+        {
+            PowerBlock block = (PowerBlock) dataParser.parse(DataType.POWER);
+            String group = "power";
+            if (block != null) {
+                updateState(channelUID(group, PV_POWER_SUPPLY_CHANNEL), block.pvPowerSupply);
+                updateState(channelUID(group, BATTERY_POWER_SUPPLY_CHANNEL), block.batteryPowerSupply);
+                updateState(channelUID(group, BATTERY_POWER_CONSUMPTION), block.batteryPowerConsumption);
+                updateState(channelUID(group, HOUSEHOLD_POWER_CONSUMPTION_CHANNEL), block.householdPowerConsumption);
+                updateState(channelUID(group, GRID_POWER_CONSUMPTION_CHANNEL), block.gridPowerConsumpition);
+                updateState(channelUID(group, GRID_POWER_SUPPLY_CHANNEL), block.gridPowerSupply);
+                updateState(channelUID(group, EXTERNAL_POWER_SUPPLY_CHANNEL), block.externalPowerSupply);
+                updateState(channelUID(group, WALLBOX_POWER_CONSUMPTION_CHANNEL), block.wallboxPowerConsumption);
+                updateState(channelUID(group, WALLBOX_PV_POWER_CONSUMPTION_CHANNEL), block.wallboxPVPowerConsumption);
+                updateState(channelUID(group, AUTARKY), block.autarky);
+                updateState(channelUID(group, SELF_CONSUMPTION), block.selfConsumption);
+                updateState(channelUID(group, BATTERY_STATE_OF_CHARGE_CHANNEL), block.batterySOC);
+            } else {
+                logger.debug("Unable to get {} from provider {}", DataType.POWER, dataParser.toString());
             }
+        }
+
+        // TODO: update rest of channels
+    }
+
+    private void handleDataFailure(AsyncModbusFailure<ModbusReadRequestBlueprint> result) {
+        // TODO: error handling
+    }
+
+    private void turnOnline() {
+        if (myStatus != ThingStatus.ONLINE) {
+            setStatus(ThingStatus.ONLINE);
         }
     }
 
-    private boolean checkConfig(@Nullable E3DCDeviceConfiguration c) {
-        if (c != null) {
-            if (c.port > 1) {
-                if (c.refresh < 1) {
-                    c.refresh = 2;
-                }
-                return true;
+    @Override
+    public void dispose() {
+        ModbusCommunicationInterface localComms = comms;
+        if (localComms != null) {
+            PollTask localInfoPoller = infoPoller;
+            if (localInfoPoller != null) {
+                localComms.unregisterRegularPoll(localInfoPoller);
+            }
+            PollTask localDataPoller = dataPoller;
+            if (localDataPoller != null) {
+                localComms.unregisterRegularPoll(localDataPoller);
             }
         }
-        return false;
+        // Comms will be close()'d by endpoint thing handler
+        comms = null;
     }
 
     private void setStatus(ThingStatus status) {
@@ -141,38 +193,95 @@ public class E3DCDeviceThingHandler extends BaseBridgeHandler
      * @param writeValue integer to be written
      */
     public void wallboxSet(int wallboxId, int writeValue) {
-        E3DCDeviceConfiguration localConfig = config;
-        ModbusCommunicationInterface localCom = modbusCom;
-        if (localConfig != null && localCom != null) {
+        ModbusCommunicationInterface localComms = comms;
+        if (localComms != null) {
             ModbusRegisterArray regArray = new ModbusRegisterArray(writeValue);
-            ModbusWriteRegisterRequestBlueprint writeBluePrint = new ModbusWriteRegisterRequestBlueprint(
-                    localConfig.deviceid, WALLBOX_REG_START + wallboxId, regArray, false, 3);
-            localCom.submitOneTimeWrite(writeBluePrint, this, this);
+            ModbusWriteRegisterRequestBlueprint writeBluePrint = new ModbusWriteRegisterRequestBlueprint(slaveId,
+                    WALLBOX_REG_START + wallboxId, regArray, false, 3);
+            localComms.submitOneTimeWrite(writeBluePrint, result -> {
+                // TODO: update thing status?
+                logger.debug("E3DC Modbus write response! {}", result.getResponse().toString());
+            }, failure -> {
+                // TODO: update thing status?
+                logger.warn("E3DC Modbus write error! {}", failure.getRequest().toString());
+            });
         }
     }
 
-    @Override
-    public void dataAvailable(ModbusDataProvider provider) {
-        if (myStatus != ThingStatus.ONLINE) {
-            setStatus(ThingStatus.ONLINE);
+    /**
+     * Get a reference to the modbus endpoint
+     */
+    private void connectEndpoint() {
+        if (comms != null) {
+            return;
+        }
+
+        ModbusEndpointThingHandler slaveEndpointThingHandler = getEndpointThingHandler();
+        if (slaveEndpointThingHandler == null) {
+            @SuppressWarnings("null")
+            String label = Optional.ofNullable(getBridge()).map(b -> b.getLabel()).orElse("<null>");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("Bridge '%s' is offline", label));
+            logger.debug("No bridge handler available -- aborting init for {}", label);
+            return;
+        }
+        try {
+            slaveId = slaveEndpointThingHandler.getSlaveId();
+            comms = slaveEndpointThingHandler.getCommunicationInterface();
+        } catch (EndpointNotInitializedException e) {
+            // FIXME: this cannot be raised anymore, throws was left accidentally in the API
+        }
+        if (comms == null) {
+            @SuppressWarnings("null")
+            String label = Optional.ofNullable(getBridge()).map(b -> b.getLabel()).orElse("<null>");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE,
+                    String.format("Bridge '%s' not completely initialized", label));
+            logger.debug("Bridge not initialized fully (no endpoint) -- aborting init for {}", this);
+            return;
         }
     }
 
-    public ModbusDataProvider getInfoDataProvider() {
-        return modbusInfoCallback;
+    /**
+     * Get the endpoint handler from the bridge this handler is connected to
+     * Checks that we're connected to the right type of bridge
+     *
+     * @return the endpoint handler or null if the bridge does not exist
+     */
+    private @Nullable ModbusEndpointThingHandler getEndpointThingHandler() {
+        Bridge bridge = getBridge();
+        if (bridge == null) {
+            logger.debug("Bridge is null");
+            return null;
+        }
+        if (bridge.getStatus() != ThingStatus.ONLINE) {
+            logger.debug("Bridge is not online");
+            return null;
+        }
+
+        ThingHandler handler = bridge.getHandler();
+        if (handler == null) {
+            logger.debug("Bridge handler is null");
+            return null;
+        }
+
+        if (handler instanceof ModbusEndpointThingHandler) {
+            ModbusEndpointThingHandler slaveEndpoint = (ModbusEndpointThingHandler) handler;
+            return slaveEndpoint;
+        } else {
+            logger.debug("Unexpected bridge handler: {}", handler);
+            return null;
+        }
     }
 
-    public ModbusDataProvider getDataProvider() {
-        return modbusDataCallback;
+    /**
+     * Returns the channel UID for the specified group and channel id
+     *
+     * @param string the channel group
+     * @param string the channel id in that group
+     * @return the globally unique channel uid
+     */
+    private ChannelUID channelUID(String group, String id) {
+        return new ChannelUID(getThing().getUID(), group, id);
     }
 
-    @Override
-    public void handle(AsyncModbusWriteResult result) {
-        logger.debug("E3DC Modbus write response! {}", result.getResponse().toString());
-    }
-
-    @Override
-    public void handle(AsyncModbusFailure<ModbusWriteRequestBlueprint> failure) {
-        logger.warn("E3DC Modbus write error! {}", failure.getRequest().toString());
-    }
 }

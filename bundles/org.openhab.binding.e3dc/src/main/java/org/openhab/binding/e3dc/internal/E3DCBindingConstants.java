@@ -14,6 +14,7 @@ package org.openhab.binding.e3dc.internal;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.openhab.binding.modbus.ModbusBindingConstants;
 
 /**
  * The {@link E3DCBindingConstants} class defines common constants, which are
@@ -24,15 +25,10 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 @NonNullByDefault
 public class E3DCBindingConstants {
 
-    private static final String BINDING_ID = "e3dc";
+    private static final String BINDING_ID = ModbusBindingConstants.BINDING_ID;
 
     // Suppoerted Thing Types
-    public static final ThingTypeUID THING_TYPE_E3DC_DEVICE = new ThingTypeUID(BINDING_ID, "e3dc-device");
-    public static final ThingTypeUID THING_TYPE_E3DC_INFO = new ThingTypeUID(BINDING_ID, "e3dc-info");
-    public static final ThingTypeUID THING_TYPE_E3DC_POWER = new ThingTypeUID(BINDING_ID, "e3dc-power");
-    public static final ThingTypeUID THING_TYPE_E3DC_WALLBOX = new ThingTypeUID(BINDING_ID, "e3dc-wallbox");
-    public static final ThingTypeUID THING_TYPE_E3DC_STRING_DETAILS = new ThingTypeUID(BINDING_ID, "e3dc-strings");
-    public static final ThingTypeUID THING_TYPE_E3DC_EMERGENCY_POWER = new ThingTypeUID(BINDING_ID, "e3dc-emergency");
+    public static final ThingTypeUID THING_TYPE_E3DC = new ThingTypeUID(BINDING_ID, "e3dc");
 
     // Channels for Info Block
     public static final String MODBUS_ID_CHANNEL = "modbus-id";

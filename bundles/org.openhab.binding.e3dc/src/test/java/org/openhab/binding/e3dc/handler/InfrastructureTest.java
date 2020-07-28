@@ -25,7 +25,7 @@ import org.openhab.binding.e3dc.internal.E3DCBindingConstants;
 import org.openhab.binding.e3dc.internal.E3DCHandlerFactory;
 import org.openhab.binding.e3dc.internal.handler.E3DCDeviceThingHandler;
 import org.openhab.binding.e3dc.internal.handler.E3DCInfoHandler;
-import org.openhab.binding.e3dc.internal.modbus.ModbusCallback;
+import org.openhab.binding.e3dc.internal.modbus.Parser;
 import org.openhab.io.transport.modbus.ModbusManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +43,7 @@ public class InfrastructureTest {
     public void testSuppoertedThings() {
         ModbusManager mm = mock(ModbusManager.class);
         E3DCHandlerFactory hf = new E3DCHandlerFactory(mm);
-        assertTrue(hf.supportsThingType(E3DCBindingConstants.THING_TYPE_E3DC_DEVICE));
+        assertTrue(hf.supportsThingType(E3DCBindingConstants.THING_TYPE_E3DC));
         assertTrue(hf.supportsThingType(E3DCBindingConstants.THING_TYPE_E3DC_INFO));
         assertTrue(hf.supportsThingType(E3DCBindingConstants.THING_TYPE_E3DC_POWER));
         assertTrue(hf.supportsThingType(E3DCBindingConstants.THING_TYPE_E3DC_WALLBOX));
@@ -54,7 +54,7 @@ public class InfrastructureTest {
     @Test
     public void testE3DCInfoDevice() {
         Thing t = mock(Thing.class);
-        ThingUID tuid = new ThingUID(E3DCBindingConstants.THING_TYPE_E3DC_DEVICE, "e3dc");
+        ThingUID tuid = new ThingUID(E3DCBindingConstants.THING_TYPE_E3DC, "e3dc");
         when(t.getBridgeUID()).thenReturn(tuid);
         when(t.getUID()).thenReturn(tuid);
         E3DCInfoHandler ih = new E3DCInfoHandler(t);
@@ -76,7 +76,7 @@ public class InfrastructureTest {
         }
         // now everything should be set up - sent some data and check if isUpdated flag is true
         assertNotNull(dth.getInfoDataProvider());
-        ModbusCallback mc = (ModbusCallback) dth.getInfoDataProvider();
+        Parser mc = (Parser) dth.getInfoDataProvider();
         byte[] infoBlock = new byte[] { -29, -36, 1, 2, 0, -120, 69, 51, 47, 68, 67, 32, 71, 109, 98, 72, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 49, 48, 32, 69, 32, 65, 73, 79, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 78, 73, 78, 73, 84, 73, 65, 76, 73, 90, 69, 68,
