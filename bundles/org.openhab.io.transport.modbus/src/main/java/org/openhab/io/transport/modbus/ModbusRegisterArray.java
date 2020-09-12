@@ -12,7 +12,7 @@
  */
 package org.openhab.io.transport.modbus;
 
-import java.util.Iterator;
+import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -23,9 +23,10 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * @author Sami Salonen - Initial contribution
  */
 @NonNullByDefault
-public class ModbusRegisterArray implements Iterable<ModbusRegister> {
+public class ModbusRegisterArray {
 
-    private final ModbusRegister[] registers;
+    // private final ModbusRegister[] registers;
+    private final ByteBuffer buffer;
 
     /**
      * Construct plain <code>ModbusRegister[]</code> array from register values
@@ -34,6 +35,7 @@ public class ModbusRegisterArray implements Iterable<ModbusRegister> {
      * @return
      */
     public static ModbusRegister[] registersFromValues(int... registerValues) {
+
         ModbusRegister[] registers = new ModbusRegister[registerValues.length];
         for (int i = 0; i < registerValues.length; i++) {
             registers[i] = new ModbusRegister(registerValues[i]);
@@ -41,13 +43,37 @@ public class ModbusRegisterArray implements Iterable<ModbusRegister> {
         return registers;
     }
 
+    private static int[] fromRegisters(ModbusRegister... registers) {
+        int[] values = new int[registers.length];
+        for (int i = 0; i < registers.length; i++) {
+            values[i] = registers[i].getValue();
+        }
+        return values;
+    }
+
     /**
      * Construct ModbusRegisterArrayImpl from array of {@link ModbusRegister}
      *
+     * @deprecated Use other constructors instead to avoid unnecessary allocations
+     *
      * @param registers
      */
+    @Deprecated
     public ModbusRegisterArray(ModbusRegister[] registers) {
-        this.registers = registers;
+        this(fromRegisters(registers));
+    }
+
+    public ModbusRegisterArray(ByteBuffer buffer) {
+        // TODO:copy
+        this.buffer = buffer.asReadOnlyBuffer();
+    }
+
+    public ModbusRegisterArray(byte... bytes) {
+        if (bytes.length % 2 != 0) {
+            throw new IllegalArgumentException();
+        }
+        // TODO:Copy?
+        buffer = ByteBuffer.wrap(bytes);
     }
 
     /**
@@ -57,7 +83,10 @@ public class ModbusRegisterArray implements Iterable<ModbusRegister> {
      * @return
      */
     public ModbusRegisterArray(int... registerValues) {
-        this(registersFromValues(registerValues));
+        buffer = ByteBuffer.allocate(registerValues.length * 2);
+        for (int registerValue : registerValues) {
+            buffer.putInt(registerValue);
+        }
     }
 
     /**
@@ -89,14 +118,6 @@ public class ModbusRegisterArray implements Iterable<ModbusRegister> {
         }
         StringBuffer buffer = new StringBuffer(registers.length * 2).append("ModbusRegisterArrayImpl(");
         return appendHexString(buffer).append(')').toString();
-    }
-
-    /**
-     * Iterator over all the registers
-     */
-    @Override
-    public Iterator<ModbusRegister> iterator() {
-        return IntStream.range(0, size()).mapToObj(i -> getRegister(i)).iterator();
     }
 
     /**
