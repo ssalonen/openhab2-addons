@@ -14,8 +14,6 @@ package org.openhab.io.transport.modbus;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Optional;
 
@@ -34,6 +32,8 @@ import org.eclipse.smarthome.core.types.Command;
  */
 @NonNullByDefault
 public class ModbusBitUtilities {
+
+    private static final BigInteger INT64_MAX = BigInteger.valueOf(0xffff_ffff_ffff_ffffL);
 
     /**
      * Read data from registers and convert the result to DecimalType
@@ -109,103 +109,159 @@ public class ModbusBitUtilities {
                     String.format("Index=%d with type=%s is out-of-bounds given registers of size %d", index, type,
                             registers.size()));
         }
+        byte[] bytes = registers.getBytes();
         switch (type) {
-            case BIT:
-                return Optional
-                        .of(new DecimalType((registers.getRegister(index / 16).toUnsignedShort() >> (index % 16)) & 1));
-            case INT8:
-                return Optional.of(new DecimalType(registers.getRegister(index / 2).getBytes()[1 - (index % 2)]));
-            case UINT8:
-                return Optional.of(new DecimalType(
-                        (registers.getRegister(index / 2).toUnsignedShort() >> (8 * (index % 2))) & 0xff));
-            case INT16: {
-                ByteBuffer buff = ByteBuffer.allocate(2);
-                buff.put(registers.getRegister(index).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getShort(0)));
+            case BIT: {
+                int registerIndex = index / 16;
+                boolean hiByte = index % 16 >= 8;
+                int indexWithinByte = index % 8;
+                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+                return Optional.of(new DecimalType((bytes[byteIndex] >>> indexWithinByte) & 1));
             }
-            case UINT16:
-                return Optional.of(new DecimalType(registers.getRegister(index).toUnsignedShort()));
+            case INT8: {
+                int registerIndex = index / 2;
+                boolean hiByte = index % 2 == 1;
+                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+                int signed = bytes[byteIndex];
+                return Optional.of(new DecimalType(signed));
+            }
+            case UINT8: {
+                int registerIndex = index / 2;
+                boolean hiByte = index % 2 == 1;
+                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+                int signed = bytes[byteIndex];
+                int unsigned = signed & 0xff;
+                assert unsigned >= 0;
+                return Optional.of(new DecimalType(unsigned));
+            }
+            case INT16: {
+                int hi = (bytes[index * 2] & 0xff);
+                int lo = (bytes[index * 2 + 1] & 0xff);
+                short signed = (short) ((hi << 8) | lo);
+                return Optional.of(new DecimalType(signed));
+            }
+            case UINT16: {
+                int hi = bytes[index * 2] & 0xff;
+                int lo = bytes[index * 2 + 1] & 0xff;
+                short signed = (short) ((hi << 8) | lo);
+                int unsigned = signed & 0xffff;
+                assert unsigned >= 0;
+                return Optional.of(new DecimalType(unsigned));
+            }
             case INT32: {
-                ByteBuffer buff = ByteBuffer.allocate(4);
-                buff.put(registers.getRegister(index).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0)));
+                int hi1 = bytes[(index + 0) * 2] & 0xff;
+                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 1) * 2] & 0xff;
+                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+                return Optional.of(new DecimalType(signed));
             }
             case UINT32: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.position(4);
-                buff.put(registers.getRegister(index).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0)));
+                int hi1 = bytes[(index + 0) * 2] & 0xff;
+                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 1) * 2] & 0xff;
+                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+                long unsigned = signed & 0xffff_ffffL;
+                assert unsigned >= 0;
+                return Optional.of(new DecimalType(unsigned));
             }
             case FLOAT32: {
-                ByteBuffer buff = ByteBuffer.allocate(4);
-                buff.put(registers.getRegister(index).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
+                int hi1 = bytes[(index + 0) * 2] & 0xff;
+                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 1) * 2] & 0xff;
+                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
                 try {
-                    return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0)));
+                    return Optional.of(new DecimalType(Float.intBitsToFloat(bits32)));
                 } catch (NumberFormatException e) {
                     // floating point NaN or infinity encountered
                     return Optional.empty();
                 }
             }
             case INT64: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.put(registers.getRegister(index).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index + 2).getBytes());
-                buff.put(registers.getRegister(index + 3).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0)));
+                byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
+                byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+                byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
+                byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+                byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
+                byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+                byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
+                byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+                return Optional.of(new DecimalType(
+                        new BigDecimal(new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
             }
             case UINT64: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.put(registers.getRegister(index).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index + 2).getBytes());
-                buff.put(registers.getRegister(index + 3).getBytes());
-                return Optional.of(
-                        new DecimalType(new BigDecimal(new BigInteger(1, buff.order(ByteOrder.BIG_ENDIAN).array()))));
+                byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
+                byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+                byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
+                byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+                byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
+                byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+                byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
+                byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+                return Optional.of(new DecimalType(
+                        new BigDecimal(new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
             }
             case INT32_SWAP: {
-                ByteBuffer buff = ByteBuffer.allocate(4);
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getInt(0)));
+                // swapped order of registers, high 16 bits *follow* low 16 bits
+                int hi1 = bytes[(index + 1) * 2] & 0xff;
+                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 0) * 2] & 0xff;
+                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+                return Optional.of(new DecimalType(signed));
             }
             case UINT32_SWAP: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.position(4);
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0)));
+                // swapped order of registers, high 16 bits *follow* low 16 bits
+                int hi1 = bytes[(index + 1) * 2] & 0xff;
+                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 0) * 2] & 0xff;
+                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+                long unsigned = signed & 0xffff_ffffL;
+                assert unsigned >= 0;
+                return Optional.of(new DecimalType(unsigned));
             }
             case FLOAT32_SWAP: {
-                ByteBuffer buff = ByteBuffer.allocate(4);
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index).getBytes());
+                // swapped order of registers, high 16 bits *follow* low 16 bits
+                int hi1 = bytes[(index + 1) * 2] & 0xff;
+                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
+                int hi2 = bytes[(index + 0) * 2] & 0xff;
+                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
+                int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
                 try {
-                    return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getFloat(0)));
+                    return Optional.of(new DecimalType(Float.intBitsToFloat(bits32)));
                 } catch (NumberFormatException e) {
                     // floating point NaN or infinity encountered
                     return Optional.empty();
                 }
             }
             case INT64_SWAP: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.put(registers.getRegister(index + 3).getBytes());
-                buff.put(registers.getRegister(index + 2).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index).getBytes());
-                return Optional.of(new DecimalType(buff.order(ByteOrder.BIG_ENDIAN).getLong(0)));
+                // Swapped order of registers
+                byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
+                byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+                byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
+                byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+                byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
+                byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+                byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
+                byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+                return Optional.of(new DecimalType(
+                        new BigDecimal(new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
             }
             case UINT64_SWAP: {
-                ByteBuffer buff = ByteBuffer.allocate(8);
-                buff.put(registers.getRegister(index + 3).getBytes());
-                buff.put(registers.getRegister(index + 2).getBytes());
-                buff.put(registers.getRegister(index + 1).getBytes());
-                buff.put(registers.getRegister(index).getBytes());
-                return Optional.of(
-                        new DecimalType(new BigDecimal(new BigInteger(1, buff.order(ByteOrder.BIG_ENDIAN).array()))));
+                // Swapped order of registers
+                byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
+                byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+                byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
+                byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+                byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
+                byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+                byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
+                byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+                return Optional.of(new DecimalType(
+                        new BigDecimal(new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
             }
             default:
                 throw new IllegalArgumentException(type.getConfigValue());
