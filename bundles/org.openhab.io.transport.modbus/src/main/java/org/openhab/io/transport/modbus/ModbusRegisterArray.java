@@ -12,10 +12,9 @@
  */
 package org.openhab.io.transport.modbus;
 
-import java.util.stream.IntStream;
-
 import org.bouncycastle.util.Arrays;
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.smarthome.core.util.HexUtils;
 
 /**
  * Immutable {@link ModbusRegisterArray} implementation
@@ -40,18 +39,6 @@ public class ModbusRegisterArray {
             throw new IllegalArgumentException();
         }
         this.bytes = Arrays.copyOf(bytes, bytes.length);
-    }
-
-    /**
-     * Construct plain <code>ModbusRegisterArrayImpl</code> array from register values
-     *
-     * @param registerValues register values, each <code>int</code> corresponding to one register
-     * @return
-     * @deprecated
-     */
-    @Deprecated
-    public ModbusRegisterArray(ModbusRegister... registers) {
-        this(fromRegisters(registers));
     }
 
     /**
@@ -113,8 +100,8 @@ public class ModbusRegisterArray {
         if (bytes.length == 0) {
             return "ModbusRegisterArrayImpl(<empty>)";
         }
-        StringBuffer stringBuffer = new StringBuffer(bytes.length).append("ModbusRegisterArrayImpl(");
-        return appendHexString(stringBuffer).append(')').toString();
+        return new StringBuilder(bytes.length).append("ModbusRegisterArrayImpl(").append(toHexString()).append(')')
+                .toString();
     }
 
     /**
@@ -128,22 +115,7 @@ public class ModbusRegisterArray {
         if (size() == 0) {
             return "";
         }
-        // Initialize capacity to (n*2 + n-1), two chars per byte + spaces in between
-        StringBuffer buffer = new StringBuffer(size() * 2 + (size() - 1));
-        return appendHexString(buffer).toString();
+        return HexUtils.bytesToHex(getBytes());
     }
 
-    /**
-     * Appends the register data as hex string to the given StringBuffer
-     *
-     */
-    public StringBuffer appendHexString(StringBuffer buffer) {
-        IntStream.range(0, size()).forEachOrdered(index -> {
-            getRegister(index).appendHexString(buffer);
-            if (index < size() - 1) {
-                buffer.append(' ');
-            }
-        });
-        return buffer;
-    }
 }

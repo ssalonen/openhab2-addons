@@ -13,6 +13,7 @@
 package org.openhab.io.transport.modbus;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.smarthome.core.util.HexUtils;
 
 import net.wimpi.modbus.procimg.SimpleInputRegister;
 
@@ -74,9 +75,8 @@ public class ModbusRegister {
 
     @Override
     public String toString() {
-        StringBuffer buffer = new StringBuffer("ModbusRegisterImpl(");
-        buffer.append("uint16=").append(toUnsignedShort()).append(", hex=");
-        return appendHexString(buffer).append(')').toString();
+        return new StringBuilder("ModbusRegisterImpl(").append("uint16=").append(toUnsignedShort()).append(", hex=")
+                .append(toHexString()).append(')').toString();
     }
 
     /**
@@ -87,27 +87,7 @@ public class ModbusRegister {
      * @return string representing the register data
      */
     public String toHexString() {
-        StringBuffer buffer = new StringBuffer(5);
-        return appendHexString(buffer).toString();
+        return HexUtils.bytesToHex(this.wrapped.toBytes());
     }
 
-    /**
-     * Appends the register value as hex string to the given StringBuffer
-     *
-     */
-    public StringBuffer appendHexString(StringBuffer buffer) {
-        byte[] bytes = getBytes();
-        for (int i = 0; i < 2; i++) {
-            byte b = bytes[i];
-            String byteHex = Long.toHexString(b & 0xff);
-            if ((b & 0xff) < 0x10) {
-                buffer.append('0');
-            }
-            buffer.append(byteHex);
-            if (i == 0) {
-                buffer.append(' ');
-            }
-        }
-        return buffer;
-    }
 }
