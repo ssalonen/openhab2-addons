@@ -22,7 +22,6 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
-import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.Command;
 
 /**
@@ -269,22 +268,25 @@ public class ModbusBitUtilities {
     }
 
     /**
-     * Read data from registers and convert the result to StringType
+     * Read data from registers and convert the result to String
      * Strings should start the the first byte of a register, but could
      * have an odd number of characters.
      * Raw byte array values are converted using the charset parameter
      * and a maximum of length bytes are read. However reading stops at the first
      * NUL byte encountered.
      *
+     * Registers are read in big-endian order, i.e. two registers consisting 4 bytes (ab, cd) are parsed as sequence of
+     * bytes (a,b,c,d).
+     *
      * @param registers list of registers, each register represent 16bit of data
      * @param index zero based register index. Registers are handled as 16bit registers,
      *            this parameter defines the starting register.
-     * @param length maximum length of string in 8bit characters.
+     * @param length maximum length of string in 8bit characters (number of bytes considered)
      * @param charset the character set used to construct the string.
      * @return string representation queried value
      * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
      */
-    public static StringType extractStringFromRegisters(ModbusRegisterArray registers, int index, int length,
+    public static String extractStringFromRegisters(ModbusRegisterArray registers, int index, int length,
             Charset charset) {
         if (index * 2 + length > registers.size() * 2) {
             throw new IllegalArgumentException(
@@ -297,25 +299,19 @@ public class ModbusBitUtilities {
         if (length < 0) {
             throw new IllegalArgumentException("Negative string length is not supported");
         }
-        byte[] buff = new byte[length];
 
-        int src = index;
-        int dest;
-        for (dest = 0; dest < length; dest++) {
+        int effectiveLength = length;
+        byte[] bytes = registers.getBytes();
 
-            byte chr;
-            if (dest % 2 == 0) {
-                chr = (byte) ((registers.getRegister(src).getValue() >> 8));
-            } else {
-                chr = (byte) (registers.getRegister(src).getValue() & 0xff);
-                src++;
-            }
-            if (chr == 0) {
+        // Find first zero byte in registers and call reduce length such that we stop before it
+        for (int i = 0; i < length; i++) {
+            if (bytes[index * 2 + i] == '\0') {
+                effectiveLength = i;
                 break;
             }
-            buff[dest] = chr;
         }
-        return new StringType(new String(buff, 0, dest, charset));
+
+        return new String(registers.getBytes(), index * 2, effectiveLength, charset);
     }
 
     /**

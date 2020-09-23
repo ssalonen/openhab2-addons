@@ -684,8 +684,8 @@ public class HeliosEasyControlsHandler extends BaseThingHandler {
      * @return The value or <tt>null</tt> if an error occurred
      */
     private void processResponse(HeliosVariable v, ModbusRegisterArray registers) {
-        String r = ModbusBitUtilities
-                .extractStringFromRegisters(registers, 0, registers.size() * 2, StandardCharsets.US_ASCII).toString();
+        String r = ModbusBitUtilities.extractStringFromRegisters(registers, 0, registers.size() * 2,
+                StandardCharsets.US_ASCII);
         String[] parts = r.split("=", 2); // remove the part "vXXXX=" from the string
         // making sure we have a proper response and the response matches the requested variable
         if ((parts.length == 2) && (v.getVariableString().equals(parts[0]))) {
