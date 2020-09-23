@@ -26,14 +26,6 @@ public class ModbusRegisterArray {
 
     private final byte[] bytes;
 
-    private static int[] fromRegisters(ModbusRegister... registers) {
-        int[] values = new int[registers.length];
-        for (int i = 0; i < registers.length; i++) {
-            values[i] = registers[i].getValue();
-        }
-        return values;
-    }
-
     public ModbusRegisterArray(byte... bytes) {
         if (bytes.length % 2 != 0) {
             throw new IllegalArgumentException();
