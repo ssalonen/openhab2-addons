@@ -15,13 +15,11 @@ package org.openhab.io.transport.modbus.test;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.Rule;
@@ -31,7 +29,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
-import org.openhab.io.transport.modbus.ModbusRegister;
 import org.openhab.io.transport.modbus.ModbusRegisterArray;
 
 /**
@@ -59,12 +56,7 @@ public class BitUtilitiesExtractStringFromRegistersTest {
     }
 
     private static ModbusRegisterArray shortArrayToRegisterArray(int... arr) {
-        ModbusRegister[] tmp = new ModbusRegister[0];
-        return new ModbusRegisterArray(IntStream.of(arr).mapToObj(val -> {
-            ByteBuffer buffer = ByteBuffer.allocate(2);
-            buffer.putShort((short) val);
-            return new ModbusRegister(buffer.get(0), buffer.get(1));
-        }).collect(Collectors.toList()).toArray(tmp));
+        return new ModbusRegisterArray(arr);
     }
 
     @Parameters

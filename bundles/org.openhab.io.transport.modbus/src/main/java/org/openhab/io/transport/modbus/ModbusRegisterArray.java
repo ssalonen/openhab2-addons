@@ -72,20 +72,15 @@ public class ModbusRegisterArray {
     }
 
     /**
-     * Return register at the given index
+     * Get register index i as unsigned integer
      *
-     * Index 0 matches first register (lowest register index).
-     * <p>
-     *
-     * @param index the index of the register to be returned.
-     * @throws IndexOutOfBoundsException if the index is out of bounds.
-     * @deprecated
+     * @param i register index
+     * @return register value interpreted as unsigned integer (big-endian byte ordering)
      */
-    @Deprecated
-    public ModbusRegister getRegister(int index) {
-        byte hi = bytes[index * 2];
-        byte lo = bytes[index * 2 + 1];
-        return new ModbusRegister(hi, lo);
+    public int getRegister(int i) {
+        int hi = bytes[i * 2] & 0xff;
+        int lo = bytes[i * 2 + 1] & 0xff;
+        return ((hi << 8) | lo) & 0xffff;
     }
 
     /**

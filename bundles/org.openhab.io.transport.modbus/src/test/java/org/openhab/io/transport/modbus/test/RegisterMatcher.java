@@ -47,7 +47,7 @@ class RegisterMatcher extends AbstractRequestComparer<ModbusWriteRegisterRequest
         ModbusRegisterArray registers = item.getRegisters();
         Object[] actual = StreamSupport
                 .stream(IntStream.range(0, registers.size()).mapToObj(registers::getRegister).spliterator(), false)
-                .map(r -> r.getValue()).toArray();
+                .toArray();
         return Objects.deepEquals(actual, expectedRegisterValues);
     }
 }

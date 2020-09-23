@@ -344,89 +344,80 @@ public class ModbusBitUtilities {
             case UINT16: {
                 short shortValue = numericCommand.shortValue();
                 // big endian byte ordering
-                byte b1 = (byte) (shortValue >> 8);
-                byte b2 = (byte) shortValue;
-
-                ModbusRegister register = new ModbusRegister(b1, b2);
-                return new ModbusRegisterArray(new ModbusRegister[] { register });
+                byte hi = (byte) (shortValue >> 8);
+                byte lo = (byte) shortValue;
+                return new ModbusRegisterArray(new byte[] { hi, lo });
             }
             case INT32:
             case UINT32: {
                 int intValue = numericCommand.intValue();
                 // big endian byte ordering
-                byte b1 = (byte) (intValue >> 24);
-                byte b2 = (byte) (intValue >> 16);
-                byte b3 = (byte) (intValue >> 8);
-                byte b4 = (byte) intValue;
-                ModbusRegister register = new ModbusRegister(b1, b2);
-                ModbusRegister register2 = new ModbusRegister(b3, b4);
-                return new ModbusRegisterArray(new ModbusRegister[] { register, register2 });
+                byte hi1 = (byte) (intValue >> 24);
+                byte lo1 = (byte) (intValue >> 16);
+                byte hi2 = (byte) (intValue >> 8);
+                byte lo2 = (byte) intValue;
+                return new ModbusRegisterArray(new byte[] { hi1, lo1, hi2, lo2 });
             }
             case INT32_SWAP:
             case UINT32_SWAP: {
                 int intValue = numericCommand.intValue();
                 // big endian byte ordering
-                byte b1 = (byte) (intValue >> 24);
-                byte b2 = (byte) (intValue >> 16);
-                byte b3 = (byte) (intValue >> 8);
-                byte b4 = (byte) intValue;
-                ModbusRegister register = new ModbusRegister(b3, b4);
-                ModbusRegister register2 = new ModbusRegister(b1, b2);
-                return new ModbusRegisterArray(new ModbusRegister[] { register, register2 });
+                byte hi1 = (byte) (intValue >> 24);
+                byte lo1 = (byte) (intValue >> 16);
+                byte hi2 = (byte) (intValue >> 8);
+                byte lo2 = (byte) intValue;
+                // Swapped order of registers
+                return new ModbusRegisterArray(new byte[] { hi2, lo2, hi1, lo1 });
             }
             case FLOAT32: {
                 float floatValue = numericCommand.floatValue();
                 int intBits = Float.floatToIntBits(floatValue);
                 // big endian byte ordering
-                byte b1 = (byte) (intBits >> 24);
-                byte b2 = (byte) (intBits >> 16);
-                byte b3 = (byte) (intBits >> 8);
-                byte b4 = (byte) intBits;
-                ModbusRegister register = new ModbusRegister(b1, b2);
-                ModbusRegister register2 = new ModbusRegister(b3, b4);
-                return new ModbusRegisterArray(new ModbusRegister[] { register, register2 });
+                byte hi1 = (byte) (intBits >> 24);
+                byte lo1 = (byte) (intBits >> 16);
+                byte hi2 = (byte) (intBits >> 8);
+                byte lo2 = (byte) intBits;
+                return new ModbusRegisterArray(new byte[] { hi1, lo1, hi2, lo2 });
             }
             case FLOAT32_SWAP: {
                 float floatValue = numericCommand.floatValue();
                 int intBits = Float.floatToIntBits(floatValue);
                 // big endian byte ordering
-                byte b1 = (byte) (intBits >> 24);
-                byte b2 = (byte) (intBits >> 16);
-                byte b3 = (byte) (intBits >> 8);
-                byte b4 = (byte) intBits;
-                ModbusRegister register = new ModbusRegister(b3, b4);
-                ModbusRegister register2 = new ModbusRegister(b1, b2);
-                return new ModbusRegisterArray(new ModbusRegister[] { register, register2 });
+                byte hi1 = (byte) (intBits >> 24);
+                byte lo1 = (byte) (intBits >> 16);
+                byte hi2 = (byte) (intBits >> 8);
+                byte lo2 = (byte) intBits;
+                // Swapped order of registers
+                return new ModbusRegisterArray(new byte[] { hi2, lo2, hi1, lo1 });
             }
             case INT64:
             case UINT64: {
                 long longValue = numericCommand.longValue();
                 // big endian byte ordering
-                byte b1 = (byte) (longValue >> 56);
-                byte b2 = (byte) (longValue >> 48);
-                byte b3 = (byte) (longValue >> 40);
-                byte b4 = (byte) (longValue >> 32);
-                byte b5 = (byte) (longValue >> 24);
-                byte b6 = (byte) (longValue >> 16);
-                byte b7 = (byte) (longValue >> 8);
-                byte b8 = (byte) longValue;
-                return new ModbusRegisterArray(new ModbusRegister[] { new ModbusRegister(b1, b2),
-                        new ModbusRegister(b3, b4), new ModbusRegister(b5, b6), new ModbusRegister(b7, b8) });
+                byte hi1 = (byte) (longValue >> 56);
+                byte lo1 = (byte) (longValue >> 48);
+                byte hi2 = (byte) (longValue >> 40);
+                byte lo2 = (byte) (longValue >> 32);
+                byte hi3 = (byte) (longValue >> 24);
+                byte lo3 = (byte) (longValue >> 16);
+                byte hi4 = (byte) (longValue >> 8);
+                byte lo4 = (byte) longValue;
+                return new ModbusRegisterArray(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
             }
             case INT64_SWAP:
             case UINT64_SWAP: {
                 long longValue = numericCommand.longValue();
                 // big endian byte ordering
-                byte b1 = (byte) (longValue >> 56);
-                byte b2 = (byte) (longValue >> 48);
-                byte b3 = (byte) (longValue >> 40);
-                byte b4 = (byte) (longValue >> 32);
-                byte b5 = (byte) (longValue >> 24);
-                byte b6 = (byte) (longValue >> 16);
-                byte b7 = (byte) (longValue >> 8);
-                byte b8 = (byte) longValue;
-                return new ModbusRegisterArray(new ModbusRegister[] { new ModbusRegister(b7, b8),
-                        new ModbusRegister(b5, b6), new ModbusRegister(b3, b4), new ModbusRegister(b1, b2) });
+                byte hi1 = (byte) (longValue >> 56);
+                byte lo1 = (byte) (longValue >> 48);
+                byte hi2 = (byte) (longValue >> 40);
+                byte lo2 = (byte) (longValue >> 32);
+                byte hi3 = (byte) (longValue >> 24);
+                byte lo3 = (byte) (longValue >> 16);
+                byte hi4 = (byte) (longValue >> 8);
+                byte lo4 = (byte) longValue;
+                // Swapped order of registers
+                return new ModbusRegisterArray(new byte[] { hi4, lo4, hi3, lo3, hi2, lo2, hi1, lo1 });
             }
             default:
                 throw new NotImplementedException(
