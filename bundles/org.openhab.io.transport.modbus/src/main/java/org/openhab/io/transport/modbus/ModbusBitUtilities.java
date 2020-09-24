@@ -32,8 +32,6 @@ import org.eclipse.smarthome.core.types.Command;
 @NonNullByDefault
 public class ModbusBitUtilities {
 
-    private static final BigInteger INT64_MAX = BigInteger.valueOf(0xffff_ffff_ffff_ffffL);
-
     /**
      * Read data from registers and convert the result to DecimalType
      * Interpretation of <tt>index</tt> goes as follows depending on type
