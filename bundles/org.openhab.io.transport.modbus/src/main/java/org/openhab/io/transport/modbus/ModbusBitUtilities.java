@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -23,6 +24,7 @@ import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.types.Command;
+import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
 
 /**
  * Utilities for working with binary data.
@@ -31,6 +33,86 @@ import org.eclipse.smarthome.core.types.Command;
  */
 @NonNullByDefault
 public class ModbusBitUtilities {
+
+    public class ValueReader {
+        private final ModbusRegisterArray registers;
+        private final AtomicInteger index = new AtomicInteger();
+
+        public ValueReader(ModbusRegisterArray array) {
+            this.registers = array;
+        }
+
+        private int readGenericInt(ValueType valueType) {
+            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType).get()
+                    .intValue();
+        }
+
+        private long readGenericLong(ValueType valueType) {
+            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType).get()
+                    .longValue();
+        }
+
+        private float readGenericFloat(ValueType valueType) {
+            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType)
+                    .map(decimal -> decimal.floatValue()).orElse(Float.NaN);
+        }
+
+        public int readInt8() {
+            return readGenericInt(ValueType.INT8);
+        }
+
+        public int readUInt8() {
+            return readGenericInt(ValueType.UINT8);
+        }
+
+        public int readInt16() {
+            return readGenericInt(ValueType.INT16);
+        }
+
+        public int readUInt16() {
+            return readGenericInt(ValueType.UINT16);
+        }
+
+        public int readInt32() {
+            return readGenericInt(ValueType.INT32);
+        }
+
+        public int readUInt32() {
+            return readGenericInt(ValueType.UINT32);
+        }
+
+        public int readInt32Swap() {
+            return readGenericInt(ValueType.INT32_SWAP);
+        }
+
+        public int readUInt32Swap() {
+            return readGenericInt(ValueType.UINT32_SWAP);
+        }
+
+        public long readInt64() {
+            return readGenericLong(ValueType.INT64);
+        }
+
+        public long readUInt64() {
+            return readGenericLong(ValueType.UINT64);
+        }
+
+        public long readInt64Swap() {
+            return readGenericLong(ValueType.INT64_SWAP);
+        }
+
+        public long readUInt64Swap() {
+            return readGenericLong(ValueType.UINT64_SWAP);
+        }
+
+        public float readFloat32() {
+            return readGenericFloat(ValueType.FLOAT32);
+        }
+
+        public float readFloat32Swap() {
+            return readGenericFloat(ValueType.FLOAT32_SWAP);
+        }
+    }
 
     /**
      * Read data from registers and convert the result to DecimalType
