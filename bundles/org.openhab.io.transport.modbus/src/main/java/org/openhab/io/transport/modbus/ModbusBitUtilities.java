@@ -14,6 +14,7 @@ package org.openhab.io.transport.modbus;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.InvalidMarkException;
 import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,81 +37,112 @@ public class ModbusBitUtilities {
 
     public class ValueReader {
         private final ModbusRegisterArray registers;
-        private final AtomicInteger index = new AtomicInteger();
+        private final AtomicInteger byteIndex = new AtomicInteger();
+        private volatile Optional<AtomicInteger> mark = Optional.empty();
 
         public ValueReader(ModbusRegisterArray array) {
             this.registers = array;
         }
 
-        private int readGenericInt(ValueType valueType) {
-            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType).get()
-                    .intValue();
+        public int position() {
+            return byteIndex.get();
         }
 
-        private long readGenericLong(ValueType valueType) {
-            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType).get()
-                    .longValue();
+        public ValueReader position(int byteIndex) {
+            this.byteIndex.set(byteIndex);
+            return this;
         }
 
-        private float readGenericFloat(ValueType valueType) {
-            return extractStateFromRegisters(registers, index.getAndAdd(valueType.getBits() / 8), valueType)
-                    .map(decimal -> decimal.floatValue()).orElse(Float.NaN);
+        public ValueReader mark() {
+            mark = Optional.of(new AtomicInteger(byteIndex.get()));
+            return this;
         }
 
-        public int readInt8() {
-            return readGenericInt(ValueType.INT8);
+        public ValueReader reset() throws InvalidMarkException {
+            int mark = this.mark.map(i -> i.get()).orElse(-1);
+            if (mark < 0) {
+                throw new InvalidMarkException();
+            }
+            byteIndex.set(mark);
+            return this;
         }
 
-        public int readUInt8() {
-            return readGenericInt(ValueType.UINT8);
+        public int remaining() {
+            return registers.size() - byteIndex.get();
         }
 
-        public int readInt16() {
-            return readGenericInt(ValueType.INT16);
+        public byte[] array() {
+            return registers.getBytes();
         }
 
-        public int readUInt16() {
-            return readGenericInt(ValueType.UINT16);
+        public ModbusRegisterArray registers() {
+            return registers;
         }
 
-        public int readInt32() {
-            return readGenericInt(ValueType.INT32);
+        public boolean hasRemaining() {
+            return remaining() > 0;
         }
 
-        public int readUInt32() {
-            return readGenericInt(ValueType.UINT32);
+        public ValueReader get(byte[] dst) {
+            int start = byteIndex.getAndAdd(dst.length);
+            System.arraycopy(registers.getBytes(), start, dst, 0, dst.length);
+            return this;
         }
 
-        public int readInt32Swap() {
-            return readGenericInt(ValueType.INT32_SWAP);
+        public int getInt8() {
+            return extractInt8(registers.getBytes(), byteIndex.getAndAdd(1));
         }
 
-        public int readUInt32Swap() {
-            return readGenericInt(ValueType.UINT32_SWAP);
+        public int getUInt8() {
+            return extractUInt8(registers.getBytes(), byteIndex.getAndAdd(1));
         }
 
-        public long readInt64() {
-            return readGenericLong(ValueType.INT64);
+        public int getInt16() {
+            return extractInt16(registers.getBytes(), byteIndex.getAndAdd(2));
         }
 
-        public long readUInt64() {
-            return readGenericLong(ValueType.UINT64);
+        public int getUInt16() {
+            return extractUInt16(registers.getBytes(), byteIndex.getAndAdd(2));
         }
 
-        public long readInt64Swap() {
-            return readGenericLong(ValueType.INT64_SWAP);
+        public int getInt32() {
+            return extractInt32(registers.getBytes(), byteIndex.getAndAdd(4));
         }
 
-        public long readUInt64Swap() {
-            return readGenericLong(ValueType.UINT64_SWAP);
+        public long getUInt32() {
+            return extractUInt32(registers.getBytes(), byteIndex.getAndAdd(4));
         }
 
-        public float readFloat32() {
-            return readGenericFloat(ValueType.FLOAT32);
+        public long getInt32Swap() {
+            return extractInt32Swap(registers.getBytes(), byteIndex.getAndAdd(4));
         }
 
-        public float readFloat32Swap() {
-            return readGenericFloat(ValueType.FLOAT32_SWAP);
+        public long getUInt32Swap() {
+            return extractUInt32Swap(registers.getBytes(), byteIndex.getAndAdd(4));
+        }
+
+        public long getInt64() {
+            return extractInt64(registers.getBytes(), byteIndex.getAndAdd(8));
+        }
+
+        public BigInteger getUInt64() {
+            return extractUInt64(registers.getBytes(), byteIndex.getAndAdd(8));
+        }
+
+        public long getInt64Swap() {
+            return extractInt64Swap(registers.getBytes(), byteIndex.getAndAdd(8));
+        }
+
+        public BigInteger getUInt64Swap() {
+            return extractUInt64Swap(registers.getBytes(), byteIndex.getAndAdd(8));
+        }
+
+        public float getFloat32() {
+            return extractFloat32(registers.getBytes(), byteIndex.getAndAdd(4));
+        }
+
+        public float getFloat32Swap() {
+            return extractFloat32Swap(registers.getBytes(), byteIndex.getAndAdd(4));
         }
     }
 
@@ -180,171 +212,216 @@ public class ModbusBitUtilities {
      */
     public static Optional<DecimalType> extractStateFromRegisters(ModbusRegisterArray registers, int index,
             ModbusConstants.ValueType type) {
-        int endBitIndex = (type.getBits() >= 16 ? 16 * index : type.getBits() * index) + type.getBits() - 1;
-        // each register has 16 bits
-        int lastValidIndex = registers.size() * 16 - 1;
-        if (endBitIndex > lastValidIndex || index < 0) {
-            throw new IllegalArgumentException(
-                    String.format("Index=%d with type=%s is out-of-bounds given registers of size %d", index, type,
-                            registers.size()));
-        }
         byte[] bytes = registers.getBytes();
         switch (type) {
-            case BIT: {
-                int registerIndex = index / 16;
-                boolean hiByte = index % 16 >= 8;
-                int indexWithinByte = index % 8;
-                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
-                return Optional.of(new DecimalType((bytes[byteIndex] >>> indexWithinByte) & 1));
-            }
-            case INT8: {
-                int registerIndex = index / 2;
-                boolean hiByte = index % 2 == 1;
-                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
-                int signed = bytes[byteIndex];
-                return Optional.of(new DecimalType(signed));
-            }
-            case UINT8: {
-                int registerIndex = index / 2;
-                boolean hiByte = index % 2 == 1;
-                int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
-                int signed = bytes[byteIndex];
-                int unsigned = signed & 0xff;
-                assert unsigned >= 0;
-                return Optional.of(new DecimalType(unsigned));
-            }
-            case INT16: {
-                int hi = (bytes[index * 2] & 0xff);
-                int lo = (bytes[index * 2 + 1] & 0xff);
-                short signed = (short) ((hi << 8) | lo);
-                return Optional.of(new DecimalType(signed));
-            }
-            case UINT16: {
-                int hi = bytes[index * 2] & 0xff;
-                int lo = bytes[index * 2 + 1] & 0xff;
-                short signed = (short) ((hi << 8) | lo);
-                int unsigned = signed & 0xffff;
-                assert unsigned >= 0;
-                return Optional.of(new DecimalType(unsigned));
-            }
-            case INT32: {
-                int hi1 = bytes[(index + 0) * 2] & 0xff;
-                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 1) * 2] & 0xff;
-                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
-                return Optional.of(new DecimalType(signed));
-            }
-            case UINT32: {
-                int hi1 = bytes[(index + 0) * 2] & 0xff;
-                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 1) * 2] & 0xff;
-                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
-                long unsigned = signed & 0xffff_ffffL;
-                assert unsigned >= 0;
-                return Optional.of(new DecimalType(unsigned));
-            }
-            case FLOAT32: {
-                int hi1 = bytes[(index + 0) * 2] & 0xff;
-                int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 1) * 2] & 0xff;
-                int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+            case BIT:
+                return Optional.of(new DecimalType(extractBit(bytes, index)));
+            case INT8:
+                return Optional.of(new DecimalType(extractInt8(bytes, index)));
+            case UINT8:
+                return Optional.of(new DecimalType(extractUInt8(bytes, index)));
+            case INT16:
+                return Optional.of(new DecimalType(extractInt16(bytes, index)));
+            case UINT16:
+                return Optional.of(new DecimalType(extractUInt16(bytes, index)));
+            case INT32:
+                return Optional.of(new DecimalType(extractInt32(bytes, index)));
+            case UINT32:
+                return Optional.of(new DecimalType(extractUInt32(bytes, index)));
+            case FLOAT32:
                 try {
-                    return Optional.of(new DecimalType(Float.intBitsToFloat(bits32)));
+                    return Optional.of(new DecimalType(extractFloat32(bytes, index)));
                 } catch (NumberFormatException e) {
                     // floating point NaN or infinity encountered
                     return Optional.empty();
                 }
-            }
-            case INT64: {
-                byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
-                byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
-                byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
-                byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
-                byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
-                byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
-                byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
-                byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
-                return Optional.of(new DecimalType(
-                        new BigDecimal(new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
-            }
-            case UINT64: {
-                byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
-                byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
-                byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
-                byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
-                byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
-                byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
-                byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
-                byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
-                return Optional.of(new DecimalType(
-                        new BigDecimal(new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
-            }
-            case INT32_SWAP: {
-                // swapped order of registers, high 16 bits *follow* low 16 bits
-                int hi1 = bytes[(index + 1) * 2] & 0xff;
-                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 0) * 2] & 0xff;
-                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
-                return Optional.of(new DecimalType(signed));
-            }
-            case UINT32_SWAP: {
-                // swapped order of registers, high 16 bits *follow* low 16 bits
-                int hi1 = bytes[(index + 1) * 2] & 0xff;
-                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 0) * 2] & 0xff;
-                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
-                long unsigned = signed & 0xffff_ffffL;
-                assert unsigned >= 0;
-                return Optional.of(new DecimalType(unsigned));
-            }
-            case FLOAT32_SWAP: {
-                // swapped order of registers, high 16 bits *follow* low 16 bits
-                int hi1 = bytes[(index + 1) * 2] & 0xff;
-                int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
-                int hi2 = bytes[(index + 0) * 2] & 0xff;
-                int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
-                int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+            case INT64:
+                return Optional.of(new DecimalType(extractInt64(bytes, index)));
+            case UINT64:
+                return Optional.of(new DecimalType(new BigDecimal(extractUInt64(bytes, index))));
+            case INT32_SWAP:
+                return Optional.of(new DecimalType(extractInt32Swap(bytes, index)));
+            case UINT32_SWAP:
+                return Optional.of(new DecimalType(extractUInt32Swap(bytes, index)));
+            case FLOAT32_SWAP:
                 try {
-                    return Optional.of(new DecimalType(Float.intBitsToFloat(bits32)));
+                    return Optional.of(new DecimalType(extractFloat32Swap(bytes, index)));
                 } catch (NumberFormatException e) {
                     // floating point NaN or infinity encountered
                     return Optional.empty();
                 }
-            }
-            case INT64_SWAP: {
-                // Swapped order of registers
-                byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
-                byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
-                byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
-                byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
-                byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
-                byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
-                byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
-                byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
-                return Optional.of(new DecimalType(
-                        new BigDecimal(new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
-            }
-            case UINT64_SWAP: {
-                // Swapped order of registers
-                byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
-                byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
-                byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
-                byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
-                byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
-                byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
-                byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
-                byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
-                return Optional.of(new DecimalType(
-                        new BigDecimal(new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }))));
-            }
+            case INT64_SWAP:
+                return Optional.of(new DecimalType(extractInt64Swap(bytes, index)));
+            case UINT64_SWAP:
+                return Optional.of(new DecimalType(new BigDecimal(extractUInt64Swap(bytes, index))));
             default:
                 throw new IllegalArgumentException(type.getConfigValue());
         }
+    }
+
+    private static void assertIndexAndType(byte[] bytes, int index, ValueType type) {
+        int typeBits = type.getBits();
+        int endBitIndex = (typeBits >= 16 ? 16 * index : typeBits * index) + typeBits - 1;
+        int lastValidIndex = bytes.length * 8 - 1;
+        if (endBitIndex > lastValidIndex || index < 0) {
+            throw new IllegalArgumentException(
+                    String.format("Index=%d with type=%s is out-of-bounds given registers of size %d", index, type,
+                            bytes.length / 2));
+        }
+    }
+
+    public static int extractBit(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.BIT);
+        int registerIndex = index / 16;
+        boolean hiByte = index % 16 >= 8;
+        int indexWithinByte = index % 8;
+        int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+        return ((bytes[byteIndex] >>> indexWithinByte) & 1);
+    }
+
+    public static int extractInt8(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT8);
+        int registerIndex = index / 2;
+        boolean hiByte = index % 2 == 1;
+        int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+        int signed = bytes[byteIndex];
+        return signed;
+    }
+
+    public static int extractUInt8(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT8);
+        int signed = extractInt8(bytes, index);
+        int unsigned = signed & 0xff;
+        assert unsigned >= 0;
+        return unsigned;
+    }
+
+    public static int extractInt16(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT16);
+        int hi = (bytes[index * 2] & 0xff);
+        int lo = (bytes[index * 2 + 1] & 0xff);
+        short signed = (short) ((hi << 8) | lo);
+        return signed;
+    }
+
+    public static int extractUInt16(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT16);
+        int signed = extractInt16(bytes, index);
+        int unsigned = signed & 0xffff;
+        assert unsigned >= 0;
+        return unsigned;
+    }
+
+    public static int extractInt32(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT32);
+        int hi1 = bytes[(index + 0) * 2] & 0xff;
+        int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
+        int hi2 = bytes[(index + 1) * 2] & 0xff;
+        int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
+        int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+        return signed;
+    }
+
+    public static long extractUInt32(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT32);
+        long signed = extractInt32(bytes, index);
+        long unsigned = signed & 0xffff_ffffL;
+        assert unsigned >= 0;
+        return unsigned;
+    }
+
+    public static long extractInt32Swap(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT32_SWAP);
+        // swapped order of registers, high 16 bits *follow* low 16 bits
+        int hi1 = bytes[(index + 1) * 2] & 0xff;
+        int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
+        int hi2 = bytes[(index + 0) * 2] & 0xff;
+        int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
+        int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+        return signed;
+    }
+
+    public static long extractUInt32Swap(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT32_SWAP);
+        long signed = extractInt32Swap(bytes, index);
+        long unsigned = signed & 0xffff_ffffL;
+        assert unsigned >= 0;
+        return unsigned;
+    }
+
+    public static long extractInt64(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT64);
+        byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
+        byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+        byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
+        byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+        byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
+        byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+        byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
+        byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+        return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
+    }
+
+    public static BigInteger extractUInt64(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT64);
+        byte hi1 = (byte) (bytes[(index + 0) * 2] & 0xff);
+        byte lo1 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+        byte hi2 = (byte) (bytes[(index + 1) * 2] & 0xff);
+        byte lo2 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+        byte hi3 = (byte) (bytes[(index + 2) * 2] & 0xff);
+        byte lo3 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+        byte hi4 = (byte) (bytes[(index + 3) * 2] & 0xff);
+        byte lo4 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+        return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
+    }
+
+    public static long extractInt64Swap(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.INT64_SWAP);
+        // Swapped order of registers
+        byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
+        byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+        byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
+        byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+        byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
+        byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+        byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
+        byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+        return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
+    }
+
+    public static BigInteger extractUInt64Swap(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.UINT64_SWAP);
+        // Swapped order of registers
+        byte hi1 = (byte) (bytes[(index + 3) * 2] & 0xff);
+        byte lo1 = (byte) (bytes[(index + 3) * 2 + 1] & 0xff);
+        byte hi2 = (byte) (bytes[(index + 2) * 2] & 0xff);
+        byte lo2 = (byte) (bytes[(index + 2) * 2 + 1] & 0xff);
+        byte hi3 = (byte) (bytes[(index + 1) * 2] & 0xff);
+        byte lo3 = (byte) (bytes[(index + 1) * 2 + 1] & 0xff);
+        byte hi4 = (byte) (bytes[(index + 0) * 2] & 0xff);
+        byte lo4 = (byte) (bytes[(index + 0) * 2 + 1] & 0xff);
+        return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
+    }
+
+    public static float extractFloat32(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.FLOAT32);
+        int hi1 = bytes[(index + 0) * 2] & 0xff;
+        int lo1 = bytes[(index + 0) * 2 + 1] & 0xff;
+        int hi2 = bytes[(index + 1) * 2] & 0xff;
+        int lo2 = bytes[(index + 1) * 2 + 1] & 0xff;
+        int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+        return Float.intBitsToFloat(bits32);
+    }
+
+    public static float extractFloat32Swap(byte[] bytes, int index) {
+        assertIndexAndType(bytes, index, ValueType.FLOAT32_SWAP);
+        // swapped order of registers, high 16 bits *follow* low 16 bits
+        int hi1 = bytes[(index + 1) * 2] & 0xff;
+        int lo1 = bytes[(index + 1) * 2 + 1] & 0xff;
+        int hi2 = bytes[(index + 0) * 2] & 0xff;
+        int lo2 = bytes[(index + 0) * 2 + 1] & 0xff;
+        int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
+        return Float.intBitsToFloat(bits32);
     }
 
     /**
