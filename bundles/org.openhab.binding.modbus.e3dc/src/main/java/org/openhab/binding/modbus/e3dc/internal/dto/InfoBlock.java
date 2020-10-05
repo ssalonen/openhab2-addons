@@ -12,13 +12,13 @@
  */
 package org.openhab.binding.modbus.e3dc.internal.dto;
 
-import java.nio.ByteBuffer;
-
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.util.HexUtils;
 import org.openhab.binding.modbus.e3dc.internal.modbus.Data;
+import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ModbusBitUtilities.ValueReader;
 
 /**
  * The {@link InfoBlock} Data object for E3DC Info Block
@@ -43,7 +43,7 @@ public class InfoBlock implements Data {
      */
     public InfoBlock(byte[] bArray) {
         // index handling to calculate the correct start index
-        ByteBuffer wrapper = ByteBuffer.wrap(bArray);
+        ValueReader wrapper = ModbusBitUtilities.ValueReader.wrap(bArray);
 
         // first uint16 = 2 bytes - decode magic byte
         byte[] magicBytes = new byte[2];
@@ -52,11 +52,11 @@ public class InfoBlock implements Data {
         // first uint16 = 2 bytes - decode magic byte
 
         // unit8 (Modbus Major Version) + uint8 Modbus minor Version
-        String modbusVersion = wrapper.get() + "." + wrapper.get();
+        String modbusVersion = wrapper.getInt8() + "." + wrapper.getInt8();
         this.modbusVersion = new StringType(modbusVersion);
 
         // unit16 - supported registers
-        short supportedRegisters = wrapper.getShort();
+        int supportedRegisters = wrapper.getInt16();
         this.supportedRegisters = new DecimalType(supportedRegisters);
 
         byte[] buffer = new byte[32];

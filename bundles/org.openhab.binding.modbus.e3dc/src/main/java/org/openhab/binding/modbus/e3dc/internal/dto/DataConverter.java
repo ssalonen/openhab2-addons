@@ -12,11 +12,11 @@
  */
 package org.openhab.binding.modbus.e3dc.internal.dto;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.openhab.io.transport.modbus.ModbusBitUtilities;
 
 /**
  * The {@link DataConverter} Helper class to convert bytes from modbus into desired data format
@@ -28,33 +28,13 @@ public class DataConverter {
     private static final long MAX_INT32 = (long) Math.pow(2, Integer.SIZE);
 
     /**
-     * Get unit16 value from 2 bytes
-     *
-     * @param wrap
-     * @return int
-     */
-    public static int getUInt16Value(ByteBuffer wrap) {
-        return Short.toUnsignedInt(wrap.getShort());
-    }
-
-    /**
-     * Get unit32 value from 4 bytes
-     *
-     * @param wrap
-     * @return long
-     */
-    public static long getLongValue(ByteBuffer wrap) {
-        return Integer.toUnsignedLong(wrap.getInt());
-    }
-
-    /**
      * Get double value from 2 bytes with correction factor
      *
      * @param wrap
      * @return double
      */
-    public static double getUDoubleValue(ByteBuffer wrap, double factor) {
-        return round(getUInt16Value(wrap) * factor, 2);
+    public static double getUDoubleValue(ModbusBitUtilities.ValueReader wrap, double factor) {
+        return round(wrap.getUInt16() * factor, 2);
     }
 
     /**
@@ -63,9 +43,9 @@ public class DataConverter {
      * @param wrap
      * @return decoded long value, Long.MIN_VALUE otherwise
      */
-    public static long getInt32Swap(ByteBuffer wrap) {
-        long a = getUInt16Value(wrap);
-        long b = getUInt16Value(wrap);
+    public static long getE3DCInt32Swap(ModbusBitUtilities.ValueReader wrap) {
+        long a = wrap.getUInt16();
+        long b = wrap.getUInt16();
         if (b < 32768) {
             return b * 65536 + a;
         } else {
@@ -74,7 +54,7 @@ public class DataConverter {
     }
 
     public static String getString(byte[] bArray) {
-        return new String(bArray, StandardCharsets.US_ASCII).trim();
+        return ModbusBitUtilities.extractStringFromBytes(bArray, 0, bArray.length, StandardCharsets.US_ASCII).trim();
     }
 
     public static int toInt(BitSet bitSet) {
