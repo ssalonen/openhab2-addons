@@ -90,9 +90,9 @@ public class ModbusRegisterArray {
     @Override
     public String toString() {
         if (bytes.length == 0) {
-            return "ModbusRegisterArrayImpl(<empty>)";
+            return "ModbusRegisterArray(<empty>)";
         }
-        return new StringBuilder(bytes.length).append("ModbusRegisterArrayImpl(").append(toHexString()).append(')')
+        return new StringBuilder(bytes.length).append("ModbusRegisterArray(").append(toHexString()).append(')')
                 .toString();
     }
 

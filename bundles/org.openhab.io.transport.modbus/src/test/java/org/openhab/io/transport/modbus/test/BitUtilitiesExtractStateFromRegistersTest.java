@@ -131,7 +131,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 new Object[] { new DecimalType("64000"), ValueType.UINT16, shortArrayToRegisterArray(64000), 0 },
                 new Object[] { new DecimalType("64532"), ValueType.UINT16, shortArrayToRegisterArray(4, -1004), 1 },
                 new Object[] { new DecimalType("64532"), ValueType.UINT16, shortArrayToRegisterArray(-1004, 4), 0 },
-                new Object[] { IllegalArgumentException.class, ValueType.INT16, shortArrayToRegisterArray(4, -1004),
+                new Object[] { IllegalArgumentException.class, ValueType.UINT16, shortArrayToRegisterArray(4, -1004),
                         2 },
                 //
                 // INT32

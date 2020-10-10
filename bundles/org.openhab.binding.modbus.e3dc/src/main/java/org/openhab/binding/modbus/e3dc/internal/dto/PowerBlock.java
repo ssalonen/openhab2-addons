@@ -52,7 +52,7 @@ public class PowerBlock implements Data {
         ValueReader wrap = ModbusBitUtilities.ValueReader.wrap(bArray);
 
         // int32_swap value = 4 byte
-        long pvPowerSupplyL = DataConverter.getE3DCInt32Swap(wrap);
+        long pvPowerSupplyL = wrap.getInt32Swap();
 
         /*
          * int32_swap value don't provide negative values!
@@ -60,7 +60,7 @@ public class PowerBlock implements Data {
          * Negative value - Battery is discharging = Power supplier
          */
         pvPowerSupply = QuantityType.valueOf(pvPowerSupplyL, SmartHomeUnits.WATT);
-        long batteryPower = DataConverter.getE3DCInt32Swap(wrap);
+        long batteryPower = wrap.getInt32Swap();
         if (batteryPower > 0) {
             // Battery is charging so Power is consumed by Battery
             batteryPowerSupply = QuantityType.valueOf(0, SmartHomeUnits.WATT);
@@ -80,7 +80,7 @@ public class PowerBlock implements Data {
          * Positive value - Power provided towards Grid = Power consumer
          * Negative value - Power requested from Grid = Power supplier
          */
-        long gridPower = DataConverter.getE3DCInt32Swap(wrap);
+        long gridPower = wrap.getInt32Swap();
         if (gridPower > 0) {
             // Power is provided by Grid
             gridPowerSupply = QuantityType.valueOf(gridPower, SmartHomeUnits.WATT);

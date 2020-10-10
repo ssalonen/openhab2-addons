@@ -117,7 +117,7 @@ public class ModbusBitUtilities {
             return extractUInt32(bytes, byteIndex.getAndAdd(4));
         }
 
-        public long getInt32Swap() {
+        public int getInt32Swap() {
             return extractInt32Swap(bytes, byteIndex.getAndAdd(4));
         }
 
@@ -271,10 +271,12 @@ public class ModbusBitUtilities {
 
     private static void assertIndexAndType(byte[] bytes, int index, ValueType type) {
         int typeBits = type.getBits();
-        int typeBytes = typeBits / 8;
-        int endByteIndex = index + typeBytes - 1;
-        int lastValidIndex = bytes.length - 1;
-        if (endByteIndex > lastValidIndex || index < 0) {
+        // for 8-bit types and larger, index specifies the index of the byte. For bits, index specifies the index of the
+        // bit (of the whole data)
+        int indexPositionAsBitIndex = Math.min(type.getBits(), 8) * index;
+        int endBitIndex = indexPositionAsBitIndex + typeBits - 1;
+        int lastValidIndex = bytes.length * 8 - 1;
+        if (endBitIndex > lastValidIndex || index < 0) {
             throw new IllegalArgumentException(
                     String.format("Index=%d with type=%s is out-of-bounds given registers of size %d ", index, type,
                             bytes.length / 2));
@@ -284,14 +286,14 @@ public class ModbusBitUtilities {
     public static int extractBit(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.BIT);
         int registerIndex = index / 16;
-        boolean hiByte = index % 16 >= 8;
-        return extractBit(bytes, registerIndex, index % 16);
+        int bitIndexWithinRegister = index % 16;
+        return extractBit(bytes, registerIndex, bitIndexWithinRegister);
     }
 
-    public static int extractBit(byte[] bytes, int registerIndex, int bitIndex) {
+    public static int extractBit(byte[] bytes, int registerIndex, int bitIndexWithinRegister) {
         // TODO: out of range check
-        boolean hiByte = bitIndex >= 8;
-        int indexWithinByte = bitIndex % 8;
+        boolean hiByte = bitIndexWithinRegister >= 8;
+        int indexWithinByte = bitIndexWithinRegister % 8;
         int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
         return ((bytes[byteIndex] >>> indexWithinByte) & 1);
     }
@@ -340,10 +342,10 @@ public class ModbusBitUtilities {
 
     public static int extractInt32(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT32);
-        int hi1 = bytes[(index + 0)] & 0xff;
-        int lo1 = bytes[(index + 0) + 1] & 0xff;
-        int hi2 = bytes[(index + 1)] & 0xff;
-        int lo2 = bytes[(index + 1) + 1] & 0xff;
+        int hi1 = bytes[index + 0] & 0xff;
+        int lo1 = bytes[index + 1] & 0xff;
+        int hi2 = bytes[index + 2] & 0xff;
+        int lo2 = bytes[index + 3] & 0xff;
         int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
         return signed;
     }
@@ -356,13 +358,13 @@ public class ModbusBitUtilities {
         return unsigned;
     }
 
-    public static long extractInt32Swap(byte[] bytes, int index) {
+    public static int extractInt32Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT32_SWAP);
         // swapped order of registers, high 16 bits *follow* low 16 bits
-        int hi1 = bytes[(index + 1)] & 0xff;
-        int lo1 = bytes[(index + 1) + 1] & 0xff;
-        int hi2 = bytes[(index + 0)] & 0xff;
-        int lo2 = bytes[(index + 0) + 1] & 0xff;
+        int hi1 = bytes[index + 2] & 0xff;
+        int lo1 = bytes[index + 3] & 0xff;
+        int hi2 = bytes[index + 0] & 0xff;
+        int lo2 = bytes[index + 1] & 0xff;
         int signed = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
         return signed;
     }
@@ -377,64 +379,64 @@ public class ModbusBitUtilities {
 
     public static long extractInt64(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT64);
-        byte hi1 = (byte) (bytes[(index + 0)] & 0xff);
-        byte lo1 = (byte) (bytes[(index + 0) + 1] & 0xff);
-        byte hi2 = (byte) (bytes[(index + 1)] & 0xff);
-        byte lo2 = (byte) (bytes[(index + 1) + 1] & 0xff);
-        byte hi3 = (byte) (bytes[(index + 2)] & 0xff);
-        byte lo3 = (byte) (bytes[(index + 2) + 1] & 0xff);
-        byte hi4 = (byte) (bytes[(index + 3)] & 0xff);
-        byte lo4 = (byte) (bytes[(index + 3) + 1] & 0xff);
+        byte hi1 = (byte) (bytes[index + 0] & 0xff);
+        byte lo1 = (byte) (bytes[index + 1] & 0xff);
+        byte hi2 = (byte) (bytes[index + 2] & 0xff);
+        byte lo2 = (byte) (bytes[index + 3] & 0xff);
+        byte hi3 = (byte) (bytes[index + 4] & 0xff);
+        byte lo3 = (byte) (bytes[index + 5] & 0xff);
+        byte hi4 = (byte) (bytes[index + 6] & 0xff);
+        byte lo4 = (byte) (bytes[index + 7] & 0xff);
         return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
     }
 
     public static BigInteger extractUInt64(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT64);
-        byte hi1 = (byte) (bytes[(index + 0)] & 0xff);
-        byte lo1 = (byte) (bytes[(index + 0) + 1] & 0xff);
-        byte hi2 = (byte) (bytes[(index + 1)] & 0xff);
-        byte lo2 = (byte) (bytes[(index + 1) + 1] & 0xff);
-        byte hi3 = (byte) (bytes[(index + 2)] & 0xff);
-        byte lo3 = (byte) (bytes[(index + 2) + 1] & 0xff);
-        byte hi4 = (byte) (bytes[(index + 3)] & 0xff);
-        byte lo4 = (byte) (bytes[(index + 3) + 1] & 0xff);
+        byte hi1 = (byte) (bytes[index + 0] & 0xff);
+        byte lo1 = (byte) (bytes[index + 1] & 0xff);
+        byte hi2 = (byte) (bytes[index + 2] & 0xff);
+        byte lo2 = (byte) (bytes[index + 3] & 0xff);
+        byte hi3 = (byte) (bytes[index + 4] & 0xff);
+        byte lo3 = (byte) (bytes[index + 5] & 0xff);
+        byte hi4 = (byte) (bytes[index + 6] & 0xff);
+        byte lo4 = (byte) (bytes[index + 7] & 0xff);
         return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
     }
 
     public static long extractInt64Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT64_SWAP);
         // Swapped order of registers
-        byte hi1 = (byte) (bytes[(index + 3)] & 0xff);
-        byte lo1 = (byte) (bytes[(index + 3) + 1] & 0xff);
-        byte hi2 = (byte) (bytes[(index + 2)] & 0xff);
-        byte lo2 = (byte) (bytes[(index + 2) + 1] & 0xff);
-        byte hi3 = (byte) (bytes[(index + 1)] & 0xff);
-        byte lo3 = (byte) (bytes[(index + 1) + 1] & 0xff);
-        byte hi4 = (byte) (bytes[(index + 0)] & 0xff);
-        byte lo4 = (byte) (bytes[(index + 0) + 1] & 0xff);
+        byte hi1 = (byte) (bytes[index + 6] & 0xff);
+        byte lo1 = (byte) (bytes[index + 7] & 0xff);
+        byte hi2 = (byte) (bytes[index + 4] & 0xff);
+        byte lo2 = (byte) (bytes[index + 5] & 0xff);
+        byte hi3 = (byte) (bytes[index + 2] & 0xff);
+        byte lo3 = (byte) (bytes[index + 3] & 0xff);
+        byte hi4 = (byte) (bytes[index + 0] & 0xff);
+        byte lo4 = (byte) (bytes[index + 1] & 0xff);
         return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
     }
 
     public static BigInteger extractUInt64Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT64_SWAP);
         // Swapped order of registers
-        byte hi1 = (byte) (bytes[(index + 3)] & 0xff);
-        byte lo1 = (byte) (bytes[(index + 3) + 1] & 0xff);
-        byte hi2 = (byte) (bytes[(index + 2)] & 0xff);
-        byte lo2 = (byte) (bytes[(index + 2) + 1] & 0xff);
-        byte hi3 = (byte) (bytes[(index + 1)] & 0xff);
-        byte lo3 = (byte) (bytes[(index + 1) + 1] & 0xff);
-        byte hi4 = (byte) (bytes[(index + 0)] & 0xff);
-        byte lo4 = (byte) (bytes[(index + 0) + 1] & 0xff);
+        byte hi1 = (byte) (bytes[index + 6] & 0xff);
+        byte lo1 = (byte) (bytes[index + 7] & 0xff);
+        byte hi2 = (byte) (bytes[index + 4] & 0xff);
+        byte lo2 = (byte) (bytes[index + 5] & 0xff);
+        byte hi3 = (byte) (bytes[index + 2] & 0xff);
+        byte lo3 = (byte) (bytes[index + 3] & 0xff);
+        byte hi4 = (byte) (bytes[index + 0] & 0xff);
+        byte lo4 = (byte) (bytes[index + 1] & 0xff);
         return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
     }
 
     public static float extractFloat32(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.FLOAT32);
-        int hi1 = bytes[(index + 0)] & 0xff;
-        int lo1 = bytes[(index + 0) + 1] & 0xff;
-        int hi2 = bytes[(index + 1)] & 0xff;
-        int lo2 = bytes[(index + 1) + 1] & 0xff;
+        int hi1 = bytes[index + 0] & 0xff;
+        int lo1 = bytes[index + 1] & 0xff;
+        int hi2 = bytes[index + 2] & 0xff;
+        int lo2 = bytes[index + 3] & 0xff;
         int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
         return Float.intBitsToFloat(bits32);
     }
@@ -442,10 +444,10 @@ public class ModbusBitUtilities {
     public static float extractFloat32Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.FLOAT32_SWAP);
         // swapped order of registers, high 16 bits *follow* low 16 bits
-        int hi1 = bytes[(index + 1)] & 0xff;
-        int lo1 = bytes[(index + 1) + 1] & 0xff;
-        int hi2 = bytes[(index + 0)] & 0xff;
-        int lo2 = bytes[(index + 0) + 1] & 0xff;
+        int hi1 = bytes[index + 2] & 0xff;
+        int lo1 = bytes[index + 3] & 0xff;
+        int hi2 = bytes[index + 0] & 0xff;
+        int lo2 = bytes[index + 1] & 0xff;
         int bits32 = (hi1 << 24) | (lo1 << 16) | (hi2 << 8) | lo2;
         return Float.intBitsToFloat(bits32);
     }

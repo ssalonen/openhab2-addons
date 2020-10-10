@@ -25,7 +25,6 @@ import org.openhab.io.transport.modbus.ModbusBitUtilities;
  */
 @NonNullByDefault
 public class DataConverter {
-    private static final long MAX_INT32 = (long) Math.pow(2, Integer.SIZE);
 
     /**
      * Get double value from 2 bytes with correction factor
@@ -35,22 +34,6 @@ public class DataConverter {
      */
     public static double getUDoubleValue(ModbusBitUtilities.ValueReader wrap, double factor) {
         return round(wrap.getUInt16() * factor, 2);
-    }
-
-    /**
-     * Conversion done according to E3DC Modbus Specification V1.7
-     *
-     * @param wrap
-     * @return decoded long value, Long.MIN_VALUE otherwise
-     */
-    public static long getE3DCInt32Swap(ModbusBitUtilities.ValueReader wrap) {
-        long a = wrap.getUInt16();
-        long b = wrap.getUInt16();
-        if (b < 32768) {
-            return b * 65536 + a;
-        } else {
-            return (MAX_INT32 - b * 65536 - a) * -1;
-        }
     }
 
     public static String getString(byte[] bArray) {
@@ -73,8 +56,7 @@ public class DataConverter {
         }
 
         long factor = (long) Math.pow(10, places);
-        value = value * factor;
-        long tmp = Math.round(value);
+        long tmp = Math.round(value * factor);
         return (double) tmp / factor;
     }
 }
