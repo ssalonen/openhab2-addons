@@ -324,7 +324,7 @@ public class ModbusBitUtilities {
         return unsigned;
     }
 
-    public static int extractInt16(byte[] bytes, int index) {
+    public static short extractInt16(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT16);
         int hi = (bytes[index] & 0xff);
         int lo = (bytes[index + 1] & 0xff);

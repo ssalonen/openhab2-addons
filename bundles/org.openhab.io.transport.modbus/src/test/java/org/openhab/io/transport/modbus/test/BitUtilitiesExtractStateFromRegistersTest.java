@@ -13,13 +13,17 @@
 package org.openhab.io.transport.modbus.test;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.Stream.Builder;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.library.types.DecimalType;
@@ -374,6 +378,34 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 .collect(Collectors.toList()));
     }
 
+    private boolean isUnsignedType() {
+        return type.name().toLowerCase().charAt(0) == 'u';
+    }
+
+    private boolean isIntegerType() {
+        return type.name().toLowerCase().contains("int");
+    }
+
+    /**
+     * Generate register variations for extractXX functions
+     *
+     *
+     * @return entries of (byte[], byteIndex)
+     */
+    private Stream<Map.Entry<byte[], Integer>> registerVariations() {
+        byte[] origBytes = registers.getBytes();
+        int origRegisterIndex = index;
+        int origByteIndex = origRegisterIndex * 2;
+
+        Builder<Map.Entry<byte[], Integer>> streamBuilder = Stream.builder();
+        for (int offset = 0; offset < 5; offset++) {
+            byte[] bytesOffsetted = new byte[origBytes.length + offset];
+            System.arraycopy(origBytes, 0, bytesOffsetted, offset, origBytes.length);
+            streamBuilder.add(new SimpleImmutableEntry<>(bytesOffsetted, origByteIndex + offset));
+        }
+        return streamBuilder.build();
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testextractStateFromRegisters() {
@@ -389,5 +421,159 @@ public class BitUtilitiesExtractStateFromRegistersTest {
                 : (Optional<@NonNull DecimalType>) expectedResult;
         assertThat(String.format("registers=%s, index=%d, type=%s", registers, index, type), actualState,
                 is(equalTo(expectedStateWrapped)));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testExtractIndividual16BitIntegers() {
+        assumeTrue(type == ValueType.INT16 || type == ValueType.UINT16);
+        final Object expectedNumber;
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+            shouldThrow.expect((Class<? extends Throwable>) expectedResult);
+            expectedNumber = new Object(); // does not matter, should raise
+        } else {
+            DecimalType expectedDecimal = (DecimalType) expectedResult;
+            if (isUnsignedType()) {
+                expectedNumber = expectedDecimal.intValue();
+            } else {
+                expectedNumber = expectedDecimal.shortValue();
+            }
+        }
+
+        String testExplanation = String.format("registers=%s, index=%d, type=%s", registers, index, type);
+        registerVariations().forEach(entry -> {
+            byte[] bytes = entry.getKey();
+            int byteIndex = entry.getValue();
+            switch (type) {
+                case INT16:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractInt16(bytes, byteIndex));
+                    break;
+                case UINT16:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractUInt16(bytes, byteIndex));
+                    break;
+                default:
+                    // does not happen, test is skipped
+
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testExtractIndividual32BitIntegers() {
+        assumeTrue(type == ValueType.INT32 || type == ValueType.UINT32 || type == ValueType.INT32_SWAP
+                || type == ValueType.UINT32_SWAP);
+        final Object expectedNumber;
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+            shouldThrow.expect((Class<? extends Throwable>) expectedResult);
+            expectedNumber = new Object(); // does not matter, should raise
+        } else {
+            DecimalType expectedDecimal = (DecimalType) expectedResult;
+            if (isUnsignedType()) {
+                expectedNumber = expectedDecimal.longValue();
+            } else {
+                expectedNumber = expectedDecimal.intValue();
+            }
+        }
+        String testExplanation = String.format("registers=%s, index=%d, type=%s", registers, index, type);
+        registerVariations().forEach(entry -> {
+            byte[] bytes = entry.getKey();
+            int byteIndex = entry.getValue();
+            switch (type) {
+                case INT32:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractInt32(bytes, byteIndex));
+                    break;
+                case UINT32:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractUInt32(bytes, byteIndex));
+                    break;
+                case INT32_SWAP:
+                    assertEquals(testExplanation, expectedNumber,
+                            ModbusBitUtilities.extractInt32Swap(bytes, byteIndex));
+                    break;
+                case UINT32_SWAP:
+                    assertEquals(testExplanation, expectedNumber,
+                            ModbusBitUtilities.extractUInt32Swap(bytes, byteIndex));
+                    break;
+                default:
+                    // does not happen, test is skipped
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testExtractIndividual64BitIntegers() {
+        assumeTrue(type == ValueType.INT64 || type == ValueType.UINT64 || type == ValueType.INT64_SWAP
+                || type == ValueType.UINT64_SWAP);
+        final Object expectedNumber;
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+            shouldThrow.expect((Class<? extends Throwable>) expectedResult);
+            expectedNumber = new Object(); // does not matter, should raise
+        } else {
+            DecimalType expectedDecimal = (DecimalType) expectedResult;
+            if (isUnsignedType()) {
+                expectedNumber = expectedDecimal.toBigDecimal().toBigIntegerExact();
+            } else {
+                expectedNumber = expectedDecimal.longValue();
+            }
+        }
+
+        String testExplanation = String.format("registers=%s, index=%d, type=%s", registers, index, type);
+        registerVariations().forEach(entry -> {
+            byte[] bytes = entry.getKey();
+            int byteIndex = entry.getValue();
+            switch (type) {
+                case INT64:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractInt64(bytes, byteIndex));
+                    break;
+                case UINT64:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractUInt64(bytes, byteIndex));
+                    break;
+                case INT64_SWAP:
+                    assertEquals(testExplanation, expectedNumber,
+                            ModbusBitUtilities.extractInt64Swap(bytes, byteIndex));
+                    break;
+                case UINT64_SWAP:
+                    assertEquals(testExplanation, expectedNumber,
+                            ModbusBitUtilities.extractUInt64Swap(bytes, byteIndex));
+                    break;
+                default:
+                    // does not happen, test is skipped
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testExtractIndividual32Floats() {
+        assumeTrue(type == ValueType.FLOAT32 || type == ValueType.FLOAT32_SWAP);
+        final Object expectedNumber;
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+            shouldThrow.expect((Class<? extends Throwable>) expectedResult);
+            expectedNumber = new Object(); // does not matter, should raise
+        } else if (expectedResult instanceof Optional<?>) {
+            assertTrue(!((Optional) expectedResult).isPresent());
+            expectedNumber = Float.NaN;
+        } else {
+            DecimalType expectedDecimal = (DecimalType) expectedResult; // Optional is used only with empty values
+            expectedNumber = expectedDecimal.floatValue();
+        }
+
+        String testExplanation = String.format("registers=%s, index=%d, type=%s", registers, index, type);
+        registerVariations().forEach(entry -> {
+            byte[] bytes = entry.getKey();
+            int byteIndex = entry.getValue();
+            switch (type) {
+                case FLOAT32:
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractFloat32(bytes, byteIndex));
+                    break;
+                case FLOAT32_SWAP:
+                    assertEquals(testExplanation, expectedNumber,
+                            ModbusBitUtilities.extractFloat32Swap(bytes, byteIndex));
+                    break;
+                default:
+                    // does not happen, test is skipped
+            }
+        });
     }
 }
