@@ -17,10 +17,14 @@ import static org.junit.Assert.assertThat;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.Stream.Builder;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,7 +39,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
  * @author Sami Salonen - Initial contribution
  */
 @RunWith(Parameterized.class)
-public class BitUtilitiesExtractStringFromRegistersTest {
+public class BitUtilitiesExtractStringTest {
 
     final ModbusRegisterArray registers;
     final int index;
@@ -46,7 +50,7 @@ public class BitUtilitiesExtractStringFromRegistersTest {
     @Rule
     public final ExpectedException shouldThrow = ExpectedException.none();
 
-    public BitUtilitiesExtractStringFromRegistersTest(Object expectedResult, ModbusRegisterArray registers, int index,
+    public BitUtilitiesExtractStringTest(Object expectedResult, ModbusRegisterArray registers, int index,
             int length, Charset charset) {
         this.registers = registers;
         this.index = index;
@@ -114,4 +118,32 @@ public class BitUtilitiesExtractStringFromRegistersTest {
         assertThat(String.format("registers=%s, index=%d, length=%d", registers, index, length), actualState,
                 is(equalTo(expectedResult)));
     }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testExtractStringFromBytes() {
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+            shouldThrow.expect((Class) expectedResult);
+        }
+
+        byte[] origBytes = registers.getBytes();
+        int origRegisterIndex = index;
+        int origByteIndex = origRegisterIndex * 2;
+
+        Builder<Map.Entry<byte[], Integer>> streamBuilder = Stream.builder();
+        for (int offset = 0; offset < 5; offset++) {
+            byte[] bytesOffsetted = new byte[origBytes.length + offset];
+            System.arraycopy(origBytes, 0, bytesOffsetted, offset, origBytes.length);
+            streamBuilder.add(new SimpleImmutableEntry<>(bytesOffsetted, origByteIndex + offset));
+        }
+        Stream<Entry<byte[], Integer>> variations = streamBuilder.build();
+        variations.forEach(entry -> {
+            byte[] bytes = entry.getKey();
+            int byteIndex = entry.getValue();
+            String actualState = ModbusBitUtilities.extractStringFromBytes(bytes, byteIndex, this.length, this.charset);
+            assertThat(String.format("registers=%s, index=%d, length=%d, byteIndex=%d", registers, index, length,
+                    byteIndex), actualState, is(equalTo(expectedResult)));
+        });
+    }
+
 }

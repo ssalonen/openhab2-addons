@@ -17,6 +17,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -382,10 +383,6 @@ public class BitUtilitiesExtractStateFromRegistersTest {
         return type.name().toLowerCase().charAt(0) == 'u';
     }
 
-    private boolean isIntegerType() {
-        return type.name().toLowerCase().contains("int");
-    }
-
     /**
      * Generate register variations for extractXX functions
      *
@@ -401,7 +398,12 @@ public class BitUtilitiesExtractStateFromRegistersTest {
         for (int offset = 0; offset < 5; offset++) {
             byte[] bytesOffsetted = new byte[origBytes.length + offset];
             System.arraycopy(origBytes, 0, bytesOffsetted, offset, origBytes.length);
+            // offsetted:
             streamBuilder.add(new SimpleImmutableEntry<>(bytesOffsetted, origByteIndex + offset));
+            // offsetted, with no extra bytes
+            byte[] bytesOffsettedCutExtra = Arrays.copyOfRange(bytesOffsetted, 0,
+                    origByteIndex + offset + type.getBits() / 8);
+            streamBuilder.add(new SimpleImmutableEntry<>(bytesOffsettedCutExtra, origByteIndex + offset));
         }
         return streamBuilder.build();
     }
@@ -428,7 +430,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
     public void testExtractIndividual16BitIntegers() {
         assumeTrue(type == ValueType.INT16 || type == ValueType.UINT16);
         final Object expectedNumber;
-        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class<?>) expectedResult)) {
             shouldThrow.expect((Class<? extends Throwable>) expectedResult);
             expectedNumber = new Object(); // does not matter, should raise
         } else {
@@ -446,7 +448,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
             int byteIndex = entry.getValue();
             switch (type) {
                 case INT16:
-                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractInt16(bytes, byteIndex));
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractSInt16(bytes, byteIndex));
                     break;
                 case UINT16:
                     assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractUInt16(bytes, byteIndex));
@@ -464,7 +466,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
         assumeTrue(type == ValueType.INT32 || type == ValueType.UINT32 || type == ValueType.INT32_SWAP
                 || type == ValueType.UINT32_SWAP);
         final Object expectedNumber;
-        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class<?>) expectedResult)) {
             shouldThrow.expect((Class<? extends Throwable>) expectedResult);
             expectedNumber = new Object(); // does not matter, should raise
         } else {
@@ -481,14 +483,14 @@ public class BitUtilitiesExtractStateFromRegistersTest {
             int byteIndex = entry.getValue();
             switch (type) {
                 case INT32:
-                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractInt32(bytes, byteIndex));
+                    assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractSInt32(bytes, byteIndex));
                     break;
                 case UINT32:
                     assertEquals(testExplanation, expectedNumber, ModbusBitUtilities.extractUInt32(bytes, byteIndex));
                     break;
                 case INT32_SWAP:
                     assertEquals(testExplanation, expectedNumber,
-                            ModbusBitUtilities.extractInt32Swap(bytes, byteIndex));
+                            ModbusBitUtilities.extractSInt32Swap(bytes, byteIndex));
                     break;
                 case UINT32_SWAP:
                     assertEquals(testExplanation, expectedNumber,
@@ -506,7 +508,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
         assumeTrue(type == ValueType.INT64 || type == ValueType.UINT64 || type == ValueType.INT64_SWAP
                 || type == ValueType.UINT64_SWAP);
         final Object expectedNumber;
-        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class<?>) expectedResult)) {
             shouldThrow.expect((Class<? extends Throwable>) expectedResult);
             expectedNumber = new Object(); // does not matter, should raise
         } else {
@@ -548,7 +550,7 @@ public class BitUtilitiesExtractStateFromRegistersTest {
     public void testExtractIndividual32Floats() {
         assumeTrue(type == ValueType.FLOAT32 || type == ValueType.FLOAT32_SWAP);
         final Object expectedNumber;
-        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class) expectedResult)) {
+        if (expectedResult instanceof Class && Exception.class.isAssignableFrom((Class<?>) expectedResult)) {
             shouldThrow.expect((Class<? extends Throwable>) expectedResult);
             expectedNumber = new Object(); // does not matter, should raise
         } else if (expectedResult instanceof Optional<?>) {

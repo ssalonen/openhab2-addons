@@ -14,10 +14,8 @@ package org.openhab.io.transport.modbus;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.InvalidMarkException;
 import java.nio.charset.Charset;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -34,121 +32,6 @@ import org.openhab.io.transport.modbus.ModbusConstants.ValueType;
  */
 @NonNullByDefault
 public class ModbusBitUtilities {
-
-    public static class ValueReader {
-        private final byte[] bytes;
-        private final AtomicInteger byteIndex = new AtomicInteger();
-        private volatile Optional<AtomicInteger> mark = Optional.empty();
-
-        public static ValueReader wrap(ModbusRegisterArray array) {
-            return new ValueReader(array.getBytes());
-        }
-
-        public static ValueReader wrap(byte[] array) {
-            return new ValueReader(array);
-        }
-
-        private ValueReader(byte[] bytes) {
-            this.bytes = bytes;
-        }
-
-        public int position() {
-            return byteIndex.get();
-        }
-
-        public ValueReader position(int byteIndex) {
-            this.byteIndex.set(byteIndex);
-            return this;
-        }
-
-        public ValueReader mark() {
-            mark = Optional.of(new AtomicInteger(byteIndex.get()));
-            return this;
-        }
-
-        public ValueReader reset() throws InvalidMarkException {
-            int mark = this.mark.map(i -> i.get()).orElse(-1);
-            if (mark < 0) {
-                throw new InvalidMarkException();
-            }
-            byteIndex.set(mark);
-            return this;
-        }
-
-        public int remaining() {
-            return bytes.length - byteIndex.get();
-        }
-
-        public byte[] array() {
-            return bytes;
-        }
-
-        public boolean hasRemaining() {
-            return remaining() > 0;
-        }
-
-        public ValueReader get(byte[] dst) {
-            int start = byteIndex.getAndAdd(dst.length);
-            System.arraycopy(bytes, start, dst, 0, dst.length);
-            return this;
-        }
-
-        public int getInt8() {
-            return extractInt8(bytes, byteIndex.getAndAdd(1));
-        }
-
-        public int getUInt8() {
-            return extractUInt8(bytes, byteIndex.getAndAdd(1));
-        }
-
-        public int getInt16() {
-            return extractInt16(bytes, byteIndex.getAndAdd(2));
-        }
-
-        public int getUInt16() {
-            return extractUInt16(bytes, byteIndex.getAndAdd(2));
-        }
-
-        public int getInt32() {
-            return extractInt32(bytes, byteIndex.getAndAdd(4));
-        }
-
-        public long getUInt32() {
-            return extractUInt32(bytes, byteIndex.getAndAdd(4));
-        }
-
-        public int getInt32Swap() {
-            return extractInt32Swap(bytes, byteIndex.getAndAdd(4));
-        }
-
-        public long getUInt32Swap() {
-            return extractUInt32Swap(bytes, byteIndex.getAndAdd(4));
-        }
-
-        public long getInt64() {
-            return extractInt64(bytes, byteIndex.getAndAdd(8));
-        }
-
-        public BigInteger getUInt64() {
-            return extractUInt64(bytes, byteIndex.getAndAdd(8));
-        }
-
-        public long getInt64Swap() {
-            return extractInt64Swap(bytes, byteIndex.getAndAdd(8));
-        }
-
-        public BigInteger getUInt64Swap() {
-            return extractUInt64Swap(bytes, byteIndex.getAndAdd(8));
-        }
-
-        public float getFloat32() {
-            return extractFloat32(bytes, byteIndex.getAndAdd(4));
-        }
-
-        public float getFloat32Swap() {
-            return extractFloat32Swap(bytes, byteIndex.getAndAdd(4));
-        }
-    }
 
     /**
      * Read data from registers and convert the result to DecimalType
@@ -223,7 +106,7 @@ public class ModbusBitUtilities {
             case INT8: {
                 int registerIndex = index / 2;
                 boolean hiByte = index % 2 == 1;
-                return Optional.of(new DecimalType(extractInt8(bytes, registerIndex, hiByte)));
+                return Optional.of(new DecimalType(extractSInt8(bytes, registerIndex, hiByte)));
             }
             case UINT8: {
                 int registerIndex = index / 2;
@@ -231,11 +114,11 @@ public class ModbusBitUtilities {
                 return Optional.of(new DecimalType(extractUInt8(bytes, registerIndex, hiByte)));
             }
             case INT16:
-                return Optional.of(new DecimalType(extractInt16(bytes, index * 2)));
+                return Optional.of(new DecimalType(extractSInt16(bytes, index * 2)));
             case UINT16:
                 return Optional.of(new DecimalType(extractUInt16(bytes, index * 2)));
             case INT32:
-                return Optional.of(new DecimalType(extractInt32(bytes, index * 2)));
+                return Optional.of(new DecimalType(extractSInt32(bytes, index * 2)));
             case UINT32:
                 return Optional.of(new DecimalType(extractUInt32(bytes, index * 2)));
             case FLOAT32:
@@ -250,7 +133,7 @@ public class ModbusBitUtilities {
             case UINT64:
                 return Optional.of(new DecimalType(new BigDecimal(extractUInt64(bytes, index * 2))));
             case INT32_SWAP:
-                return Optional.of(new DecimalType(extractInt32Swap(bytes, index * 2)));
+                return Optional.of(new DecimalType(extractSInt32Swap(bytes, index * 2)));
             case UINT32_SWAP:
                 return Optional.of(new DecimalType(extractUInt32Swap(bytes, index * 2)));
             case FLOAT32_SWAP:
@@ -283,6 +166,19 @@ public class ModbusBitUtilities {
         }
     }
 
+    /**
+     * Extract single bit from registers represented by sequence of bytes
+     *
+     * - indices between 0...15 (inclusive) represent bits of the first register
+     * - indices between 16...31 (inclusive) represent bits of the second register, etc.
+     * - index 0 refers to the least significant bit of the first register
+     * - index 1 refers to the second least significant bit of the first register, etc.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of bit
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static int extractBit(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.BIT);
         int registerIndex = index / 16;
@@ -290,41 +186,118 @@ public class ModbusBitUtilities {
         return extractBit(bytes, registerIndex, bitIndexWithinRegister);
     }
 
+    /**
+     * Extract single bit from registers represented by sequence of bytes
+     *
+     * bitIndexWithinRegister between 0...15 (inclusive) represent bits of the first register, where 0 refers to the
+     * least significant bit of the register, index 1 refers to the second least significant bit of the register, etc.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param registerIndex index of register. First register has index of 0.
+     * @param bitIndexWithinRegister bit index within the register
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when registerIndex and/or bitIndexWithinRegister is out of bounds
+     */
     public static int extractBit(byte[] bytes, int registerIndex, int bitIndexWithinRegister) {
-        // TODO: out of range check
+        if (bitIndexWithinRegister < 0 || bitIndexWithinRegister > 15) {
+            throw new IllegalArgumentException(
+                    String.format("bitIndexWithinRegister=%d is out-of-bounds (max 15)", bitIndexWithinRegister));
+        } else if (registerIndex < 0) {
+            throw new IllegalArgumentException(
+                    String.format("registerIndex=%d is out-of-bounds", bitIndexWithinRegister));
+        }
         boolean hiByte = bitIndexWithinRegister >= 8;
         int indexWithinByte = bitIndexWithinRegister % 8;
         int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
+        if (byteIndex >= bytes.length) {
+            throw new IllegalArgumentException(String.format(
+                    "registerIndex=%d, bitIndexWithinRegister=%d is out-of-bounds with registers of size %d",
+                    registerIndex, bitIndexWithinRegister, bytes.length / 2));
+        }
         return ((bytes[byteIndex] >>> indexWithinByte) & 1);
     }
 
-    public static int extractInt8(byte[] bytes, int registerIndex, boolean hiByte) {
+    /**
+     * Extract signed 8-bit integer (byte) from registers represented by sequence of bytes
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param registerIndex index of register. First register has index of 0.
+     * @param hiByte whether to extract hi byte or lo byte
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static byte extractSInt8(byte[] bytes, int registerIndex, boolean hiByte) {
         int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
-        int signed = extractInt8(bytes, byteIndex);
+        byte signed = extractSInt8(bytes, byteIndex);
         return signed;
     }
 
-    public static int extractInt8(byte[] bytes, int index) {
+    /**
+     * Extract signed 8-bit integer (byte) from registers represented by sequence of bytes
+     *
+     * - index 0 refers to low byte of the first register, 1 high byte of first register
+     * - index 2 refers to low byte of the second register, 3 high byte of second register, etc.
+     * - it is assumed that each high and low byte is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param registerIndex index of register. First register has index of 0.
+     * @param index index of the byte in registers
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static byte extractSInt8(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT8);
-        int signed = bytes[index];
+        byte signed = bytes[index];
         return signed;
     }
 
-    public static int extractUInt8(byte[] bytes, int registerIndex, boolean hiByte) {
+    /**
+     * Extract unsigned 8-bit integer (byte) from registers represented by sequence of bytes
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param registerIndex index of register. First register has index of 0.
+     * @param hiByte whether to extract hi byte or lo byte
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when registerIndex is out of bounds
+     */
+    public static short extractUInt8(byte[] bytes, int registerIndex, boolean hiByte) {
         int byteIndex = 2 * registerIndex + (hiByte ? 0 : 1);
-        int unsigned = extractUInt8(bytes, byteIndex);
+        short unsigned = extractUInt8(bytes, byteIndex);
         return unsigned;
     }
 
-    public static int extractUInt8(byte[] bytes, int index) {
+    /**
+     * Extract unsigned 8-bit integer (byte) from registers represented by sequence of bytes
+     *
+     * - index 0 refers to low byte of the first register, 1 high byte of first register
+     * - index 2 refers to low byte of the second register, 3 high byte of second register, etc.
+     * - it is assumed that each high and low byte is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param registerIndex index of register. First register has index of 0.
+     * @param index index of the byte in registers
+     * @return 0 when bit is set, 1 otherwise
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static short extractUInt8(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT8);
-        int signed = extractInt8(bytes, index);
-        int unsigned = signed & 0xff;
+        int signed = extractSInt8(bytes, index);
+        short unsigned = (short) (signed & 0xff);
         assert unsigned >= 0;
         return unsigned;
     }
 
-    public static short extractInt16(byte[] bytes, int index) {
+    /**
+     * Extract signed 16-bit integer (short) from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of register. First register has index of 0.
+     * @return register with index interpreted as 16 bit signed integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static short extractSInt16(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT16);
         int hi = (bytes[index] & 0xff);
         int lo = (bytes[index + 1] & 0xff);
@@ -332,15 +305,35 @@ public class ModbusBitUtilities {
         return signed;
     }
 
+    /**
+     * Extract unsigned 16-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of register. First register has index of 0.
+     * @return register with index interpreted as 16 bit unsigned integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static int extractUInt16(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT16);
-        int signed = extractInt16(bytes, index);
+        int signed = extractSInt16(bytes, index);
         int unsigned = signed & 0xffff;
         assert unsigned >= 0;
         return unsigned;
     }
 
-    public static int extractInt32(byte[] bytes, int index) {
+    /**
+     * Extract signed 32-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index) and (index+1) interpreted as 32 bit signed integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static int extractSInt32(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT32);
         int hi1 = bytes[index + 0] & 0xff;
         int lo1 = bytes[index + 1] & 0xff;
@@ -350,15 +343,37 @@ public class ModbusBitUtilities {
         return signed;
     }
 
+    /**
+     * Extract unsigned 32-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index) and (index+1) interpreted as 32 bit unsigned integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static long extractUInt32(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT32);
-        long signed = extractInt32(bytes, index);
+        long signed = extractSInt32(bytes, index);
         long unsigned = signed & 0xffff_ffffL;
         assert unsigned >= 0;
         return unsigned;
     }
 
-    public static int extractInt32Swap(byte[] bytes, int index) {
+    /**
+     * Extract signed 32-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * This is identical with extractSInt32, but with registers swapped.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index+1), (index) interpreted as 32 bit signed integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
+    public static int extractSInt32Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT32_SWAP);
         // swapped order of registers, high 16 bits *follow* low 16 bits
         int hi1 = bytes[index + 2] & 0xff;
@@ -369,14 +384,36 @@ public class ModbusBitUtilities {
         return signed;
     }
 
+    /**
+     * Extract unsigned 32-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * This is identical with extractUInt32, but with registers swapped.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index+1), (index) interpreted as 32 bit unsigned integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static long extractUInt32Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT32_SWAP);
-        long signed = extractInt32Swap(bytes, index);
+        long signed = extractSInt32Swap(bytes, index);
         long unsigned = signed & 0xffff_ffffL;
         assert unsigned >= 0;
         return unsigned;
     }
 
+    /**
+     * Extract signed 64-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index), (index+1), (index+2), (index+3) interpreted as 64 bit signed integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static long extractInt64(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT64);
         byte hi1 = (byte) (bytes[index + 0] & 0xff);
@@ -390,6 +427,16 @@ public class ModbusBitUtilities {
         return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
     }
 
+    /**
+     * Extract unsigned 64-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index), (index+1), (index+2), (index+3) interpreted as 64 bit unsigned integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static BigInteger extractUInt64(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT64);
         byte hi1 = (byte) (bytes[index + 0] & 0xff);
@@ -403,6 +450,18 @@ public class ModbusBitUtilities {
         return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
     }
 
+    /**
+     * Extract signed 64-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * This is identical with extractInt64, but with registers swapped (registers with higher index before lower index).
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index+3), (index+2), (index+1), (index) interpreted as 64 bit signed integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static long extractInt64Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.INT64_SWAP);
         // Swapped order of registers
@@ -417,6 +476,19 @@ public class ModbusBitUtilities {
         return new BigInteger(new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 }).longValue();
     }
 
+    /**
+     * Extract unsigned 64-bit integer from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * This is identical with extractUInt64, but with registers swapped (registers with higher index before lower
+     * index).
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index+3), (index+2), (index+1), (index) interpreted as 64 bit unsigned integer
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static BigInteger extractUInt64Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.UINT64_SWAP);
         // Swapped order of registers
@@ -431,6 +503,19 @@ public class ModbusBitUtilities {
         return new BigInteger(1, new byte[] { hi1, lo1, hi2, lo2, hi3, lo3, hi4, lo4 });
     }
 
+    /**
+     * Extract single-precision 32-bit IEEE 754 floating point from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * Note that this method can return floating point NaN and floating point infinity.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index), (index+1), (index+2), (index+3) interpreted as single-precision 32-bit IEEE 754
+     *         floating point
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static float extractFloat32(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.FLOAT32);
         int hi1 = bytes[index + 0] & 0xff;
@@ -441,6 +526,22 @@ public class ModbusBitUtilities {
         return Float.intBitsToFloat(bits32);
     }
 
+    /**
+     * Extract single-precision 32-bit IEEE 754 floating point from registers represented by sequence of bytes
+     *
+     * It is assumed that each register is encoded in most significant bit first order.
+     *
+     * This is identical with extractFloat32, but with registers swapped (registers with higher index before lower
+     * index).
+     *
+     * Note that this method can return floating point NaN and floating point infinity.
+     *
+     * @param bytes registers represented by sequence of bytes
+     * @param index index of first register. First register has index of 0.
+     * @return registers (index+3), (index+2), (index+1), (index) interpreted as single-precision 32-bit IEEE 754
+     *         floating point
+     * @throws IllegalArgumentException when index is out of bounds
+     */
     public static float extractFloat32Swap(byte[] bytes, int index) {
         assertIndexAndType(bytes, index, ValueType.FLOAT32_SWAP);
         // swapped order of registers, high 16 bits *follow* low 16 bits
@@ -483,20 +584,20 @@ public class ModbusBitUtilities {
      * and a maximum of length bytes are read. However reading stops at the first
      * NUL byte encountered.
      *
-     * @param registers list of registers, each register represent 16bit of data
-     * @param index zero based byte index
+     * @param bytes bytes representing the registers
+     * @param byteIndex zero based byte index
      * @param length maximum length of string in 8bit characters (number of bytes considered)
      * @param charset the character set used to construct the string.
      * @return string representation queried value
      * @throws IllegalArgumentException when <tt>index</tt> is out of bounds of registers
      */
-    public static String extractStringFromBytes(byte[] bytes, int index, int length, Charset charset) {
-        if (index + length > bytes.length) {
+    public static String extractStringFromBytes(byte[] bytes, int byteIndex, int length, Charset charset) {
+        if (byteIndex + length > bytes.length) {
             throw new IllegalArgumentException(
-                    String.format("Index=%d with length=%d is out-of-bounds given registers of size %d", index, length,
-                            bytes.length));
+                    String.format("byteIndex=%d with length=%d is out-of-bounds given registers of size %d", byteIndex,
+                            length, bytes.length));
         }
-        if (index < 0) {
+        if (byteIndex < 0) {
             throw new IllegalArgumentException("Negative index values are not supported");
         }
         if (length < 0) {
@@ -507,13 +608,13 @@ public class ModbusBitUtilities {
 
         // Find first zero byte in registers and call reduce length such that we stop before it
         for (int i = 0; i < length; i++) {
-            if (bytes[index + i] == '\0') {
+            if (bytes[byteIndex + i] == '\0') {
                 effectiveLength = i;
                 break;
             }
         }
 
-        return new String(bytes, index * 2, effectiveLength, charset);
+        return new String(bytes, byteIndex, effectiveLength, charset);
     }
 
     /**

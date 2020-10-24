@@ -37,7 +37,7 @@ public class DataConverterTest {
         // Reg 69 value 65098 bytes [-2, 74]
         // Reg 70 value 65535 bytes [-1, -1]
         byte[] b = new byte[] { -2, -74, -1, -1 };
-        assertEquals("Negative Value", -330, ModbusBitUtilities.extractInt32Swap(b, 0));
+        assertEquals("Negative Value", -330, ModbusBitUtilities.extractSInt32Swap(b, 0));
     }
 
     @Test
@@ -59,7 +59,7 @@ public class DataConverterTest {
             Object[] val = (Object[]) object;
             DecimalType command = (DecimalType) val[0];
             byte[] bytes = new ModbusRegisterArray((int[]) val[2]).getBytes();
-            assertEquals(command.toString(), command.longValue(), ModbusBitUtilities.extractInt32Swap(bytes, 0));
+            assertEquals(command.toString(), command.longValue(), ModbusBitUtilities.extractSInt32Swap(bytes, 0));
         }
     }
 

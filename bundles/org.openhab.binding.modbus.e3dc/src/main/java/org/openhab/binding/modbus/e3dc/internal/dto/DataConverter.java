@@ -17,6 +17,7 @@ import java.util.BitSet;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
+import org.openhab.io.transport.modbus.ValueBuffer;
 
 /**
  * The {@link DataConverter} Helper class to convert bytes from modbus into desired data format
@@ -32,7 +33,7 @@ public class DataConverter {
      * @param wrap
      * @return double
      */
-    public static double getUDoubleValue(ModbusBitUtilities.ValueReader wrap, double factor) {
+    public static double getUDoubleValue(ValueBuffer wrap, double factor) {
         return round(wrap.getUInt16() * factor, 2);
     }
 

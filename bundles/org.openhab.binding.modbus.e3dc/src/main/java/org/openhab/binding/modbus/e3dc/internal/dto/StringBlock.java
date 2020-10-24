@@ -20,8 +20,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 import org.openhab.binding.modbus.e3dc.internal.modbus.Data;
-import org.openhab.io.transport.modbus.ModbusBitUtilities;
-import org.openhab.io.transport.modbus.ModbusBitUtilities.ValueReader;
+import org.openhab.io.transport.modbus.ValueBuffer;
 
 /**
  * The {@link StringBlock} Data object for E3DC Info Block
@@ -46,7 +45,7 @@ public class StringBlock implements Data {
      * @param bArray - Modbus Registers as bytes from 40096 to 40104
      */
     public StringBlock(byte[] bArray) {
-        ValueReader wrap = ModbusBitUtilities.ValueReader.wrap(bArray);
+        ValueBuffer wrap = ValueBuffer.wrap(bArray);
         // straight forward - for each String the values Volt, Ampere and then Watt. All unt16 = 2 bytes values
         string1Volt = QuantityType.valueOf(wrap.getUInt16(), SmartHomeUnits.VOLT);
         string2Volt = QuantityType.valueOf(wrap.getUInt16(), SmartHomeUnits.VOLT);

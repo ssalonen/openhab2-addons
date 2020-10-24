@@ -72,7 +72,7 @@ public class ModbusRegisterArray {
      * Index 4: low-byte of 2nd register
      * ...
      *
-     * @return
+     * @return set of bytes
      */
     public byte[] getBytes() {
         return bytes;

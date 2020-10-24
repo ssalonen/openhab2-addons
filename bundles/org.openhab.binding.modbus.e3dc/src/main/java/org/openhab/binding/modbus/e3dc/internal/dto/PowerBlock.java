@@ -19,8 +19,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 import org.openhab.binding.modbus.e3dc.internal.modbus.Data;
-import org.openhab.io.transport.modbus.ModbusBitUtilities;
-import org.openhab.io.transport.modbus.ModbusBitUtilities.ValueReader;
+import org.openhab.io.transport.modbus.ValueBuffer;
 
 /**
  * The {@link PowerBlock} Data object for E3DC Info Block
@@ -49,10 +48,10 @@ public class PowerBlock implements Data {
      */
     public PowerBlock(byte[] bArray) {
         // index handling to calculate the correct start index
-        ValueReader wrap = ModbusBitUtilities.ValueReader.wrap(bArray);
+        ValueBuffer wrap = ValueBuffer.wrap(bArray);
 
         // int32_swap value = 4 byte
-        long pvPowerSupplyL = wrap.getInt32Swap();
+        long pvPowerSupplyL = wrap.getSInt32Swap();
 
         /*
          * int32_swap value don't provide negative values!
@@ -60,7 +59,7 @@ public class PowerBlock implements Data {
          * Negative value - Battery is discharging = Power supplier
          */
         pvPowerSupply = QuantityType.valueOf(pvPowerSupplyL, SmartHomeUnits.WATT);
-        long batteryPower = wrap.getInt32Swap();
+        long batteryPower = wrap.getSInt32Swap();
         if (batteryPower > 0) {
             // Battery is charging so Power is consumed by Battery
             batteryPowerSupply = QuantityType.valueOf(0, SmartHomeUnits.WATT);
@@ -72,7 +71,7 @@ public class PowerBlock implements Data {
         }
 
         // int32_swap value = 4 byte
-        long householdPowerConsumptionL = wrap.getInt32Swap();
+        long householdPowerConsumptionL = wrap.getSInt32Swap();
         householdPowerConsumption = QuantityType.valueOf(householdPowerConsumptionL, SmartHomeUnits.WATT);
 
         /*
@@ -80,7 +79,7 @@ public class PowerBlock implements Data {
          * Positive value - Power provided towards Grid = Power consumer
          * Negative value - Power requested from Grid = Power supplier
          */
-        long gridPower = wrap.getInt32Swap();
+        long gridPower = wrap.getSInt32Swap();
         if (gridPower > 0) {
             // Power is provided by Grid
             gridPowerSupply = QuantityType.valueOf(gridPower, SmartHomeUnits.WATT);
@@ -92,19 +91,19 @@ public class PowerBlock implements Data {
         }
 
         // int32_swap value = 4 byte
-        externalPowerSupply = QuantityType.valueOf(wrap.getInt32Swap(), SmartHomeUnits.WATT);
+        externalPowerSupply = QuantityType.valueOf(wrap.getSInt32Swap(), SmartHomeUnits.WATT);
 
         // int32_swap value = 4 byte
-        wallboxPowerConsumption = QuantityType.valueOf(wrap.getInt32Swap(), SmartHomeUnits.WATT);
+        wallboxPowerConsumption = QuantityType.valueOf(wrap.getSInt32Swap(), SmartHomeUnits.WATT);
 
         // int32_swap value = 4 byte
-        wallboxPVPowerConsumption = QuantityType.valueOf(wrap.getInt32Swap(), SmartHomeUnits.WATT);
+        wallboxPVPowerConsumption = QuantityType.valueOf(wrap.getSInt32Swap(), SmartHomeUnits.WATT);
 
         // unit8 + uint8 - one register with split value for Autarky & Self Consumption
-        autarky = QuantityType.valueOf(wrap.getInt8(), SmartHomeUnits.PERCENT);
-        selfConsumption = QuantityType.valueOf(wrap.getInt8(), SmartHomeUnits.PERCENT);
+        autarky = QuantityType.valueOf(wrap.getSInt8(), SmartHomeUnits.PERCENT);
+        selfConsumption = QuantityType.valueOf(wrap.getSInt8(), SmartHomeUnits.PERCENT);
 
         // uint16 for Battery State of Charge
-        batterySOC = QuantityType.valueOf(wrap.getInt16(), SmartHomeUnits.PERCENT);
+        batterySOC = QuantityType.valueOf(wrap.getSInt16(), SmartHomeUnits.PERCENT);
     }
 }
