@@ -109,5 +109,4 @@ public class ModbusRegisterArray {
         }
         return HexUtils.bytesToHex(getBytes());
     }
-
 }

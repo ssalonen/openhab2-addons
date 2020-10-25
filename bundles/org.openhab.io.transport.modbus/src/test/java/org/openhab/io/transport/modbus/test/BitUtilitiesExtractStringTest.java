@@ -50,8 +50,8 @@ public class BitUtilitiesExtractStringTest {
     @Rule
     public final ExpectedException shouldThrow = ExpectedException.none();
 
-    public BitUtilitiesExtractStringTest(Object expectedResult, ModbusRegisterArray registers, int index,
-            int length, Charset charset) {
+    public BitUtilitiesExtractStringTest(Object expectedResult, ModbusRegisterArray registers, int index, int length,
+            Charset charset) {
         this.registers = registers;
         this.index = index;
         this.length = length;
@@ -145,5 +145,4 @@ public class BitUtilitiesExtractStringTest {
                     byteIndex), actualState, is(equalTo(expectedResult)));
         });
     }
-
 }

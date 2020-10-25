@@ -129,5 +129,4 @@ public class BitUtilitiesExtractBit {
                 0b00101001 }; // lo byte of 2nd register
         ModbusBitUtilities.extractBit(bytes, -1);
     }
-
 }
