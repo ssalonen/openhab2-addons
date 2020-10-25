@@ -37,7 +37,7 @@ import org.openhab.io.transport.modbus.ModbusRegisterArray;
  * @author Sami Salonen - Initial contribution
  */
 @RunWith(Parameterized.class)
-public class BitUtilitiesExtractStateFromRegistersIndividualMethodsTest {
+public class BitUtilitiesExtractIndividualMethodsTest {
 
     final byte[] bytes;
     final ValueType type;
@@ -47,8 +47,8 @@ public class BitUtilitiesExtractStateFromRegistersIndividualMethodsTest {
     @Rule
     public final ExpectedException shouldThrow = ExpectedException.none();
 
-    public BitUtilitiesExtractStateFromRegistersIndividualMethodsTest(Object expectedResult, ValueType type,
-            byte[] bytes, int byteIndex) {
+    public BitUtilitiesExtractIndividualMethodsTest(Object expectedResult, ValueType type, byte[] bytes,
+            int byteIndex) {
         this.expectedResult = expectedResult; // Exception or DecimalType
         this.type = type;
         this.bytes = bytes;
@@ -57,6 +57,11 @@ public class BitUtilitiesExtractStateFromRegistersIndividualMethodsTest {
 
     @Parameters
     public static Collection<Object[]> data() {
+        // We use test data from BitUtilitiesExtractStateFromRegistersTest
+        // In BitUtilitiesExtractStateFromRegistersTest the data is aligned to registers
+        //
+        // Here (in registerVariations) we generate offsetted variations of the byte data
+        // to test extractXX which can operate on data aligned on byte-level, not just data aligned on-register level
         Collection<Object[]> data = BitUtilitiesExtractStateFromRegistersTest.data();
         return data.stream().flatMap(values -> {
             Object expectedResult = values[0];

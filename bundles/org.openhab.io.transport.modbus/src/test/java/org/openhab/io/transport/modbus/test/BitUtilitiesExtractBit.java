@@ -18,9 +18,12 @@ import org.junit.Test;
 import org.openhab.io.transport.modbus.ModbusBitUtilities;
 
 /**
+ *
+ * Tests for extractBit
+ *
  * @author Sami Salonen - Initial contribution
  */
-public class BitUtilitiesExtractStateFromRegistersBitAndInt8Test {
+public class BitUtilitiesExtractBit {
 
     @Test
     public void testExtractBitWithRegisterIndexAndBitIndex() {
@@ -127,89 +130,4 @@ public class BitUtilitiesExtractStateFromRegistersBitAndInt8Test {
         ModbusBitUtilities.extractBit(bytes, -1);
     }
 
-    @Test
-    public void extractSInt8WithSingleIndex() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        assertEquals(-1, ModbusBitUtilities.extractSInt8(bytes, 0));
-        assertEquals(2, ModbusBitUtilities.extractSInt8(bytes, 1));
-        assertEquals(3, ModbusBitUtilities.extractSInt8(bytes, 2));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractSInt8WithSingleIndexOOB() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        ModbusBitUtilities.extractSInt8(bytes, 3);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractSInt8WithSingleIndexOOB2() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        ModbusBitUtilities.extractSInt8(bytes, -1);
-    }
-
-    @Test
-    public void extractSInt8WithRegisterIndexAndHiByte() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        assertEquals(-1, ModbusBitUtilities.extractSInt8(bytes, 0, true));
-        assertEquals(2, ModbusBitUtilities.extractSInt8(bytes, 0, false));
-        assertEquals(3, ModbusBitUtilities.extractSInt8(bytes, 1, true));
-        assertEquals(4, ModbusBitUtilities.extractSInt8(bytes, 1, false));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractSInt8WithRegisterIndexAndHiByteOOB() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        ModbusBitUtilities.extractSInt8(bytes, 2, true);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractSInt8WithRegisterIndexAndHiByteOOB2() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        ModbusBitUtilities.extractSInt8(bytes, -1, true);
-    }
-
-    //
-    // unsigned int8 follows
-    //
-
-    @Test
-    public void extractUInt8WithSingleIndex() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        assertEquals(255, ModbusBitUtilities.extractUInt8(bytes, 0));
-        assertEquals(2, ModbusBitUtilities.extractUInt8(bytes, 1));
-        assertEquals(3, ModbusBitUtilities.extractUInt8(bytes, 2));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractUInt8WithSingleIndexOOB() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        ModbusBitUtilities.extractUInt8(bytes, 3);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractUInt8WithSingleIndexOOB2() {
-        byte[] bytes = new byte[] { -1, 2, 3 };
-        ModbusBitUtilities.extractUInt8(bytes, -1);
-    }
-
-    @Test
-    public void extractUInt8WithRegisterIndexAndHiByte() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        assertEquals(255, ModbusBitUtilities.extractUInt8(bytes, 0, true));
-        assertEquals(2, ModbusBitUtilities.extractUInt8(bytes, 0, false));
-        assertEquals(3, ModbusBitUtilities.extractUInt8(bytes, 1, true));
-        assertEquals(4, ModbusBitUtilities.extractUInt8(bytes, 1, false));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractUInt8WithRegisterIndexAndHiByteOOB() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        ModbusBitUtilities.extractUInt8(bytes, 2, true);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void extractUInt8WithRegisterIndexAndHiByteOOB2() {
-        byte[] bytes = new byte[] { -1, 2, 3, 4 };
-        ModbusBitUtilities.extractUInt8(bytes, 255, true);
-    }
 }
